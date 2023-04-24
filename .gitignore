@@ -1,0 +1,7 @@
+# 忽略 .idea 目录及其中的所有文件
+.idea/
+# 忽略 venv 目录及其中的所有文件
+venv/
+# 忽略 __pycache__ 目录及其中的所有文件
+__pycache__/
+/db.sqlite3
