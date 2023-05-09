@@ -42,7 +42,7 @@ def index(request):
             if r.status_code == 200:
                 jwt = r.json()
                 print("ok")
-                return HttpResponse("ok")
+                return login_success(request, jwt)
             else:
                 return render(
                     request,
@@ -92,7 +92,7 @@ def check(request):
                     user_pass.cookie = nas_cookie
                     user_pass.save()
                 finally:
-                    return HttpResponse("ok")
+                    return login_success(request, jwt)
 
             else:
                 return render(
@@ -104,3 +104,9 @@ def check(request):
                 )
     else:
         return redirect("login:index")
+
+
+def login_success(request, jwt):
+    response = redirect("manager:manager")
+    response.set_cookie("jwt", jwt["jwt"])
+    return response

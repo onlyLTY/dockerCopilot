@@ -1,0 +1,227 @@
+{% extends 'manager/base.html' %}
+{% load static %}
+
+{% block button_region %}
+    <button id="start" type="button" class="layui-btn layui-btn-sm layui-btn-normal">启动</button>
+    <button id="stop" type="button" class="layui-btn layui-btn-sm layui-btn-normal">停止</button>
+    <button id="update" type="button" class="layui-btn layui-btn-sm layui-btn-normal">更新</button>
+    <button type="button" class="layui-btn layui-btn-sm layui-btn-normal">更换镜像</button>
+{% endblock %}
+
+{#{% block data_region %}#}
+{#    <table class="layui-hide" id="test" lay-filter="test"></table>#}
+{#{% endblock %}#}
+
+{% block data_region %}
+    <table class="layui-table" lay-skin="line" lay-data="{limit: Number.MAX_VALUE, id:'test'}" lay-filter="test">
+        <colgroup>
+            <col style="width: 70px">
+        </colgroup>
+
+        <thead>
+        <tr>
+            <th lay-data="{field:'status', width:70}">状态</th>
+            <th lay-data="{field:'name'}">容器名称</th>
+            <th lay-data="{field:'images'}">使用镜像</th>
+            <th lay-data="{field:'runTime'}">创建时间</th>
+            <th lay-data="{field:'upTime'}">运行时间</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if container_list %}
+            {% for container in container_list %}
+                {% with name=container.Names.0|slice:"1:" %}
+                    <tr>
+                        <td id="state">{{ container.State }}</td>
+                        <td class="col-auto">{{ name }}</td>
+                        <td>{{ container.Image }}</td>
+                        <td class="runTime">{{ container.Created }}</td>
+                        <td>{{ container.Status }}</td>
+                    </tr>
+                {% endwith %}
+            {% endfor %}
+        {% else %}
+            <p>列表为空</p>
+        {% endif %}
+        </tbody>
+    </table>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'layui/layui.js' %}"></script>
+    <!-- 具体的 JavaScript 代码 -->
+
+    <script>
+        layui.use('table', function(){
+            var table = layui.table;
+            //监听行单击事件（双击事件为：rowDouble）
+            table.on('row(test)', function(obj){
+            var data = obj.data;
+            layer.alert(JSON.stringify(data), {
+              title: '当前行数据：'
+            });
+
+            //标注选中样式
+            obj.tr.addClass('layui-bg-blue active').siblings().removeClass('layui-bg-blue active');
+          });
+        });
+    </script>
+
+    <script>
+        var tdList = document.querySelectorAll('#state');                   // 获取所有id为state的td标签
+
+        for (var i = 0; i < tdList.length; i++) {// 遍历标签列表
+            if (tdList[i].innerHTML === 'running') // 判断标签的内容
+                tdList[i].innerHTML = '<span class="layui-badge-dot layui-bg-green"></span>'; // 替换标签的内容
+            else if (tdList[i].innerHTML === 'exited')
+                tdList[i].innerHTML = '<span class="layui-badge-dot"></span>'; // 替换标签的内容
+            else
+                tdList[i].innerHTML = '<span class="layui-badge-dot layui-bg-gray"></span>'; // 替换标签的内容
+        }
+    </script>
+
+    <script>
+        var cells = document.querySelectorAll('td.runTime');     // 获取所有类名为"runTime"的单元格
+        for (var i = 0; i < cells.length; i++) {                   // 遍历单元格列表
+            var timestamp = cells[i].textContent;                    // 获取时间戳
+            var date = new Date(timestamp * 1000);                   // 将时间戳转换为Date对象
+            cells[i].textContent = date.toLocaleString();                       // 替换原始内容为日期字符串
+        }
+    </script>
+
+    <script>
+        var start = document.getElementById('start');
+        start.onclick = function () {
+            var activeElements = document.getElementsByClassName("layui-bg-blue active");
+            num = activeElements[0].getAttribute("data-index");
+            start_container(num);
+        }
+
+        var stop = document.getElementById('stop');
+        stop.onclick = function () {
+            var activeElements = document.getElementsByClassName("layui-bg-blue active");
+            num = activeElements[0].getAttribute("data-index");
+            stop_container(num);
+        }
+
+        var update = document.getElementById('update');
+        update.onclick = function () {
+            var activeElements = document.getElementsByClassName("layui-bg-blue active");
+            num = activeElements[0].getAttribute("data-index");
+            stop_container(num);
+            var name = activeElements[0].querySelector('td[data-field="name"]').textContent;
+            var new_name = name + '_old';
+            rename_container(num, new_name);
+        }
+
+        function start_container(num) {
+            var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+            var xhr = new XMLHttpRequest();
+            var url = "start_container/";
+            var method = "POST";
+            xhr.open(method, url, true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            var data = {num: num};
+            var params = JSON.stringify(data);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        console.log(response);
+                        if (response['status'] === 'success'){
+                            layer.msg('启动成功',{time: 0});
+                            delayedReload();
+                        }else if (response['status'] === 'failed'){
+                            layer.msg('启动失败');
+                            delayedReload();
+                        }
+                    } catch (error) {
+                        console.error("Failed to parse JSON response:", error);
+                        delayedReload();
+                    }
+                }
+            };
+            layer.msg('正在启动容器',{time: 0});
+            setTimeout(function() {
+               xhr.send(params);
+            }, 1500); // 暂缓3秒执行xhr.send(params)
+        }
+
+        function stop_container(num) {
+            var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+            var xhr = new XMLHttpRequest();
+            var url = "stop_container/";
+            var method = "POST";
+            xhr.open(method, url, true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            var data = {num: num};
+            var params = JSON.stringify(data);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        console.log(response);
+                        if (response['status'] === 'success'){
+                            layer.msg('更新成功',{time: 0});
+                            delayedReload();
+                        }else if (response['status'] === 'failed'){
+                            layer.msg('更新失败');
+                            delayedReload();
+                        }
+                    } catch (error) {
+                        console.error("Failed to parse JSON response:", error);
+                        delayedReload();
+                    }
+                }
+            };
+            layer.msg('正在更新容器',{time: 0});
+            setTimeout(function() {
+               xhr.send(params);
+            }, 1500); // 暂缓3秒执行xhr.send(params)
+        }
+
+        function rename_container(num, new_name) {
+            var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+            var xhr = new XMLHttpRequest();
+            var url = "rename_container/";
+            var method = "POST";
+            xhr.open(method, url, true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            var data = {num: num, new_name: new_name};
+            var params = JSON.stringify(data);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        console.log(response);
+                        if (response['status'] === 'success'){
+                            layer.msg('更新成功',{time: 0});
+                            delayedReload();
+                        }else if (response['status'] === 'failed'){
+                            layer.msg('更新失败');
+                            delayedReload();
+                        }
+                    } catch (error) {
+                        console.error("Failed to parse JSON response:", error);
+                        delayedReload();
+                    }
+                }
+            };
+            layer.msg('正在更新容器',{time: 0});
+            setTimeout(function() {
+               xhr.send(params);
+            }, 1500); // 暂缓3秒执行xhr.send(params)
+        }
+
+        function delayedReload() {
+            setTimeout(function() {
+                location.reload();
+            }, 2500); // 延迟3秒钟（或3000毫秒）
+        }
+    </script>
+{% endblock %}
+
+

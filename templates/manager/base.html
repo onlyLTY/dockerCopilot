@@ -1,0 +1,56 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Example</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'layui/css/layui.css' %}">
+    {% csrf_token %}
+</head>
+<body>
+    <div class="layui-layout layui-layout-admin">
+        <div class="layui-header">
+            <!-- 头部区域（可配合layui 已有的水平导航） -->
+            <div class="layui-logo">layout demo</div>
+        </div>
+
+        <div class="layui-side layui-bg-black">
+            <div class="layui-side-scroll">
+                <!-- 左侧导航区域（可配合layui已有的垂直导航） -->
+                <ul class="layui-nav layui-nav-tree" lay-filter="test">
+                    <li class="layui-nav-item layui-this"><a href="javascript:">容器</a></li>
+                    <li class="layui-nav-item"><a href="javascript:">镜像</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="layui-body" style="padding-left: 5px;">
+            <!-- 内容主体区域 -->
+            <div class="layui-row">
+                <div class="layui-col-md12" style="padding: 5px;">
+                    <!-- 按键区域 -->
+                    {% block button_region %}{% endblock %}
+                </div>
+                <hr>
+                {% block data_region %}
+
+                {% endblock %}
+            </div>
+        </div>
+
+        <div class="layui-footer">
+            <!-- 底部固定区域 -->
+            <div class="layui-col-lg-offset10">
+                <!-- 底部数据显示 -->
+                {% block footer_region %}
+                    <span>底部数据显示</span>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
