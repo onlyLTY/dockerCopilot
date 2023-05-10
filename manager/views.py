@@ -78,7 +78,8 @@ def start_container(request):
     r = requests.post("http://" + nas_ip + ":5055/docker/api/endpoints/" + request.session['endpointsId'] +
                       "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "/start",
                       headers=header)
-    print(r.status_code)
+    print("start_container" + str(r.status_code))
+    print("start_container" + r.text)
     if r.status_code == 204:
         return JsonResponse({"status": "start_success"})
     else:

@@ -1,11 +1,15 @@
 {% extends 'manager/base.html' %}
 {% load static %}
 
+{% block head_region %}
+    <title>一键升级</title>
+{% endblock %}
+
 {% block button_region %}
     <button id="start" type="button" class="layui-btn layui-btn-sm layui-btn-normal">启动</button>
     <button id="stop" type="button" class="layui-btn layui-btn-sm layui-btn-normal">停止</button>
     <button id="update" type="button" class="layui-btn layui-btn-sm layui-btn-normal">更新</button>
-    <button type="button" class="layui-btn layui-btn-sm layui-btn-normal">更换镜像</button>
+    <button id="change_tag" type="button" class="layui-btn layui-btn-sm layui-btn-normal">更换镜像</button>
 {% endblock %}
 
 {#{% block data_region %}#}
@@ -107,7 +111,13 @@
         stop.onclick = function () {
             var activeElements = document.getElementsByClassName("layui-bg-blue active");
             num = activeElements[0].getAttribute("data-index");
-            stop_container(num);
+            stop_container(num)
+                .then(() => {
+                    delayedReload();
+                })
+                .catch((error) => {
+                    console.error("An error occurred:", error);
+                });
         }
 
         var update = document.getElementById('update');
@@ -119,6 +129,21 @@
                 .catch((error) => {
                     console.error("An error occurred:", error);
                 });
+        }
+
+        var change_tag = document.getElementById('change_tag');
+        change_tag.onclick = function () {
+            layer.prompt({title: '请输入 镜像名:tag', formType: 0}, function(image_name_and_tag, index){
+                layer.close(index);
+                update_container(image_name_and_tag, true)
+                    .then(() => {
+                        delayedReload();
+                    })
+                    .catch((error) => {
+                        console.error("An error occurred:", error);
+                    });
+            });
+
         }
 
         async function update_container(image_name_and_tag = "", change_image_name_and_tag = false) {
@@ -165,7 +190,7 @@
                                 layer.msg('启动容器成功',{time: 0});
                                 resolve();
                             }else if (response['status'] === 'start_failed'){
-                                layer.msg('启动容器失败');
+                                layer.alert('启动容器失败', {icon: 5});
                                 reject();
                             }
                         } catch (error) {
@@ -201,7 +226,7 @@
                                 layer.msg('停止容器成功',{time: 0});
                                 resolve();
                             }else if (response['status'] === 'stop_failed'){
-                                layer.msg('停止容器失败');
+                                layer.alert('停止容器失败', {icon: 5});
                                 reject();
                             }
                         } catch (error) {
@@ -239,7 +264,7 @@
                                 layer.msg('重命名旧容器成功',{time: 0});
                                 resolve();
                             }else if (response['status'] === 'rename_failed'){
-                                layer.msg('重命名旧容器失败');
+                                layer.alert('重命名旧容器失败', {icon: 5});
                                 reject();
                             }
                         } catch (error) {
@@ -275,7 +300,7 @@
                                 layer.msg('拉取新镜像成功',{time: 0});
                                 resolve();
                             }else if (response['status'] === 'get_new_image_failed'){
-                                layer.msg('拉取新镜像失败');
+                                layer.alert('拉取新镜像失败', {icon: 5});
                                 reject();
                             }
                         } catch (error) {
@@ -312,7 +337,7 @@
                                 layer.msg('创建新容器成功',{time: 0});
                                 resolve();
                             }else if (response['status'] === 'create_failed'){
-                                layer.msg('创建新容器失败');
+                                layer.alert('创建新容器失败', {icon: 5});
                                 reject();
                             }
                         } catch (error) {
@@ -349,7 +374,7 @@
                                 layer.msg('删除旧容器成功',{time: 0});
                                 resolve();
                             }else if (response['status'] === 'delete_failed'){
-                                layer.msg('删除旧容器失败');
+                                layer.alert('删除旧容器失败', {icon: 5});
                                 reject();
                             }
                         } catch (error) {
@@ -368,7 +393,8 @@
         function delete_confirm(del_num) {
             return new Promise((resolve, reject) => {
                 layer.confirm('是否删除旧容器？', {
-                    btn: ['是','否'] //按钮
+                    btn: ['是','否'], //按钮
+                    skin: 'layui-layer-molv'
                 },async function(){
                     await delete_container(del_num);
                     resolve();

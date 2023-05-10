@@ -4,7 +4,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Example</title>
+    {% block head_region %}
+
+    {% endblock %}
     <link rel="stylesheet" type="text/css" href="{% static 'layui/css/layui.css' %}">
     {% csrf_token %}
 </head>
@@ -12,7 +14,7 @@
     <div class="layui-layout layui-layout-admin">
         <div class="layui-header">
             <!-- 头部区域（可配合layui 已有的水平导航） -->
-            <div class="layui-logo">layout demo</div>
+            <div class="layui-logo">oneKey Update</div>
         </div>
 
         <div class="layui-side layui-bg-black">
