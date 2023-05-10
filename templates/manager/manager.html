@@ -64,11 +64,6 @@
             var table = layui.table;
             //监听行单击事件（双击事件为：rowDouble）
             table.on('row(container_table)', function(obj){
-            var data = obj.data;
-            layer.alert(JSON.stringify(data), {
-              title: '当前行数据：'
-            });
-
             //标注选中样式
             obj.tr.addClass('layui-bg-blue active').siblings().removeClass('layui-bg-blue active');
           });
