@@ -54,7 +54,7 @@ def get_container_list(request):
         "http://" + nas_ip + ":5055/docker/api/endpoints/" + request.session['endpointsId'] + "/docker/containers/json",
         headers=header, params=p)
     container_list = r.json()
-    print(container_list)
+    # print(container_list)
     return container_list
 
 
@@ -67,7 +67,6 @@ def start_container(request):
     else:
         return JsonResponse({"error": "Invalid request method"})
     num = int(num)
-    p = {"all": "true"}
     nas_ip = request.session['nasIp']
     cookie = request.session['cookie']
     jwt = request.session['jwt']
@@ -81,9 +80,9 @@ def start_container(request):
                       headers=header)
     print(r.status_code)
     if r.status_code == 204:
-        return JsonResponse({"status": "success"})
+        return JsonResponse({"status": "start_success"})
     else:
-        return JsonResponse({"status": "failed"})
+        return JsonResponse({"status": "start_failed"})
 
 
 def stop_container(request):
@@ -108,18 +107,16 @@ def stop_container(request):
                       headers=header)
     print(r.status_code)
     if r.status_code == 204:
-        return JsonResponse({"status": "success"})
+        return JsonResponse({"status": "stop_success"})
     else:
-        return JsonResponse({"status": "failed"})
+        return JsonResponse({"status": "stop_failed"})
 
 
-def get_containers_info(self, num):
-    print(self.containers_list[num]['Id'].replace("sha256:", ""))
-    r = requests.get("http://" + self.nas_ip + ":5055/docker/api/endpoints/" + str(self.endpointsId) +
-                     "/docker/containers/" + self.containers_list[num]['Id'].replace("sha256:", "") + "/json"
-                     , headers=self.header)
+def get_containers_info(nas_ip, header, endpointsId, containers_list, num):
+    r = requests.get("http://" + nas_ip + ":5055/docker/api/endpoints/" + endpointsId +
+                     "/docker/containers/" + containers_list[num]['Id'].replace("sha256:", "") + "/json"
+                     , headers=header)
     info = r.json()
-    print(info)
     return info
 
 
@@ -147,9 +144,108 @@ def rename_container(request):
                       new_name, headers=header)
     print(r.text)
     if r.status_code == 204:
-        return JsonResponse({"status": "success"})
+        return JsonResponse({"status": "rename_success"})
     else:
-        return JsonResponse({"status": "failed"})
+        return JsonResponse({"status": "rename_failed"})
+
+
+def get_new_image(request):
+    if request.method == "POST":
+        # 从POST请求体中获取JSON数据并解析
+        data = json.loads(request.body.decode("utf-8"))
+        # 从JSON数据中获取名为“num”的值
+        image_name_and_tag = data.get("image_name_and_tag")
+    else:
+        return JsonResponse({"error": "Invalid request method"})
+    nas_ip = request.session['nasIp']
+    cookie = request.session['cookie']
+    jwt = request.session['jwt']
+    header = {
+        'Cookie': cookie,
+        "Authorization": jwt
+    }
+    print("start get new image")
+    r = requests.post("http://" + nas_ip + ":5055/docker/api/endpoints/" + request.session['endpointsId'] +
+                      "/docker/images/create?fromImage=" + image_name_and_tag, headers=header)
+    print("get new image status code: " + str(r.status_code))
+    if r.status_code == 200:
+        print("success")
+        return JsonResponse({"status": "get_new_image_success"})
+    else:
+        return JsonResponse({"status": "get_new_image_failed"})
+
+
+def create_container(request):
+    if request.method == "POST":
+        # 从POST请求体中获取JSON数据并解析
+        data = json.loads(request.body.decode("utf-8"))
+        # 从JSON数据中获取名为“num”的值
+        num = data.get("num")
+        container_name = data.get("name")
+        image_name_and_tag = data.get("image_name_and_tag")
+    else:
+        return JsonResponse({"error": "Invalid request method"})
+    num = int(num)
+    nas_ip = request.session['nasIp']
+    cookie = request.session['cookie']
+    jwt = request.session['jwt']
+    header = {
+        'Cookie': cookie,
+        "Authorization": jwt
+    }
+    body = {}
+    container_info = get_containers_info(nas_ip, header,
+                                         request.session['endpointsId'], get_container_list(request), num)
+    print("---------------------------------")
+    print(container_info)
+    for i in container_info['Config']:
+        body[i] = container_info['Config'][i]
+    body['HostConfig'] = container_info['HostConfig']
+    body['name'] = container_name
+    body['NetworkingConfig'] = {}
+    body['NetworkingConfig']['EndpointsConfig'] = {}
+    body['NetworkingConfig']['EndpointsConfig']['bridge'] = \
+        container_info['NetworkSettings']['Networks']['bridge']
+    print("---------------------------------")
+    body['Image'] = image_name_and_tag
+    print(body['Image'])
+    print("---------------------------------")
+    r = requests.post("http://" + nas_ip + ":5055/docker/api/endpoints/" + request.session['endpointsId'] +
+                      "/docker/containers/create?name=" + container_name, headers=header, json=body)
+    print("create:" + str(r.status_code))
+    print("create:" + r.text)
+    if r.status_code == 200:
+        return JsonResponse({"status": "create_success"})
+    else:
+        return JsonResponse({"status": "create_failed"})
+
+
+def delete_container(request):
+    if request.method == "POST":
+        # 从POST请求体中获取JSON数据并解析
+        data = json.loads(request.body.decode("utf-8"))
+        # 从JSON数据中获取名为“num”的值
+        num = data.get("num")
+    else:
+        return JsonResponse({"error": "Invalid request method"})
+    num = int(num)
+    nas_ip = request.session['nasIp']
+    cookie = request.session['cookie']
+    jwt = request.session['jwt']
+    header = {
+        'Cookie': cookie,
+        "Authorization": jwt
+    }
+    print("delNum:" + str(num))
+    container_list = get_container_list(request)
+    r = requests.delete("http://" + nas_ip + ":5055/docker/api/endpoints/" + request.session['endpointsId'] +
+                        "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "?v=1",
+                        headers=header)
+    print("delete:" + r.text)
+    if r.status_code == 204:
+        return JsonResponse({"status": "delete_success"})
+    else:
+        return JsonResponse({"status": "delete_failed"})
 
 
 class DockerUpdate:
@@ -179,7 +275,7 @@ class DockerUpdate:
         print(r.status_code)
         self.endpointsId = info[0]['Id']
 
-    def get_docker_info(self):
+    def get_containers_list(self):
         p = {"all": "true"}
         r = requests.get("http://" + self.nas_ip + ":5055/docker/api/endpoints/" + str(self.endpointsId) +
                          "/docker/containers/json", headers=self.header, params=p)
