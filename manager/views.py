@@ -205,8 +205,12 @@ def create_container(request):
     body['name'] = container_name
     body['NetworkingConfig'] = {}
     body['NetworkingConfig']['EndpointsConfig'] = {}
-    body['NetworkingConfig']['EndpointsConfig']['bridge'] = \
-        container_info['NetworkSettings']['Networks']['bridge']
+    if 'bridge' in container_info['NetworkSettings']['Networks']:
+        body['NetworkingConfig']['EndpointsConfig']['bridge'] = \
+            container_info['NetworkSettings']['Networks']['bridge']
+    if 'host' in container_info['NetworkSettings']['Networks']:
+        body['NetworkingConfig']['EndpointsConfig']['host'] = \
+            container_info['NetworkSettings']['Networks']['host']
     print("---------------------------------")
     body['Image'] = image_name_and_tag
     print(body['Image'])
