@@ -13,11 +13,11 @@
 {% endblock %}
 
 {#{% block data_region %}#}
-{#    <table class="layui-hide" id="test" lay-filter="test"></table>#}
+{#    <table class="layui-hide" id="container_table" lay-filter="container_table"></table>#}
 {#{% endblock %}#}
 
 {% block data_region %}
-    <table class="layui-table" lay-skin="line" lay-data="{limit: Number.MAX_VALUE, id:'test'}" lay-filter="test">
+    <table class="layui-table" id="container_table" lay-skin="line" lay-data="{limit: Number.MAX_VALUE, id:'container_table'}" lay-filter="container_table">
         <colgroup>
             <col style="width: 70px">
         </colgroup>
@@ -51,6 +51,10 @@
     </table>
 {% endblock %}
 
+{% block footer_region %}
+    <span> <span id="rowCountDisplay"></span> 个容器</span>
+{% endblock %}
+
 {% block scripts %}
     <script src="{% static 'layui/layui.js' %}"></script>
     <!-- 具体的 JavaScript 代码 -->
@@ -59,7 +63,7 @@
         layui.use('table', function(){
             var table = layui.table;
             //监听行单击事件（双击事件为：rowDouble）
-            table.on('row(test)', function(obj){
+            table.on('row(container_table)', function(obj){
             var data = obj.data;
             layer.alert(JSON.stringify(data), {
               title: '当前行数据：'
@@ -412,6 +416,12 @@
                 location.reload();
             }, 2500); // 延迟3秒钟（或3000毫秒）
         }
+    </script>
+
+    <script>
+        const table = document.getElementById('container_table');
+        const rowCount = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr').length;
+        document.getElementById('rowCountDisplay').innerText = rowCount;
     </script>
 {% endblock %}
 

@@ -43,16 +43,17 @@
 
         <div class="layui-footer">
             <!-- 底部固定区域 -->
-            <div class="layui-col-lg-offset10">
+            <div class="layui-col-lg-offset11">
                 <!-- 底部数据显示 -->
                 {% block footer_region %}
-                    <span>底部数据显示</span>
+
                 {% endblock %}
             </div>
         </div>
     </div>
 
+{% block scripts %}
 
-{% block scripts %}{% endblock %}
+{% endblock %}
 </body>
 </html>
