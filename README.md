@@ -1,6 +1,10 @@
 # oneKeyUpdate
 极空间一键更新容器
+## 开发环境
 
+-----
+
+go版本：1.20+
 ## Highlights
 
 ------
