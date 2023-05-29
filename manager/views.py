@@ -118,6 +118,7 @@ def get_containers_info(nas_ip, header, endpointsId, containers_list, num):
                      "/docker/containers/" + containers_list[num]['Id'].replace("sha256:", "") + "/json"
                      , headers=header)
     info = r.json()
+    print(r.status_code)
     return info
 
 
@@ -215,8 +216,8 @@ def create_container(request):
     body['Image'] = image_name_and_tag
     print(body['Image'])
     print("---------------------------------")
-    r = requests.post("http://" + nas_ip + ":5055/docker/api/endpoints/" + request.session['endpointsId'] +
-                      "/docker/containers/create?name=" + container_name, headers=header, json=body)
+    r = requests.post("http://" + nas_ip + ":5055/settings?create_container=true&endPointId=" + request.session['endpointsId'] +
+                      "&name=" + container_name, headers=header, json=body)
     print("create:" + str(r.status_code))
     print("create:" + r.text)
     if r.status_code == 200:
