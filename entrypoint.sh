@@ -34,4 +34,9 @@ else
     echo "程序自动升级已关闭，如需自动升级请在创建容器时设置环境变量：AUTO_UPDATE=true"
 fi
 # 启动主程序
-exec python /app/manage.py runserver 0.0.0.0:12712
+# 迁移数据库
+python /app/manage.py migrate
+
+# 添加定时任务
+python /app/manage.py crontab add
+python /app/manage.py runserver 0.0.0.0:12712
