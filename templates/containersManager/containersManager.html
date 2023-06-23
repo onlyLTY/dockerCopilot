@@ -1,8 +1,13 @@
-{% extends 'manager/base.html' %}
+{% extends 'base/base.html' %}
 {% load static %}
 
 {% block head_region %}
     <title>一键升级</title>
+{% endblock %}
+
+{% block left_region %}
+    <li class="layui-nav-item layui-this"><a href="{% url 'containers_manager:containersManager' %}">容器</a></li>
+    <li class="layui-nav-item"><a href="{% url 'images_manager:imagesManager' %}">镜像</a></li>
 {% endblock %}
 
 {% block button_region %}
@@ -17,7 +22,8 @@
 {#{% endblock %}#}
 
 {% block data_region %}
-    <table class="layui-table" id="container_table" lay-skin="line" lay-data="{limit: Number.MAX_VALUE, id:'container_table'}" lay-filter="container_table">
+    <table class="layui-table" id="container_table" lay-skin="line"
+           lay-data="{limit: Number.MAX_VALUE, id:'container_table'}" lay-filter="container_table">
         <colgroup>
             <col style="width: 70px">
         </colgroup>
@@ -27,7 +33,7 @@
             <th lay-data="{field:'status', width:70}">状态</th>
             <th lay-data="{field:'name'}">容器名称</th>
             <th lay-data="{field:'image_and_tag'}">使用镜像</th>
-            <th lay-data="{field:'runTime'}">创建时间</th>
+            <th lay-data="{field:'createTime'}">创建时间</th>
             <th lay-data="{field:'upTime'}">运行时间</th>
         </tr>
         </thead>
@@ -37,9 +43,13 @@
                 {% with name=container.Names.0|slice:"1:" %}
                     <tr>
                         <td id="state">{{ container.State }}</td>
-                        <td class="col-auto">{{ name }}</td>
-                        <td>{{ container.Image }}</td>
-                        <td class="runTime">{{ container.Created }}</td>
+                        <td class="col-auto">{{ name }}
+                            {% if container.update %}
+                                <span class="layui-badge layui-bg-blue">有更新</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ container.imageNameAndTag }}</td>
+                        <td class="createTime">{{ container.Created }}</td>
                         <td>{{ container.Status }}</td>
                     </tr>
                 {% endwith %}
@@ -60,13 +70,13 @@
     <!-- 具体的 JavaScript 代码 -->
 
     <script>
-        layui.use('table', function(){
+        layui.use('table', function () {
             var table = layui.table;
             //监听行单击事件（双击事件为：rowDouble）
-            table.on('row(container_table)', function(obj){
-            //标注选中样式
-            obj.tr.addClass('layui-bg-blue active').siblings().removeClass('layui-bg-blue active');
-          });
+            table.on('row(container_table)', function (obj) {
+                //标注选中样式
+                obj.tr.addClass('layui-bg-blue active').siblings().removeClass('layui-bg-blue active');
+            });
         });
     </script>
 
@@ -84,7 +94,7 @@
     </script>
 
     <script>
-        var cells = document.querySelectorAll('td.runTime');     // 获取所有类名为"runTime"的单元格
+        var cells = document.querySelectorAll('td.createTime');     // 获取所有类名为"createTime"的单元格
         for (var i = 0; i < cells.length; i++) {                   // 遍历单元格列表
             var timestamp = cells[i].textContent;                    // 获取时间戳
             var date = new Date(timestamp * 1000);                   // 将时间戳转换为Date对象
@@ -132,7 +142,7 @@
 
         var change_tag = document.getElementById('change_tag');
         change_tag.onclick = function () {
-            layer.prompt({title: '请输入 镜像名:tag', formType: 0}, function(image_name_and_tag, index){
+            layer.prompt({title: '请输入 镜像名:tag', formType: 0}, function (image_name_and_tag, index) {
                 layer.close(index);
                 update_container(image_name_and_tag, true)
                     .then(() => {
@@ -180,15 +190,15 @@
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {num: num};
                 var params = JSON.stringify(data);
-                xhr.onreadystatechange = function() {
+                xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
                         try {
                             var response = JSON.parse(xhr.responseText);
                             console.log(response);
-                            if (response['status'] === 'start_success'){
-                                layer.msg('启动容器成功',{time: 0});
+                            if (response['status'] === 'start_success') {
+                                layer.msg('启动容器成功', {time: 0});
                                 resolve();
-                            }else if (response['status'] === 'start_failed'){
+                            } else if (response['status'] === 'start_failed') {
                                 layer.alert('启动容器失败', {icon: 5});
                                 reject();
                             }
@@ -198,11 +208,11 @@
                         }
                     }
                 };
-                layer.msg('正在启动容器',{time: 0});
-                setTimeout(function() {
-                   xhr.send(params);
+                layer.msg('正在启动容器', {time: 0});
+                setTimeout(function () {
+                    xhr.send(params);
                 }, 1500); // 暂缓3秒执行xhr.send(params)
-                });
+            });
         }
 
         function stop_container(num) {
@@ -216,15 +226,15 @@
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {num: num};
                 var params = JSON.stringify(data);
-                xhr.onreadystatechange = function() {
+                xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
                         try {
                             var response = JSON.parse(xhr.responseText);
                             console.log(response);
-                            if (response['status'] === 'stop_success'){
-                                layer.msg('停止容器成功',{time: 0});
+                            if (response['status'] === 'stop_success') {
+                                layer.msg('停止容器成功', {time: 0});
                                 resolve();
-                            }else if (response['status'] === 'stop_failed'){
+                            } else if (response['status'] === 'stop_failed') {
                                 layer.alert('停止容器失败', {icon: 5});
                                 reject();
                             }
@@ -234,9 +244,9 @@
                         }
                     }
                 };
-                layer.msg('正在停止容器',{time: 0});
-                setTimeout(function() {
-                   xhr.send(params);
+                layer.msg('正在停止容器', {time: 0});
+                setTimeout(function () {
+                    xhr.send(params);
                 }, 1500); // 暂缓3秒执行xhr.send(params)
             });
 
@@ -253,16 +263,16 @@
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {num: num, new_name: new_name};
                 var params = JSON.stringify(data);
-                xhr.onreadystatechange = function() {
+                xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
                         try {
                             var response = JSON.parse(xhr.responseText);
                             console.log(response);
-                            if (response['status'] === 'rename_success'){
+                            if (response['status'] === 'rename_success') {
                                 console.log('重命名成功');
-                                layer.msg('重命名旧容器成功',{time: 0});
+                                layer.msg('重命名旧容器成功', {time: 0});
                                 resolve();
-                            }else if (response['status'] === 'rename_failed'){
+                            } else if (response['status'] === 'rename_failed') {
                                 layer.alert('重命名旧容器失败', {icon: 5});
                                 reject();
                             }
@@ -272,9 +282,9 @@
                         }
                     }
                 };
-                layer.msg('正在重命名旧容器',{time: 0});
-                setTimeout(function() {
-                   xhr.send(params);
+                layer.msg('正在重命名旧容器', {time: 0});
+                setTimeout(function () {
+                    xhr.send(params);
                 }, 1500); // 暂缓3秒执行xhr.send(params)
             });
         }
@@ -283,22 +293,22 @@
             return new Promise((resolve, reject) => {
                 var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
-                var url = "get_new_image/";
+                var url = "/imagesManager/get_new_image/";
                 var method = "POST";
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {image_name_and_tag: image_name_and_tag};
                 var params = JSON.stringify(data);
-                xhr.onreadystatechange = function() {
+                xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
                         try {
                             var response = JSON.parse(xhr.responseText);
                             console.log(response);
-                            if (response['status'] === 'get_new_image_success'){
-                                layer.msg('拉取新镜像成功',{time: 0});
+                            if (response['status'] === 'get_new_image_success') {
+                                layer.msg('拉取新镜像成功', {time: 0});
                                 resolve();
-                            }else if (response['status'] === 'get_new_image_failed'){
+                            } else if (response['status'] === 'get_new_image_failed') {
                                 layer.alert('拉取新镜像失败', {icon: 5});
                                 reject();
                             }
@@ -308,15 +318,15 @@
                         }
                     }
                 };
-                layer.msg('正在拉取新镜像',{time: 0});
-                setTimeout(function() {
-                   xhr.send(params);
+                layer.msg('正在拉取新镜像', {time: 0});
+                setTimeout(function () {
+                    xhr.send(params);
                 }, 1500); // 暂缓3秒执行xhr.send(params)
             });
 
         }
 
-        function create_container(num, name, image_name_and_tag){
+        function create_container(num, name, image_name_and_tag) {
             return new Promise((resolve, reject) => {
                 var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
@@ -325,17 +335,17 @@
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                var data = {num: num, name: name,image_name_and_tag: image_name_and_tag};
+                var data = {num: num, name: name, image_name_and_tag: image_name_and_tag};
                 var params = JSON.stringify(data);
-                xhr.onreadystatechange = function() {
+                xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
                         try {
                             var response = JSON.parse(xhr.responseText);
                             console.log(response);
-                            if (response['status'] === 'create_success'){
-                                layer.msg('创建新容器成功',{time: 0});
+                            if (response['status'] === 'create_success') {
+                                layer.msg('创建新容器成功', {time: 0});
                                 resolve();
-                            }else if (response['status'] === 'create_failed'){
+                            } else if (response['status'] === 'create_failed') {
                                 layer.alert('创建新容器失败', {icon: 5});
                                 reject();
                             }
@@ -345,9 +355,9 @@
                         }
                     }
                 };
-                layer.msg('正在创建新容器',{time: 0});
-                setTimeout(function() {
-                   xhr.send(params);
+                layer.msg('正在创建新容器', {time: 0});
+                setTimeout(function () {
+                    xhr.send(params);
                 }, 1500); // 暂缓3秒执行xhr.send(params)
             });
 
@@ -364,15 +374,15 @@
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {num: num};
                 var params = JSON.stringify(data);
-                xhr.onreadystatechange = function() {
+                xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
                         try {
                             var response = JSON.parse(xhr.responseText);
                             console.log(response);
-                            if (response['status'] === 'delete_success'){
-                                layer.msg('删除旧容器成功',{time: 0});
+                            if (response['status'] === 'delete_success') {
+                                layer.msg('删除旧容器成功', {time: 0});
                                 resolve();
-                            }else if (response['status'] === 'delete_failed'){
+                            } else if (response['status'] === 'delete_failed') {
                                 layer.alert('删除旧容器失败', {icon: 5});
                                 reject();
                             }
@@ -382,9 +392,9 @@
                         }
                     }
                 };
-                layer.msg('正在删除旧容器',{time: 0});
-                setTimeout(function() {
-                   xhr.send(params);
+                layer.msg('正在删除旧容器', {time: 0});
+                setTimeout(function () {
+                    xhr.send(params);
                 }, 1500); // 暂缓3秒执行xhr.send(params)
             });
         }
@@ -392,12 +402,12 @@
         function delete_confirm(del_num) {
             return new Promise((resolve, reject) => {
                 layer.confirm('是否删除旧容器？', {
-                    btn: ['是','否'], //按钮
+                    btn: ['是', '否'], //按钮
                     skin: 'layui-layer-molv'
-                },async function(){
+                }, async function () {
                     await delete_container(del_num);
                     resolve();
-                }, function(){
+                }, function () {
                     layer.msg('更新完成', {
                         time: 2000, //20s后自动关闭
                     });
@@ -407,7 +417,7 @@
         }
 
         function delayedReload() {
-            setTimeout(function() {
+            setTimeout(function () {
                 location.reload();
             }, 2500); // 延迟3秒钟（或3000毫秒）
         }
