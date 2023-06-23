@@ -103,7 +103,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 CRONJOBS = [
-    ('*/5 * * * *', 'imagesManager.tasks.check_update')  # 每5分钟运行一次 check_update 函数
+    ('*/1 * * * *', 'imagesManager.tasks.check_update', '>> /var/log/cron.log 2>&1')  # 每5分钟运行一次 check_update 函数
 ]
 
 # Internationalization
