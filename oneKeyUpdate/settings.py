@@ -102,9 +102,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# 使用 django-crontab 定时每 5 分钟运行一次
 CRONJOBS = [
-    ('*/1 * * * *', 'imagesManager.tasks.check_update', '>> /var/log/cron.log 2>&1')  # 每5分钟运行一次 check_update 函数
+    ('*/5 * * * *', 'django.core.management.call_command', ['check_update_command']),
 ]
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
