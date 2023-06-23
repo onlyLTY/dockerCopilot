@@ -39,4 +39,5 @@ python /app/manage.py migrate
 
 # 添加定时任务
 python /app/manage.py crontab add
+python /app/manage.py crontab show
 python /app/manage.py runserver 0.0.0.0:12712

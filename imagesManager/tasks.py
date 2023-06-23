@@ -7,6 +7,7 @@ from .models import ImageInfo
 
 
 def check_update():
+    print("定时任务开始")
     jwt = get_jwt()
     endpoints_id = get_endpoints_id(jwt)
     container_list = get_container_list(jwt, endpoints_id)
