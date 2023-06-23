@@ -1,0 +1,2 @@
+*/5 * * * * root python manage.py check_update_command >> /var/log/cron.log 2>&1
+
