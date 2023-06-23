@@ -9,5 +9,4 @@ urlpatterns = [
     path("rename_container/", views.rename_container, name="rename_container"),
     path("create_container/", views.create_container, name="create_container"),
     path("delete_container/", views.delete_container, name="delete_container"),
-    path("delete_image/", views.delete_image, name="delete_image"),
 ]

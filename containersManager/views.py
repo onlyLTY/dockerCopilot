@@ -225,31 +225,3 @@ def delete_container(request):
         return JsonResponse({"status": "delete_success"})
     else:
         return JsonResponse({"status": "delete_failed"})
-
-
-def delete_image(request):
-    if request.method == "POST":
-        # 从POST请求体中获取JSON数据并解析
-        data = json.loads(request.body.decode("utf-8"))
-        # 从JSON数据中获取名为“num”的值
-        num = data.get("num")
-    else:
-        return JsonResponse({"error": "Invalid request method"})
-    num = int(num)
-    jwt = request.session['jwt']
-    header = {
-        "Authorization": jwt
-    }
-    print("delNum:" + str(num))
-    images_list = get_images_list(request)
-    r = requests.delete("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
-                        "/docker/images/" + images_list[num]['Id'].replace("sha256:", ""),
-                        headers=header)
-    print("delete:" + r.text)
-    print("deleteCode:" + r.status_code.__str__())
-    if r.status_code == 204:
-        return JsonResponse({"status": "delete_success"})
-    elif r.status_code == 409:
-        return JsonResponse({"status": "can_not_delete"})
-    else:
-        return JsonResponse({"status": "delete_failed"})
