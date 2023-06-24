@@ -65,12 +65,12 @@ def get_new_image(request):
     header = {
         "Authorization": jwt
     }
-    print("start get new image")
+    # print("start get new image")
     r = requests.post("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
                       "/docker/images/create?fromImage=" + image_name_and_tag, headers=header)
-    print("get new image status code: " + str(r.status_code))
+    # print("get new image status code: " + str(r.status_code))
     if r.status_code == 200:
-        print("success")
+        # print("success")
         return JsonResponse({"status": "get_new_image_success"})
     else:
         return JsonResponse({"status": "get_new_image_failed"})
@@ -129,13 +129,13 @@ def delete_image(request):
     header = {
         "Authorization": jwt
     }
-    print("delNum:" + str(num))
+    # print("delNum:" + str(num))
     images_list = get_images_list(request)
     r = requests.delete("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
                         "/docker/images/" + images_list[num]['Id'].replace("sha256:", ""),
                         headers=header)
-    print("delete:" + r.text)
-    print("deleteCode:" + r.status_code.__str__())
+    # print("delete:" + r.text)
+    # print("deleteCode:" + r.status_code.__str__())
     if r.status_code == 200:
         return JsonResponse({"status": "delete_success"})
     elif r.status_code == 409:
