@@ -42,5 +42,8 @@ service cron status
 # 添加定时任务
 # python /app/manage.py crontab add
 # python /app/manage.py crontab show
-python /app/update/update.py &
+# python /app/update/update.py &
+cron
+tail -f /var/log/cron.log &
+/startup.sh
 python /app/manage.py runserver 0.0.0.0:12712
