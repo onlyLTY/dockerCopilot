@@ -164,12 +164,12 @@
                     await stop_container(num);
                 var name = activeElements[0].querySelector('td[data-field="name"]').textContent.trim().split('\n')[0];
                 var new_name = name + '_old';
-                await rename_container(num, new_name);
                 if (!change_image_name_and_tag) {
                     image_name_and_tag = activeElements[0].querySelector('td[data-field="image_and_tag"]').textContent;
                 }
                 console.log(image_name_and_tag)
                 await get_new_image(image_name_and_tag);
+                await rename_container(num, new_name);
                 await create_container(num, name, image_name_and_tag);
                 await start_container(0);
                 var del_num = parseInt(num) + 1;
