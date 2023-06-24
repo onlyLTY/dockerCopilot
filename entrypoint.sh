@@ -36,7 +36,10 @@ fi
 # 启动主程序
 # 迁移数据库
 python /app/manage.py migrate
-
+# 启动cron
+service cron start
+service cron status
 # 添加定时任务
-python /app/update/update.py
+python /app/manage.py crontab add
+python /app/manage.py crontab show
 python /app/manage.py runserver 0.0.0.0:12712
