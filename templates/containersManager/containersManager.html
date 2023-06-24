@@ -159,7 +159,9 @@
             try {
                 var activeElements = document.getElementsByClassName("layui-bg-blue active");
                 num = activeElements[0].getAttribute("data-index");
-                await stop_container(num);
+                state = activeElements[0].querySelector("span").className;
+                if (state !== "layui-badge-dot")
+                    await stop_container(num);
                 var name = activeElements[0].querySelector('td[data-field="name"]').textContent.trim().split('\n')[0];
                 var new_name = name + '_old';
                 await rename_container(num, new_name);
