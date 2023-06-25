@@ -46,4 +46,4 @@ service cron status
 cron
 tail -f /var/log/cron.log &
 /startup.sh
-python /app/manage.py runserver [::]:12712
+python /app/manage.py runserver \[::\]:12712
