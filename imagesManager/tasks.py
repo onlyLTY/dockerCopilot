@@ -13,19 +13,12 @@ def check_update():
     container_list = get_container_list(jwt, endpoints_id)
     container_list = get_image_tag(container_list, jwt, endpoints_id)
     for container in container_list:
-        print(container['imageNameAndTag'])
-        if container['imageNameAndTag'].split(":")[1] == "None":
+        r = requests.get("https://docker.lieying.fun/v2/repositories/" + container['image_name'] +
+                         "/tags/" + container['image_tag'])
+        if r.status_code != 200:
+            print("获取远程镜像信息失败" + container['image_name'] + ":" + container['image_tag'])
             continue
-        image_name = container['imageNameAndTag'].split(":")[0]
-        image_name = image_name.split('/')[-2] + '/' + image_name.split('/')[-1]
-        image_tag = container['imageNameAndTag'].split(":")[1]
-        r = requests.get("https://docker.lieying.fun/v2/repositories/" + image_name +
-                         "/tags/" + image_tag)
-        try:
-            remote_image_info = r.json()
-        except Exception:
-            print("获取远程镜像信息失败" + image_name + ":" + image_tag + r.text)
-            continue
+        remote_image_info = r.json()
         remote_image_create_time = datetime.fromisoformat(remote_image_info['last_updated'].replace("Z", "+00:00"))
         timestamp = container['Created']
         local_image_create_time = timezone.make_aware(datetime.fromtimestamp(timestamp))
@@ -86,9 +79,8 @@ def get_image_tag(container_list, jwt, endpoints_id):
         image_id = container['ImageID'].split(":")[1]
         images_list = get_images_list(jwt, endpoints_id)
         images_dict = create_image_id_map(images_list)
-        container['imageNameAndTag'] = \
-            images_dict.get(image_id)['image_name'] + ":" + images_dict.get(image_id)['image_tag']
-
+        container['image_name'] = images_dict.get(image_id)['image_name']
+        container['image_tag'] = images_dict.get(image_id)['image_tag']
     return container_list
 
 
@@ -113,9 +105,17 @@ def get_images_list(jwt, endpoints_id):
 def spilt_image_name_and_tag(images_list):
     for image in images_list:
         if image.get('RepoTags'):
-            image['image_name'] = image['RepoTags'][0].split(":")[0]
+            image['image_name'] = remove_proxy(image['RepoTags'][0].split(":")[0])
             image['image_tag'] = image['RepoTags'][0].split(":")[1]
         else:
-            image['image_name'] = image['RepoDigests'][0].split("@")[0]
+            image['image_name'] = remove_proxy(image['RepoDigests'][0].split("@")[0])
             image['image_tag'] = "None"
     return images_list
+
+
+def remove_proxy(image_name):
+    image_name = image_name.split('/', 1)
+    if len(image_name) == 2:
+        return image_name[1]
+    else:
+        return image_name[0]
