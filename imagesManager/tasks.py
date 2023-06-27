@@ -105,7 +105,7 @@ def get_images_list(jwt, endpoints_id):
 def spilt_image_name_and_tag(images_list):
     for image in images_list:
         if image.get('RepoTags'):
-            print("Repo: " + image['RepoTags'][0])
+            print("Repo: " + image['RepoTags'][0].split(":")[0])
             image['image_name'] = remove_proxy(image['RepoTags'][0].split(":")[0])
             image['image_tag'] = image['RepoTags'][0].split(":")[1]
         else:
@@ -116,6 +116,7 @@ def spilt_image_name_and_tag(images_list):
 
 def remove_proxy(image_name):
     image_name = image_name.split('/', 1)
+    print("image_name: " + image_name)
     if len(image_name) == 2:
         return image_name[1]
     else:
