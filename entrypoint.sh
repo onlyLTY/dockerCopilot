@@ -43,6 +43,8 @@ service cron status
 # python /app/manage.py crontab add
 # python /app/manage.py crontab show
 # python /app/update/update.py &
+# 复制cron
+cp /app/docker/mycron /etc/cron.d/
 cron
 tail -f /var/log/cron.log &
 /startup.sh
