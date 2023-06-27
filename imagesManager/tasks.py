@@ -118,8 +118,11 @@ def remove_proxy(image_name):
     print("image_name_orgin: " + image_name)
     image_name = image_name.split('/')
     if len(image_name) == 3:
-        print("image_name: " + image_name[1])
+        print("image_name: " + image_name[1] + "/" + image_name[2])
         return image_name[1] + "/" + image_name[2]
+    elif len(image_name) == 2:
+        print("image_name: " + image_name[0] + "/" + image_name[1])
+        return image_name[0] + "/" + image_name[1]
     else:
         print("image_name: " + image_name[0])
-        return image_name[0] + "/" + image_name[1]
+        return image_name[0]
