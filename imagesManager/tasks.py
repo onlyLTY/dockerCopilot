@@ -16,9 +16,16 @@ def check_update():
         print(container['imageNameAndTag'])
         if container['imageNameAndTag'].split(":")[1] == "None":
             continue
-        r = requests.get("https://docker.lieying.fun/v2/repositories/" + container['imageNameAndTag'].split(":")[0] +
-                         "/tags/" + container['imageNameAndTag'].split(":")[1])
-        remote_image_info = r.json()
+        image_name = container['imageNameAndTag'].split(":")[0]
+        image_name = image_name.split('/')[-2] + '/' + image_name.split('/')[-1]
+        image_tag = container['imageNameAndTag'].split(":")[1]
+        r = requests.get("https://docker.lieying.fun/v2/repositories/" + image_name +
+                         "/tags/" + image_tag)
+        try:
+            remote_image_info = r.json()
+        except Exception:
+            print("获取远程镜像信息失败" + image_name + ":" + image_tag + r.text)
+            continue
         remote_image_create_time = datetime.fromisoformat(remote_image_info['last_updated'].replace("Z", "+00:00"))
         timestamp = container['Created']
         local_image_create_time = timezone.make_aware(datetime.fromtimestamp(timestamp))
