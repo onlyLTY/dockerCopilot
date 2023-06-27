@@ -115,9 +115,11 @@ def spilt_image_name_and_tag(images_list):
 
 
 def remove_proxy(image_name):
+    print("image_name_orgin: " + image_name)
     image_name = image_name.split('/', 1)
-    print("image_name: " + image_name)
     if len(image_name) == 2:
+        print("image_name: " + image_name[1])
         return image_name[1]
     else:
+        print("image_name: " + image_name[0])
         return image_name[0]
