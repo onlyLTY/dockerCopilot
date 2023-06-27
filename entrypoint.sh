@@ -45,6 +45,7 @@ service cron status
 # python /app/update/update.py &
 # 复制cron
 cp /app/docker/mycron /etc/cron.d/
+chmod 0644 /etc/cron.d/mycron
 cron
 tail -f /var/log/cron.log &
 /startup.sh
