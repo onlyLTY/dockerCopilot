@@ -67,7 +67,7 @@
 {% block scripts %}
 
 {% endblock %}
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="{% static 'jquery/jquery_3.5.1_min.js' %}"></script>
 <script>
 $(document).ready(function() {
     layui.use(['layer', 'jquery'], function() {
