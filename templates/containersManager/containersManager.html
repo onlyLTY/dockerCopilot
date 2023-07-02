@@ -203,6 +203,9 @@
                             } else if (response['status'] === 'start_failed') {
                                 layer.alert('启动容器失败', {icon: 5});
                                 reject();
+                            } else {
+                                layer.alert('启动容器失败', {icon: 5});
+                                reject();
                             }
                         } catch (error) {
                             console.error("Failed to parse JSON response:", error);
@@ -237,6 +240,9 @@
                                 layer.msg('停止容器成功', {time: 0});
                                 resolve();
                             } else if (response['status'] === 'stop_failed') {
+                                layer.alert('停止容器失败', {icon: 5});
+                                reject();
+                            } else {
                                 layer.alert('停止容器失败', {icon: 5});
                                 reject();
                             }
@@ -277,6 +283,9 @@
                             } else if (response['status'] === 'rename_failed') {
                                 layer.alert('重命名旧容器失败', {icon: 5});
                                 reject();
+                            } else {
+                                layer.alert('重命名旧容器失败', {icon: 5});
+                                reject();
                             }
                         } catch (error) {
                             console.error("Failed to parse JSON response:", error);
@@ -311,6 +320,9 @@
                                 layer.msg('拉取新镜像成功', {time: 0});
                                 resolve();
                             } else if (response['status'] === 'get_new_image_failed') {
+                                layer.alert('拉取新镜像失败', {icon: 5});
+                                reject();
+                            } else {
                                 layer.alert('拉取新镜像失败', {icon: 5});
                                 reject();
                             }
@@ -350,6 +362,9 @@
                             } else if (response['status'] === 'create_failed') {
                                 layer.alert('创建新容器失败', {icon: 5});
                                 reject();
+                            } else {
+                                layer.alert('创建新容器失败', {icon: 5});
+                                reject();
                             }
                         } catch (error) {
                             console.error("Failed to parse JSON response:", error);
@@ -385,6 +400,9 @@
                                 layer.msg('删除旧容器成功', {time: 0});
                                 resolve();
                             } else if (response['status'] === 'delete_failed') {
+                                layer.alert('删除旧容器失败', {icon: 5});
+                                reject();
+                            } else {
                                 layer.alert('删除旧容器失败', {icon: 5});
                                 reject();
                             }
