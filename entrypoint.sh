@@ -49,6 +49,4 @@ chmod 0644 /etc/cron.d/mycron
 cron
 tail -f /var/log/cron.log &
 /startup.sh
-python /app/manage.py runserver \[::\]:12712 &
-python /app/manage.py check_update_command >> /var/log/cron.log 2>&1 &
-
+python /app/manage.py runserver \[::\]:12712
