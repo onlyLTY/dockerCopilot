@@ -19,7 +19,7 @@ def check_update():
             print("获取远程镜像信息失败" + container['image_name'] + ":" + container['image_tag'])
             continue
         remote_image_info = r.json()
-        remote_image_create_time = datetime.fromisoformat(remote_image_info['last_updated'].replace("Z", "+00:00"))
+        remote_image_create_time = datetime.fromisoformat(remote_image_info['tag_last_pushed'].replace("Z", "+00:00"))
         timestamp = container['Created']
         local_image_create_time = timezone.make_aware(datetime.fromtimestamp(timestamp))
         image_id_to_check = container['ImageID'].split(":")[1]
