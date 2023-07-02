@@ -131,17 +131,20 @@
 
         var update = document.getElementById('update');
         update.onclick = function () {
+            update.disable = true;
             update_container()
                 .then(() => {
                     delayedReload();
                 })
                 .catch((error) => {
+                    update.disable = false;
                     console.error("An error occurred:", error);
                 });
         }
 
         var change_tag = document.getElementById('change_tag');
         change_tag.onclick = function () {
+            change_tag.disable = true;
             layer.prompt({title: '请输入 镜像名:tag', formType: 0}, function (image_name_and_tag, index) {
                 layer.close(index);
                 update_container(image_name_and_tag, true)
@@ -149,6 +152,7 @@
                         delayedReload();
                     })
                     .catch((error) => {
+                        change_tag.disable = false;
                         console.error("An error occurred:", error);
                     });
             });
