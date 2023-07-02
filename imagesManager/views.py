@@ -65,9 +65,12 @@ def get_new_image(request):
     header = {
         "Authorization": jwt
     }
+    body = {
+        "fromImage": image_name_and_tag
+    }
     # print("start get new image")
     r = requests.post("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
-                      "/docker/images/create?fromImage=" + image_name_and_tag, headers=header)
+                      "/docker/images/create?fromImage=" + image_name_and_tag, headers=header, data=body)
     # print("get new image status code: " + str(r.status_code))
     if r.status_code == 200:
         # print("success")

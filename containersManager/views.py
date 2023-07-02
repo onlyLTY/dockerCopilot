@@ -89,8 +89,8 @@ def start_container(request):
     r = requests.post("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
                       "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "/start",
                       headers=header)
-    #print("start_container" + str(r.status_code))
-    #print("start_container" + r.text)
+    # print("start_container" + str(r.status_code))
+    # print("start_container" + r.text)
     if r.status_code == 204:
         return JsonResponse({"status": "start_success"})
     else:
@@ -114,7 +114,7 @@ def stop_container(request):
     r = requests.post("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
                       "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "/stop",
                       headers=header)
-    #print(r.status_code)
+    # print(r.status_code)
     if r.status_code == 204:
         return JsonResponse({"status": "stop_success"})
     else:
@@ -148,7 +148,7 @@ def rename_container(request):
                       "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "/rename"
                                                                                                  "?name=" +
                       new_name, headers=header)
-    #print(r.text)
+    # print(r.text)
     if r.status_code == 204:
         return JsonResponse({"status": "rename_success"})
     else:
@@ -173,8 +173,8 @@ def create_container(request):
     body = {}
     container_info = get_containers_info(header,
                                          request.session['endpointsId'], get_container_list(request), num)
-    #print("---------------------------------")
-    #print(container_info)
+    # print("---------------------------------")
+    # print(container_info)
     for i in container_info['Config']:
         body[i] = container_info['Config'][i]
     body['HostConfig'] = container_info['HostConfig']
@@ -187,14 +187,14 @@ def create_container(request):
     if 'host' in container_info['NetworkSettings']['Networks']:
         body['NetworkingConfig']['EndpointsConfig']['host'] = \
             container_info['NetworkSettings']['Networks']['host']
-    #print("---------------------------------")
+    # print("---------------------------------")
     body['Image'] = image_name_and_tag
-    #print(body['Image'])
-    #print("---------------------------------")
+    # print(body['Image'])
+    # print("---------------------------------")
     r = requests.post("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
                       "/docker/containers/create?name=" + container_name, headers=header, json=body)
-    #print("create:" + str(r.status_code))
-    #print("create:" + r.text)
+    # print("create:" + str(r.status_code))
+    # print("create:" + r.text)
     if r.status_code == 200:
 
         return JsonResponse({"status": "create_success"})
@@ -215,12 +215,12 @@ def delete_container(request):
     header = {
         "Authorization": jwt
     }
-    #print("delNum:" + str(num))
+    # print("delNum:" + str(num))
     container_list = get_container_list(request)
     r = requests.delete("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
                         "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "?v=1",
                         headers=header)
-    #print("delete:" + r.text)
+    # print("delete:" + r.text)
     if r.status_code == 204:
         return JsonResponse({"status": "delete_success"})
     else:
