@@ -61,7 +61,11 @@ def get_new_jwt(request):
         "password": hashlib.md5(os.environ.get('account').encode('utf-8')).hexdigest()
     }
     r = requests.post("http://127.0.0.1:9123/api/auth", json=body)
-    request.session['jwt'] = r.json()["jwt"]
+    try:
+        request.session['jwt'] = r.json()["jwt"]
+    except KeyError:
+        logging.error("获取jwt失败")
+        return HttpResponse("请检查环境变量中account是否正确设置", content_type="text/plain; charset=utf-8")
 
 
 def get_endpoints_id(request):
