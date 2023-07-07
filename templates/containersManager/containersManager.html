@@ -107,8 +107,8 @@
         var start = document.getElementById('start');
         start.onclick = function () {
             var activeElements = document.getElementsByClassName("layui-bg-blue active");
-            num = activeElements[0].getAttribute("data-index");
-            start_container(num)
+            name = activeElements[0].querySelector('td[data-field="name"]').textContent.trim().split('\n')[0];
+            start_container(name)
                 .then(() => {
                     delayedReload();
                 })
@@ -120,8 +120,8 @@
         var stop = document.getElementById('stop');
         stop.onclick = function () {
             var activeElements = document.getElementsByClassName("layui-bg-blue active");
-            num = activeElements[0].getAttribute("data-index");
-            stop_container(num)
+            name = activeElements[0].querySelector('td[data-field="name"]').textContent.trim().split('\n')[0];
+            stop_container(name)
                 .then(() => {
                     delayedReload();
                 })
@@ -147,10 +147,10 @@
         rename.onclick = function () {
             rename.disable = true;
             var activeElements = document.getElementsByClassName("layui-bg-blue active");
-            num = activeElements[0].getAttribute("data-index");
+            name = activeElements[0].querySelector('td[data-field="name"]').textContent.trim().split('\n')[0];
             layer.prompt({title: '请输入新的名称', formType: 0}, function (new_name, index) {
                 layer.close(index);
-                rename_container(num, new_name)
+                rename_container(name, new_name)
                     .then(() => {
                         delayedReload();
                     })
@@ -180,30 +180,28 @@
         async function update_container(image_name_and_tag = "", change_image_name_and_tag = false) {
             try {
                 var activeElements = document.getElementsByClassName("layui-bg-blue active");
-                num = activeElements[0].getAttribute("data-index");
+                name = activeElements[0].querySelector('td[data-field="name"]').textContent.trim().split('\n')[0];
                 state = activeElements[0].querySelector("span").className;
-                var name = activeElements[0].querySelector('td[data-field="name"]').textContent.trim().split('\n')[0];
-                var new_name = name + '_old';
+                new_name = name + '_old';
                 if (state !== "layui-badge-dot")
-                    await stop_container(num);
+                    await stop_container(name);
                 if (!change_image_name_and_tag) {
                     image_name_and_tag = activeElements[0].querySelector('td[data-field="image_and_tag"]').textContent;
                 }
                 console.log(image_name_and_tag)
                 await get_new_image(image_name_and_tag);
-                await rename_container(num, new_name);
-                await create_container(num, name, image_name_and_tag);
-                await start_container(0);
-                var del_num = parseInt(num) + 1;
-                console.log(num);
-                console.log(del_num);
-                await delete_confirm(del_num);
+                await rename_container(name, new_name);
+                await create_container(name, image_name_and_tag);
+                await start_container(name);
+                var del_name = name + '_old';
+                console.log(del_name);
+                await delete_confirm(del_name);
             } catch (error) {
                 console.error("An error occurred:", error);
             }
         }
 
-        function start_container(num) {
+        function start_container(name) {
             return new Promise((resolve, reject) => {
                 var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
@@ -212,7 +210,7 @@
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                var data = {num: num};
+                var data = {name: name};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
@@ -242,7 +240,7 @@
             });
         }
 
-        function stop_container(num) {
+        function stop_container(name) {
             return new Promise((resolve, reject) => {
                 var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
@@ -251,7 +249,7 @@
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                var data = {num: num};
+                var data = {name: name};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
@@ -282,7 +280,7 @@
 
         }
 
-        async function rename_container(num, new_name) {
+        async function rename_container(name, new_name) {
             return new Promise((resolve, reject) => {
                 var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
@@ -291,7 +289,7 @@
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                var data = {num: num, new_name: new_name};
+                var data = {name: name, new_name: new_name};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
@@ -362,7 +360,7 @@
 
         }
 
-        function create_container(num, name, image_name_and_tag) {
+        function create_container(name, image_name_and_tag) {
             return new Promise((resolve, reject) => {
                 var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
@@ -371,7 +369,7 @@
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                var data = {num: num, name: name, image_name_and_tag: image_name_and_tag};
+                var data = {name: name, image_name_and_tag: image_name_and_tag};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
@@ -402,7 +400,7 @@
 
         }
 
-        function delete_container(num) {
+        function delete_container(name) {
             return new Promise((resolve, reject) => {
                 var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
@@ -411,7 +409,7 @@
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                var data = {num: num};
+                var data = {name: name};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
@@ -441,13 +439,13 @@
             });
         }
 
-        function delete_confirm(del_num) {
+        function delete_confirm(del_name) {
             return new Promise((resolve, reject) => {
                 layer.confirm('是否删除旧容器？', {
                     btn: ['是', '否'], //按钮
                     skin: 'layui-layer-molv'
                 }, async function () {
-                    await delete_container(del_num);
+                    await delete_container(del_name);
                     resolve();
                 }, function () {
                     layer.msg('更新完成', {

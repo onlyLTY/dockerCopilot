@@ -36,7 +36,10 @@ def get_container_list(request):
         headers=header, params=p)
     container_list = r.json()
     container_list = get_image_tag(request, container_list)
-    # print(container_list)
+    container_list = create_container_name_map(container_list)
+    print(container_list)
+    container_list = r.json()
+    container_list = get_image_tag(request, container_list)
     return container_list
 
 
@@ -72,22 +75,26 @@ def create_image_id_map(images_list):
     return {image['Id'].split(':')[1]: image for image in images_list}
 
 
+def create_container_name_map(container_list):
+    return {container['Names'][0].split('/')[1]: container for container in container_list}
+
+
 def start_container(request):
     if request.method == "POST":
         # 从POST请求体中获取JSON数据并解析
         data = json.loads(request.body.decode("utf-8"))
-        # 从JSON数据中获取名为“num”的值
-        num = data.get("num")
+        # 从JSON数据中获取名为“name”的值
+        container_name = data.get("name")
     else:
         return JsonResponse({"error": "Invalid request method"})
-    num = int(num)
     jwt = request.session['jwt']
     header = {
         "Authorization": jwt
     }
     container_list = get_container_list(request)
+    container_list = create_container_name_map(container_list)
     r = requests.post("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
-                      "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "/start",
+                      "/docker/containers/" + container_list[container_name]['Id'].replace("sha256:", "") + "/start",
                       headers=header)
     # print("start_container" + str(r.status_code))
     # print("start_container" + r.text)
@@ -101,18 +108,18 @@ def stop_container(request):
     if request.method == "POST":
         # 从POST请求体中获取JSON数据并解析
         data = json.loads(request.body.decode("utf-8"))
-        # 从JSON数据中获取名为“num”的值
-        num = data.get("num")
+        # 从JSON数据中获取名为“name”的值
+        container_name = data.get("name")
     else:
         return JsonResponse({"error": "Invalid request method"})
-    num = int(num)
     jwt = request.session['jwt']
     header = {
         "Authorization": jwt
     }
     container_list = get_container_list(request)
+    container_list = create_container_name_map(container_list)
     r = requests.post("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
-                      "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "/stop",
+                      "/docker/containers/" + container_list[container_name]['Id'].replace("sha256:", "") + "/stop",
                       headers=header)
     # print(r.status_code)
     if r.status_code == 204:
@@ -121,9 +128,10 @@ def stop_container(request):
         return JsonResponse({"status": "stop_failed"})
 
 
-def get_containers_info(header, endpointsId, containers_list, num):
+def get_containers_info(header, endpointsId, containers_list, container_name):
+    container_list = create_container_name_map(containers_list)
     r = requests.get("http://127.0.0.1:9123/api/endpoints/" + endpointsId +
-                     "/docker/containers/" + containers_list[num]['Id'].replace("sha256:", "") + "/json"
+                     "/docker/containers/" + container_list[container_name]['Id'].replace("sha256:", "") + "/json"
                      , headers=header)
     info = r.json()
     return info
@@ -133,19 +141,19 @@ def rename_container(request):
     if request.method == "POST":
         # 从POST请求体中获取JSON数据并解析
         data = json.loads(request.body.decode("utf-8"))
-        # 从JSON数据中获取名为“num”的值
-        num = data.get("num")
+        # 从JSON数据中获取名为“name”的值
+        container_name = data.get("name")
         new_name = data.get("new_name")
     else:
         return JsonResponse({"error": "Invalid request method"})
-    num = int(num)
     jwt = request.session['jwt']
     header = {
         "Authorization": jwt
     }
     container_list = get_container_list(request)
+    container_list = create_container_name_map(container_list)
     r = requests.post("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
-                      "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "/rename"
+                      "/docker/containers/" + container_list[container_name]['Id'].replace("sha256:", "") + "/rename"
                                                                                                  "?name=" +
                       new_name, headers=header)
     # print(r.text)
@@ -159,20 +167,18 @@ def create_container(request):
     if request.method == "POST":
         # 从POST请求体中获取JSON数据并解析
         data = json.loads(request.body.decode("utf-8"))
-        # 从JSON数据中获取名为“num”的值
-        num = data.get("num")
+        # 从JSON数据中获取名为“name”的值
         container_name = data.get("name")
         image_name_and_tag = data.get("image_name_and_tag")
     else:
         return JsonResponse({"error": "Invalid request method"})
-    num = int(num)
     jwt = request.session['jwt']
     header = {
         "Authorization": jwt
     }
     body = {}
-    container_info = get_containers_info(header,
-                                         request.session['endpointsId'], get_container_list(request), num)
+    container_info = get_containers_info(
+        header, request.session['endpointsId'], get_container_list(request), container_name+'_old')
     # print("---------------------------------")
     # print(container_info)
     for i in container_info['Config']:
@@ -206,19 +212,19 @@ def delete_container(request):
     if request.method == "POST":
         # 从POST请求体中获取JSON数据并解析
         data = json.loads(request.body.decode("utf-8"))
-        # 从JSON数据中获取名为“num”的值
-        num = data.get("num")
+        # 从JSON数据中获取名为“name”的值
+        container_name = data.get("name")
     else:
         return JsonResponse({"error": "Invalid request method"})
-    num = int(num)
     jwt = request.session['jwt']
     header = {
         "Authorization": jwt
     }
-    # print("delNum:" + str(num))
+    # print("delNum:" + str(name))
     container_list = get_container_list(request)
+    container_list = create_container_name_map(container_list)
     r = requests.delete("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
-                        "/docker/containers/" + container_list[num]['Id'].replace("sha256:", "") + "?v=1",
+                        "/docker/containers/" + container_list[container_name]['Id'].replace("sha256:", "") + "?v=1",
                         headers=header)
     # print("delete:" + r.text)
     if r.status_code == 204:
