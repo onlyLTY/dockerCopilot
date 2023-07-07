@@ -14,6 +14,7 @@
     <button id="start" type="button" class="layui-btn layui-btn-sm layui-btn-normal">启动</button>
     <button id="stop" type="button" class="layui-btn layui-btn-sm layui-btn-normal">停止</button>
     <button id="update" type="button" class="layui-btn layui-btn-sm layui-btn-normal">更新</button>
+    <button id="rename" type="button" class="layui-btn layui-btn-sm layui-btn-normal">重命名</button>
     <button id="change_tag" type="button" class="layui-btn layui-btn-sm layui-btn-normal">更换镜像</button>
 {% endblock %}
 
@@ -142,6 +143,24 @@
                 });
         }
 
+        var rename = document.getElementById('rename');
+        rename.onclick = function () {
+            rename.disable = true;
+            var activeElements = document.getElementsByClassName("layui-bg-blue active");
+            num = activeElements[0].getAttribute("data-index");
+            layer.prompt({title: '请输入新的名称', formType: 0}, function (new_name, index) {
+                layer.close(index);
+                rename_container(num, new_name)
+                    .then(() => {
+                        delayedReload();
+                    })
+                    .catch((error) => {
+                        new_name.disable = false;
+                        console.error("An error occurred:", error);
+                    });
+            });
+        }
+
         var change_tag = document.getElementById('change_tag');
         change_tag.onclick = function () {
             change_tag.disable = true;
@@ -156,7 +175,6 @@
                         console.error("An error occurred:", error);
                     });
             });
-
         }
 
         async function update_container(image_name_and_tag = "", change_image_name_and_tag = false) {
@@ -164,10 +182,10 @@
                 var activeElements = document.getElementsByClassName("layui-bg-blue active");
                 num = activeElements[0].getAttribute("data-index");
                 state = activeElements[0].querySelector("span").className;
-                if (state !== "layui-badge-dot")
-                    await stop_container(num);
                 var name = activeElements[0].querySelector('td[data-field="name"]').textContent.trim().split('\n')[0];
                 var new_name = name + '_old';
+                if (state !== "layui-badge-dot")
+                    await stop_container(num);
                 if (!change_image_name_and_tag) {
                     image_name_and_tag = activeElements[0].querySelector('td[data-field="image_and_tag"]').textContent;
                 }
@@ -264,7 +282,7 @@
 
         }
 
-        function rename_container(num, new_name) {
+        async function rename_container(num, new_name) {
             return new Promise((resolve, reject) => {
                 var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
