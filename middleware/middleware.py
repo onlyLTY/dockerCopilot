@@ -70,7 +70,7 @@ def get_new_jwt(request):
 
 def get_endpoints_id(request):
     jwt = request.session['jwt']
-    print(jwt)
+    # print(jwt)
     header = {
         "Authorization": jwt
     }
