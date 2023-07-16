@@ -143,7 +143,7 @@ def delete_image(request):
         return JsonResponse({"status": "delete_success"})
     elif r.status_code == 409:
         info = "存在冲突，无法删除"
-        if "is using its referenced image" in r.text:
+        if "image is referenced in multiple repositories" in r.text:
             info = "该镜像有多个标签，请使用强制删除"
         elif "is being used by" in r.text:
             info = "该镜像正在使用，无法删除"
