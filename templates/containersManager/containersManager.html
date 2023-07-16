@@ -190,7 +190,7 @@
                 }
                 console.log(image_name_and_tag)
                 let promise = new Promise((resolve) => {
-                    layer.confirm('要拉取的镜像为' + image_name_and_tag, {title: '是否使用代理'}, function (index) {
+                    layer.confirm('使用的镜像为' + image_name_and_tag, {title: '是否使用代理'}, function (index) {
                         image_name_and_tag = "dockerproxy.com/" + image_name_and_tag
                         layer.close(index);
                         resolve();
