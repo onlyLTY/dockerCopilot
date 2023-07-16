@@ -125,6 +125,7 @@ def delete_image(request):
         data = json.loads(request.body.decode("utf-8"))
         # 从JSON数据中获取名为“num”的值
         num = data.get("num")
+        force = data.get("force")
     else:
         return JsonResponse({"error": "Invalid request method"})
     num = int(num)
@@ -132,11 +133,16 @@ def delete_image(request):
     header = {
         "Authorization": jwt
     }
+    params = {
+        "force": "false"
+    }
+    if force:
+        params['force'] = "true"
     # print("delNum:" + str(num))
     images_list = get_images_list(request)
     r = requests.delete("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
                         "/docker/images/" + images_list[num]['Id'].replace("sha256:", ""),
-                        headers=header)
+                        headers=header, params=params)
     # print("delete:" + r.text)
     # print("deleteCode:" + r.status_code.__str__())
     if r.status_code == 200:
