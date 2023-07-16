@@ -26,14 +26,14 @@ def containers_manager(request):
 
 
 def get_container_list(request):
-    p = {"all": "true"}
+    params = {"all": "true"}
     jwt = request.session.get('jwt')
     header = {
         "Authorization": jwt
     }
     r = requests.get(
         "http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] + "/docker/containers/json",
-        headers=header, params=p)
+        headers=header, params=params)
     container_list = r.json()
     container_list = get_image_tag(request, container_list)
     container_list = create_container_name_map(container_list)
