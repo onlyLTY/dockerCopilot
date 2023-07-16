@@ -118,7 +118,7 @@
                                 layer.msg('删除镜像成功', {time: 0});
                                 resolve();
                             } else if (response['status'] === "can_not_delete") {
-                                layer.alert('镜像正在使用中，无法删除', {icon: 5});
+                                layer.alert(response['info'], {icon: 5});
                                 reject();
                             } else if (response['status'] === 'delete_failed') {
                                 layer.alert('删除镜像失败', {icon: 5});
