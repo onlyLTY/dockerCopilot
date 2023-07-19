@@ -61,8 +61,11 @@ def get_image_tag(request, container_list):
         image_id = container['ImageID'].split(":")[1]
         images_list = get_images_list(request)
         images_dict = create_image_id_map(images_list)
-        container['imageNameAndTag'] = \
-            images_dict.get(image_id)['image_name'] + ":" + images_dict.get(image_id)['image_tag']
+        try:
+            container['imageNameAndTag'] = \
+                images_dict.get(image_id)['image_name'] + ":" + images_dict.get(image_id)['image_tag']
+        except TypeError:
+            container['imageNameAndTag'] = "None"
     return container_list
 
 
@@ -150,7 +153,7 @@ def rename_container(request):
     container_list = create_container_name_map(container_list)
     r = requests.post("http://127.0.0.1:9123/api/endpoints/" + request.session['endpointsId'] +
                       "/docker/containers/" + container_list[container_name]['Id'].replace("sha256:", "") + "/rename"
-                                                                                                 "?name=" +
+                                                                                                            "?name=" +
                       new_name, headers=header)
     # print(r.text)
     if r.status_code == 204:
@@ -174,7 +177,7 @@ def create_container(request):
     }
     body = {}
     container_info = get_containers_info(
-        header, request.session['endpointsId'], get_container_list(request), container_name+'_old')
+        header, request.session['endpointsId'], get_container_list(request), container_name + '_old')
     # print("---------------------------------")
     # print(container_info)
     for i in container_info['Config']:
