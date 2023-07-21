@@ -12,8 +12,10 @@ class VerifyDeviceMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # 在这里检查cookie
-        device_verified = request.COOKIES.get('device_verified')
+        # 在这里检查session
+        device_verified = True
+        if request.session.get('secret_key') is not None:
+            device_verified = False
         if not device_verified and request.path.startswith('/containersManager/'):
             # 如果设备未验证且请求的是 /containersManager/ 下的 URL，则重定向到登录页面
             return redirect('login:verification_page')
