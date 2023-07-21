@@ -42,8 +42,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'middleware.middleware.VerifyDeviceMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'middleware.middleware.GlobalVariablesMiddleware',
     'django.middleware.common.CommonMiddleware',
