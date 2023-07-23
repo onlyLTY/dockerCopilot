@@ -1,0 +1,38 @@
+syntax = "v1"
+
+type getUpdateResponse {
+	Version   string `json:"version"`
+	Link      string `json:"link"`
+	ChangeLog string `json:"changeLog"`
+}
+type DoLoginReq {
+	Secret_key string `form:"secret_key,optional"`
+}
+type refreshUpdateResp {
+	Code int `json:"code"`
+}
+
+service autoUpdate {
+	@handler LoginIndex
+	get /login () returns ()
+}
+
+@server(
+	prefix: /
+	group: Login
+	middleware: CookieCheckMiddleware
+)
+service autoUpdate {
+	@handler DoLogin
+	post /login (DoLoginReq) returns ()
+}
+
+@server(
+	prefix: /containersManager
+	group: containersManager
+	middleware: CookieCheckMiddleware
+)
+service autoUpdate {
+	@handler ContainersManagerIndex
+	get /() returns ()
+}

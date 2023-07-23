@@ -1,0 +1,7 @@
+Name: autoUpdate
+Host: 0.0.0.0
+Port: 8888
+Log:
+  Encoding: plain
+Secret_key: ${secret_key}
+Account: ${account}

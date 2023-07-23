@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    {% block head_region %}
+
+    {% endblock %}
+    <link rel="stylesheet" type="text/css" href="/static/layui/css/layui.css">
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <!-- 头部区域（可配合layui 已有的水平导航） -->
+        <div class="layui-logo">oneKey Update</div>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item">
+                <button id="reward" class="layui-btn layui-btn-danger">打赏</button>
+            </li>
+        </ul>
+        <div id="tong" style="display: none;">
+            <p class="layui-bg-red">如果喜欢的话，欢迎打赏，谢谢老板</p>
+            <img layer-src="/static/reward/zhifubao.jpg" src="/static/reward/zhifubao.jpg" alt="支付宝打赏码" style="width: 200px; height: auto;">
+            <img layer-src="/static/reward/wechat.jpg" src="/static/reward/wechat.jpg" alt="微信打赏码" style="width: 200px; height: auto;">
+        </div>
+    </div>
+
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <!-- 左侧导航区域（可配合layui已有的垂直导航） -->
+            <ul class="layui-nav layui-nav-tree" lay-filter="test">
+                {% block left_region %}
+
+                {% endblock %}
+
+            </ul>
+        </div>
+    </div>
+
+    <div class="layui-body" style="padding-left: 5px;">
+        <!-- 内容主体区域 -->
+        <div class="layui-row">
+            <div class="layui-col-md12" style="padding: 5px;">
+                <!-- 按键区域 -->
+                {% block button_region %}{% endblock %}
+            </div>
+            <hr>
+            {% block data_region %}
+
+            {% endblock %}
+        </div>
+    </div>
+
+    <div class="layui-footer">
+        <!-- 底部固定区域 -->
+        <div class="layui-col-lg-offset11">
+            <!-- 底部数据显示 -->
+            {% block footer_region %}
+
+            {% endblock %}
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+
+{% endblock %}
+<script src="/static/jquery/jquery_3.5.1_min.js"></script>
+<script>
+$(document).ready(function() {
+    layui.use(['layer', 'jquery'], function() {
+        var layer = layui.layer;
+        var $ = layui.jquery;
+        // Attach an onclick handler to the button
+        $('#reward').click(function() {
+            layer.open({
+                    type: 1,
+                    title: false,
+                    closeBtn: 0,
+                    shadeClose: true,
+                    content: $('#tong').html()
+                });
+        });
+    });
+});
+
+</script>
+</body>
+</html>
