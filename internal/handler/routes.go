@@ -6,6 +6,7 @@ import (
 
 	Login "github.com/onlyLTY/oneKeyUpdate/v2/internal/handler/Login"
 	containersManager "github.com/onlyLTY/oneKeyUpdate/v2/internal/handler/containersManager"
+	imagesManager "github.com/onlyLTY/oneKeyUpdate/v2/internal/handler/imagesManager"
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -48,5 +49,19 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			}...,
 		),
 		rest.WithPrefix("/containersManager"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.CookieCheckMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/",
+					Handler: imagesManager.ImagesManagerIndexHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/imagesManager"),
 	)
 }

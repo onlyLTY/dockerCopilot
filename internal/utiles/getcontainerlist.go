@@ -21,7 +21,7 @@ func GetContainerList(ctx *svc.ServiceContext) ([]types.Container, error) {
 	if err != nil {
 		return containerlistdata, err
 	}
-	req.Header.Set("Authorization", jwt)
+	req.Header.Add("Authorization", jwt)
 	query := req.URL.Query()
 	for k, v := range params {
 		query.Add(k, v)

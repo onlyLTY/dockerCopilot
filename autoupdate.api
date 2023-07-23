@@ -1,15 +1,7 @@
 syntax = "v1"
 
-type getUpdateResponse {
-	Version   string `json:"version"`
-	Link      string `json:"link"`
-	ChangeLog string `json:"changeLog"`
-}
 type DoLoginReq {
 	Secret_key string `form:"secret_key,optional"`
-}
-type refreshUpdateResp {
-	Code int `json:"code"`
 }
 
 service autoUpdate {
@@ -34,5 +26,15 @@ service autoUpdate {
 )
 service autoUpdate {
 	@handler ContainersManagerIndex
-	get /() returns ()
+	get / () returns ()
+}
+
+@server(
+	prefix: /imagesManager
+	group: imagesManager
+	middleware: CookieCheckMiddleware
+)
+service autoUpdate {
+	@handler imagesManagerIndex
+	get / () returns ()
 }

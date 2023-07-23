@@ -1,13 +1,13 @@
-{% extends 'base/base.html' %}
-{% load static %}
+{% extends 'templates/base/base.html' %}
+
 
 {% block head_region %}
     <title>一键升级</title>
 {% endblock %}
 
 {% block left_region %}
-    <li class="layui-nav-item"><a href="{% url 'containers_manager:containersManager' %}">容器</a></li>
-    <li class="layui-nav-item layui-this"><a href="{% url 'images_manager:imagesManager' %}">镜像</a></li>
+    <li class="layui-nav-item"><a href="/containersManager">容器</a></li>
+    <li class="layui-nav-item layui-this"><a href="/imagesManager">镜像</a></li>
 {% endblock %}
 
 {% block button_region %}
@@ -15,9 +15,9 @@
     <button id="force_del_image" type="button" class="layui-btn layui-btn-sm layui-btn-normal">强制删除</button>
 {% endblock %}
 
-{#{% block data_region %}#}
-{#    <table class="layui-hide" id="container_table" lay-filter="container_table"></table>#}
-{#{% endblock %}#}
+<!--{#{% block data_region %}#}-->
+<!--{#    <table class="layui-hide" id="container_table" lay-filter="container_table"></table>#}-->
+<!--{#{% endblock %}#}-->
 
 {% block data_region %}
     <table class="layui-table" id="container_table" lay-skin="line"
@@ -39,13 +39,13 @@
             {% for image in images_list %}
                 {#                {% with name=container.Names.0|slice:"1:" %}#}
                 <tr>
-                    <td class="col-auto">{{ image.image_name }}
-                        {% if not image.is_used %}
+                    <td class="col-auto">{{ image.Image_Name }}
+                        {% if not image.States %}
                             <span class="layui-badge layui-bg-orange">未使用</span>
                         {% endif %}
                     </td>
-                    <td>{{ image.image_tag }}</td>
-                    <td>{{ image.Size }}</td>
+                    <td>{{ image.Image_Tag }}</td>
+                    <td>{{ image.SizeFormat }}</td>
                     <td class="createTime">{{ image.Created }}</td>
                 </tr>
                 {#                {% endwith %}#}
@@ -62,7 +62,7 @@
 {% endblock %}
 
 {% block scripts %}
-    <script src="{% static 'layui/layui.js' %}"></script>
+    <script src="/static/layui/layui.js"></script>
     <!-- 具体的 JavaScript 代码 -->
 
     <script>
@@ -122,7 +122,6 @@
 
         function delImage(num, force = false) {
             return new Promise((resolve, reject) => {
-                var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
                 var url = "delete_image/";
                 var method = "POST";
