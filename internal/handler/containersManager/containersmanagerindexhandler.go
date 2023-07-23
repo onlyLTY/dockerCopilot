@@ -2,19 +2,17 @@ package containersManager
 
 import (
 	"github.com/flosch/pongo2"
-	"github.com/zeromicro/go-zero/core/logx"
-	"net/http"
-	"time"
-
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/logic/containersManager"
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
+	"net/http"
 )
 
 func ContainersManagerIndexHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		l := containersManager.NewContainersManagerIndexLogic(r.Context(), svcCtx)
-		err := l.ContainersManagerIndex()
+		list, err := l.ContainersManagerIndex()
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
@@ -22,7 +20,7 @@ func ContainersManagerIndexHandler(svcCtx *svc.ServiceContext) http.HandlerFunc 
 			if err != nil {
 				logx.Error(err)
 			}
-			execute, err := t.ExecuteBytes(pongo2.Context{"current_year": time.Now()})
+			execute, err := t.ExecuteBytes(pongo2.Context{"container_list": list})
 			if err != nil {
 				logx.Error(err)
 			}
@@ -31,3 +29,20 @@ func ContainersManagerIndexHandler(svcCtx *svc.ServiceContext) http.HandlerFunc 
 		}
 	}
 }
+
+//func checkUpdate(containerList []types.Container) {
+//	imageUpdateInfo := ImageInfo.objects.all()
+//	for i, container := range containerList {
+//		containerImageID := strings.Split(container.ImageID, ":")[1]
+//		image := imageUpdateInfo.filter(image_id=containerImageID)
+//		if image.exists() {
+//			if image.get(image_id=containerImageID).remoteLastUpdatedTime > image.get(image_id=containerImageID).localCreationTime {
+//				containerList[i].Update = true
+//			} else {
+//				containerList[i].Update = false
+//			}
+//		} else {
+//			containerList[i].Update = false
+//		}
+//	}
+//}

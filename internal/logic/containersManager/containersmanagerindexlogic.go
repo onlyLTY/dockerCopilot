@@ -2,8 +2,9 @@ package containersManager
 
 import (
 	"context"
-
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
+	"github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
+	"github.com/onlyLTY/oneKeyUpdate/v2/internal/utiles"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -21,8 +22,10 @@ func NewContainersManagerIndexLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *ContainersManagerIndexLogic) ContainersManagerIndex() error {
-	// todo: add your logic here and delete this line
-
-	return nil
+func (l *ContainersManagerIndexLogic) ContainersManagerIndex() (*[]types.Container, error) {
+	list, err := utiles.GetContainerList(l.svcCtx)
+	if err != nil {
+		return nil, err
+	}
+	return &list, nil
 }

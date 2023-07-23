@@ -12,6 +12,7 @@ type ServiceContext struct {
 	Config                config.Config
 	CookieCheckMiddleware rest.Middleware
 	Template              *pongo2.TemplateSet
+	PortainerJwt          string
 }
 
 func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext {

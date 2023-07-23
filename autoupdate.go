@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	loader "github.com/nathan-osman/pongo2-embed-loader"
-	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/onlyLTY/oneKeyUpdate/v2/internal/utiles"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"github.com/zeromicro/x/errors"
 	xhttp "github.com/zeromicro/x/http"
@@ -34,8 +34,11 @@ func main() {
 
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()
-
 	ctx := svc.NewServiceContext(c, &loader.Loader{Content: content})
+	_, _, err := utiles.GetNewJwt(ctx)
+	if err != nil {
+		panic(err)
+	}
 	handler.RegisterHandlers(server, ctx)
 	RegisterHandlers(server)
 	httpx.SetErrorHandler(func(err error) (int, any) {
@@ -68,6 +71,6 @@ func RegisterHandlers(engine *rest.Server) {
 				Handler: http.StripPrefix(patern, http.FileServer(http.Dir(dirpath))).ServeHTTP,
 			})
 
-		logx.Infof("register dir  %s  %s", path, dirpath)
+		//logx.Infof("register dir  %s  %s", path, dirpath)
 	}
 }
