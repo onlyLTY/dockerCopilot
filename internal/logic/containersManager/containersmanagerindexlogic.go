@@ -27,5 +27,6 @@ func (l *ContainersManagerIndexLogic) ContainersManagerIndex() (*[]types.Contain
 	if err != nil {
 		return nil, err
 	}
+	utiles.CheckImageUpdate(l.svcCtx, list)
 	return &list, nil
 }

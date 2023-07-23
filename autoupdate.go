@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	loader "github.com/nathan-osman/pongo2-embed-loader"
+	"github.com/onlyLTY/oneKeyUpdate/v2/internal/handler"
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/utiles"
+	"github.com/robfig/cron/v3"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"github.com/zeromicro/x/errors"
 	xhttp "github.com/zeromicro/x/http"
@@ -14,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/config"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/handler"
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
@@ -35,10 +36,26 @@ func main() {
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()
 	ctx := svc.NewServiceContext(c, &loader.Loader{Content: content})
-	_, _, err := utiles.GetNewJwt(ctx)
+	list, err := utiles.GetImagesList(ctx)
 	if err != nil {
 		panic(err)
 	}
+	ctx.HubImageInfo.CheckUpdate(list)
+	corndanmu := cron.New(cron.WithParser(cron.NewParser(
+		cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
+	)))
+	_, err = corndanmu.AddFunc("0 */12 * * *", func() {
+		list, err := utiles.GetImagesList(ctx)
+		if err != nil {
+			panic(err)
+		}
+		ctx.HubImageInfo.CheckUpdate(list)
+	})
+	if err != nil {
+		panic(err)
+	}
+	corndanmu.Start()
+	defer corndanmu.Stop()
 	handler.RegisterHandlers(server, ctx)
 	RegisterHandlers(server)
 	httpx.SetErrorHandler(func(err error) (int, any) {

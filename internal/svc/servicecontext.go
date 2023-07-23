@@ -5,6 +5,7 @@ import (
 	loader "github.com/nathan-osman/pongo2-embed-loader"
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/config"
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/middleware"
+	"github.com/onlyLTY/oneKeyUpdate/v2/internal/module"
 	"github.com/zeromicro/go-zero/rest"
 )
 
@@ -13,6 +14,7 @@ type ServiceContext struct {
 	CookieCheckMiddleware rest.Middleware
 	Template              *pongo2.TemplateSet
 	PortainerJwt          string
+	HubImageInfo          *module.ImageUpdateData
 }
 
 func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext {
@@ -20,5 +22,6 @@ func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext 
 		Config:                c,
 		CookieCheckMiddleware: middleware.NewCookieCheckMiddleware().Handle,
 		Template:              pongo2.NewSet("", loaders),
+		HubImageInfo:          module.NewImageCheck(),
 	}
 }

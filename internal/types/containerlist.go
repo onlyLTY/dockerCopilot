@@ -15,6 +15,7 @@ type Container struct {
 	Ports           []Port          `json:"Ports"`
 	State           string          `json:"State"`
 	Status          string          `json:"Status"`
+	Update          bool            `json:"Update"`
 }
 
 type HostConfig struct {

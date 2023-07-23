@@ -2,7 +2,7 @@ package types
 
 type Image struct {
 	Containers  int               `json:"Containers"`
-	Created     int               `json:"Created"`
+	Created     int64             `json:"Created"`
 	ID          string            `json:"Id"`
 	Labels      map[string]string `json:"Labels"`
 	ParentID    string            `json:"ParentId"`
