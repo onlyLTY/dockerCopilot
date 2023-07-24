@@ -7,22 +7,21 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type LoginIndexLogic struct {
+type WebindexLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 }
 
-func NewLoginIndexLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginIndexLogic {
-	return &LoginIndexLogic{
+func NewWebindexLogic(ctx context.Context, svcCtx *svc.ServiceContext) *WebindexLogic {
+	return &WebindexLogic{
 		Logger: logx.WithContext(ctx),
 		ctx:    ctx,
 		svcCtx: svcCtx,
 	}
 }
 
-func (l *LoginIndexLogic) LoginIndex() error {
-	// todo: add your logic here and delete this line
-
+func (l *WebindexLogic) Webindex() error {
+	// 这个logic没啥用 别看了 要看就去看handler
 	return nil
 }

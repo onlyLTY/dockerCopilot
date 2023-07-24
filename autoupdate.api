@@ -3,20 +3,29 @@ syntax = "v1"
 type DoLoginReq {
 	Secret_key string `form:"secret_key,optional"`
 }
+type StopContainerReq {
+	Name string `form:"name,optional"`
+}
+type MsgResp {
+	Status string `json:"status"`
+}
 
 service autoUpdate {
-	@handler LoginIndex
-	get /login () returns ()
+	@handler webindex
+	get / () returns ()
 }
 
 @server(
 	prefix: /
 	group: Login
-	middleware: CookieCheckMiddleware
+	middleware: IndexCheckMiddleware
 )
 service autoUpdate {
 	@handler DoLogin
 	post /login (DoLoginReq) returns ()
+
+	@handler LoginIndex
+	get /login () returns ()
 }
 
 @server(
@@ -27,6 +36,9 @@ service autoUpdate {
 service autoUpdate {
 	@handler ContainersManagerIndex
 	get / () returns ()
+
+	@handler StopContainer
+	post /stop_container (StopContainerReq) returns (MsgResp)
 }
 
 @server(

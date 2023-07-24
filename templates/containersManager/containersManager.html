@@ -216,13 +216,11 @@
 
         function start_container(name) {
             return new Promise((resolve, reject) => {
-                var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
                 var url = "start_container/";
                 var method = "POST";
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {name: name};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
@@ -255,13 +253,11 @@
 
         function stop_container(name) {
             return new Promise((resolve, reject) => {
-                var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
-                var url = "stop_container/";
+                var url = "containersManager/stop_container";
                 var method = "POST";
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {name: name};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
@@ -295,13 +291,11 @@
 
         async function rename_container(name, new_name) {
             return new Promise((resolve, reject) => {
-                var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
                 var url = "rename_container/";
                 var method = "POST";
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {name: name, new_name: new_name};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
@@ -335,13 +329,11 @@
 
         function get_new_image(image_name_and_tag) {
             return new Promise((resolve, reject) => {
-                var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
                 var url = "/imagesManager/get_new_image/";
                 var method = "POST";
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {image_name_and_tag: image_name_and_tag};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
@@ -375,13 +367,11 @@
 
         function create_container(name, image_name_and_tag) {
             return new Promise((resolve, reject) => {
-                var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
                 var url = "create_container/";
                 var method = "POST";
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {name: name, image_name_and_tag: image_name_and_tag};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {
@@ -415,13 +405,11 @@
 
         function delete_container(name) {
             return new Promise((resolve, reject) => {
-                var csrftoken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
                 var xhr = new XMLHttpRequest();
                 var url = "delete_container/";
                 var method = "POST";
                 xhr.open(method, url, true);
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {name: name};
                 var params = JSON.stringify(data);
                 xhr.onreadystatechange = function () {

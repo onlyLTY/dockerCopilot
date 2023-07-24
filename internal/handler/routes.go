@@ -17,20 +17,25 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodGet,
-				Path:    "/login",
-				Handler: LoginIndexHandler(serverCtx),
+				Path:    "/",
+				Handler: webindexHandler(serverCtx),
 			},
 		},
 	)
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.CookieCheckMiddleware},
+			[]rest.Middleware{serverCtx.IndexCheckMiddleware},
 			[]rest.Route{
 				{
 					Method:  http.MethodPost,
 					Path:    "/login",
 					Handler: Login.DoLoginHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/login",
+					Handler: Login.LoginIndexHandler(serverCtx),
 				},
 			}...,
 		),
@@ -45,6 +50,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Method:  http.MethodGet,
 					Path:    "/",
 					Handler: containersManager.ContainersManagerIndexHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/stop_container",
+					Handler: containersManager.StopContainerHandler(serverCtx),
 				},
 			}...,
 		),

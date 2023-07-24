@@ -16,7 +16,7 @@ import (
 
 var domain = "http://127.0.0.1:9123"
 
-//var domain = "http://127.0.0.1:10001"
+//var domain = "http://127.0.0.1:10000"
 
 type Request struct {
 	Node   string `path:"node"`

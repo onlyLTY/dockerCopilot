@@ -4,3 +4,11 @@ package types
 type DoLoginReq struct {
 	Secret_key string `form:"secret_key,optional"`
 }
+
+type StopContainerReq struct {
+	Name string `form:"name,optional"`
+}
+
+type MsgResp struct {
+	Status string `json:"status"`
+}
