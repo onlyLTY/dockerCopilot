@@ -3,6 +3,9 @@ syntax = "v1"
 type DoLoginReq {
 	Secret_key string `form:"secret_key,optional"`
 }
+type StartContainerReq {
+	Name string `form:"name,optional"`
+}
 type StopContainerReq {
 	Name string `form:"name,optional"`
 }
@@ -36,6 +39,9 @@ service autoUpdate {
 service autoUpdate {
 	@handler ContainersManagerIndex
 	get / () returns ()
+
+	@handler StartContainer
+	post /start_container (StartContainerReq) returns (MsgResp)
 
 	@handler StopContainer
 	post /stop_container (StopContainerReq) returns (MsgResp)
