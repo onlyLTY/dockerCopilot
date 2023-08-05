@@ -26,7 +26,7 @@ func NewDoLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DoLoginLo
 
 func (l *DoLoginLogic) DoLogin(req *types.DoLoginReq) error {
 	// todo: add your logic here and delete this line
-	if req.Secret_key != l.svcCtx.Config.Secret_key {
+	if req.SecretKey != l.svcCtx.Config.SecretKey {
 		return errors.New("秘钥错误")
 	}
 	return nil

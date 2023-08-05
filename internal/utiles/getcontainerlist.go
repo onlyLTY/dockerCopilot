@@ -27,7 +27,6 @@ func GetContainerList(ctx *svc.ServiceContext) ([]types.Container, error) {
 		query.Add(k, v)
 	}
 	req.URL.RawQuery = query.Encode()
-
 	client := &http.Client{}
 	response, err := client.Do(req)
 	if err != nil {
@@ -41,6 +40,7 @@ func GetContainerList(ctx *svc.ServiceContext) ([]types.Container, error) {
 	}
 	return containerlistdata, nil
 }
+
 func CheckImageUpdate(ctx *svc.ServiceContext, containerlistdata []types.Container) []types.Container {
 	for i, v := range containerlistdata {
 		if _, ok := ctx.HubImageInfo.Data[v.ImageID]; ok {

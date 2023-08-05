@@ -1,7 +1,7 @@
-Name: autoUpdate
+Name: oneKeyUpdate
 Host: 0.0.0.0
-Port: 8888
+Port: 12712
 Log:
   Encoding: plain
-Secret_key: ${secret_key}
+SecretKey: ${secret_key}
 Account: ${account}

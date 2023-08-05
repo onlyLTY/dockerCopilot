@@ -119,6 +119,7 @@ func GetNewJwt(ctx *svc.ServiceContext) (jwt, endpointid string, err error) {
 	endpointid = fmt.Sprintf("%v", EndpointsIDresponse[0]["Id"])
 	return response["jwt"], endpointid, nil
 }
+
 func GetEndpointsID(svc *svc.ServiceContext) (*http.Response, error) {
 	// 从请求的 session 中获取 jwt
 	jwt := svc.PortainerJwt

@@ -53,8 +53,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				},
 				{
 					Method:  http.MethodPost,
+					Path:    "/start_container",
+					Handler: containersManager.StartContainerHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
 					Path:    "/stop_container",
 					Handler: containersManager.StopContainerHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/rename_container",
+					Handler: containersManager.RenameContainerHandler(serverCtx),
 				},
 			}...,
 		),
@@ -69,6 +79,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Method:  http.MethodGet,
 					Path:    "/",
 					Handler: imagesManager.ImagesManagerIndexHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/get_new_image",
+					Handler: imagesManager.GetNewImageHandler(serverCtx),
 				},
 			}...,
 		),

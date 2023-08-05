@@ -1,19 +1,27 @@
 syntax = "v1"
 
 type DoLoginReq {
-	Secret_key string `form:"secret_key,optional"`
+	SecretKey string `form:"secret_key,optional"`
 }
 type StartContainerReq {
-	Name string `form:"name,optional"`
+	Name string `json:"name"`
 }
 type StopContainerReq {
-	Name string `form:"name,optional"`
+	Name string `json:"name"`
+}
+type RenameContainerReq {
+	OldName string `json:"oldName"`
+	NewName string `json:"newName"`
+}
+type getNewImageReq {
+	ImageNameAndTag string `json:"image_name_and_tag"`
 }
 type MsgResp {
 	Status string `json:"status"`
+	Msg string `json:"msg"`
 }
 
-service autoUpdate {
+service oneKeyUpdate {
 	@handler webindex
 	get / () returns ()
 }
@@ -23,7 +31,7 @@ service autoUpdate {
 	group: Login
 	middleware: IndexCheckMiddleware
 )
-service autoUpdate {
+service oneKeyUpdate {
 	@handler DoLogin
 	post /login (DoLoginReq) returns ()
 
@@ -36,7 +44,7 @@ service autoUpdate {
 	group: containersManager
 	middleware: CookieCheckMiddleware
 )
-service autoUpdate {
+service oneKeyUpdate {
 	@handler ContainersManagerIndex
 	get / () returns ()
 
@@ -45,6 +53,9 @@ service autoUpdate {
 
 	@handler StopContainer
 	post /stop_container (StopContainerReq) returns (MsgResp)
+
+	@handler RenameContainer
+	post /rename_container (RenameContainerReq) returns (MsgResp)
 }
 
 @server(
@@ -52,7 +63,10 @@ service autoUpdate {
 	group: imagesManager
 	middleware: CookieCheckMiddleware
 )
-service autoUpdate {
+service oneKeyUpdate {
 	@handler imagesManagerIndex
 	get / () returns ()
+
+	@handler getNewImage
+	post /get_new_image (getNewImageReq) returns (MsgResp)
 }

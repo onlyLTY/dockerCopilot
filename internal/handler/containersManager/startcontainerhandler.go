@@ -1,7 +1,6 @@
 package containersManager
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/logic/containersManager"
@@ -10,16 +9,16 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-func StopContainerHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func StartContainerHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.StopContainerReq
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		var req types.StartContainerReq
+		if err := httpx.Parse(r, &req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
 
-		l := containersManager.NewStopContainerLogic(r.Context(), svcCtx)
-		resp, err := l.StopContainer(&req)
+		l := containersManager.NewStartContainerLogic(r.Context(), svcCtx)
+		resp, err := l.StartContainer(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

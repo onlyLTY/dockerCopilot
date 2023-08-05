@@ -10,16 +10,16 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-func StopContainerHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func RenameContainerHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.StopContainerReq
+		var req types.RenameContainerReq
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
 
-		l := containersManager.NewStopContainerLogic(r.Context(), svcCtx)
-		resp, err := l.StopContainer(&req)
+		l := containersManager.NewRenameContainerLogic(r.Context(), svcCtx)
+		resp, err := l.RenameContainer(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

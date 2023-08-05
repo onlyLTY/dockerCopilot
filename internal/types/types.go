@@ -2,13 +2,27 @@
 package types
 
 type DoLoginReq struct {
-	Secret_key string `form:"secret_key,optional"`
+	SecretKey string `form:"secret_key,optional"`
+}
+
+type StartContainerReq struct {
+	Name string `json:"name"`
 }
 
 type StopContainerReq struct {
-	Name string `form:"name,optional"`
+	Name string `json:"name"`
+}
+
+type RenameContainerReq struct {
+	OldName string `json:"oldName"`
+	NewName string `json:"newName"`
+}
+
+type GetNewImageReq struct {
+	ImageNameAndTag string `json:"image_name_and_tag"`
 }
 
 type MsgResp struct {
 	Status string `json:"status"`
+	Msg    string `json:"msg"`
 }
