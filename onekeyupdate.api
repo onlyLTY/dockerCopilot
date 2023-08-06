@@ -13,6 +13,14 @@ type RenameContainerReq {
 	OldName string `json:"oldName"`
 	NewName string `json:"newName"`
 }
+type CreateContainerReq {
+	OldName string `json:"old_name"`
+	NewName string `json:"new_name"`
+	ImageNameAndTag string `json:"image_name_and_tag"`
+}
+type DeleteContainerReq {
+	Name string `json:"name"`
+}
 type getNewImageReq {
 	ImageNameAndTag string `json:"image_name_and_tag"`
 }
@@ -56,6 +64,12 @@ service oneKeyUpdate {
 
 	@handler RenameContainer
 	post /rename_container (RenameContainerReq) returns (MsgResp)
+
+	@handler CreateContainer
+	post /create_container (CreateContainerReq) returns (MsgResp)
+
+	@handler RemoveContainer
+	post /delete_container (DeleteContainerReq) returns (MsgResp)
 }
 
 @server(

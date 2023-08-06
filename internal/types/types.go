@@ -18,6 +18,16 @@ type RenameContainerReq struct {
 	NewName string `json:"newName"`
 }
 
+type CreateContainerReq struct {
+	OldName         string `json:"old_name"`
+	NewName         string `json:"new_name"`
+	ImageNameAndTag string `json:"image_name_and_tag"`
+}
+
+type DeleteContainerReq struct {
+	Name string `json:"name"`
+}
+
 type GetNewImageReq struct {
 	ImageNameAndTag string `json:"image_name_and_tag"`
 }
