@@ -5,6 +5,7 @@ import (
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -24,7 +25,8 @@ func NewImageCheck() *ImageUpdateData {
 func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 	for _, images := range imageList {
 		imagename := removeProxy(images.Image_Name)
-		r, err := http.Get("https://docker.lieying.fun/v2/repositories/" + imagename +
+		baseURL := os.Getenv("hubURL")
+		r, err := http.Get(baseURL + "/v2/repositories/" + imagename +
 			"/tags/" + images.Image_Tag)
 		if err != nil || r.StatusCode != 200 {
 			logx.Error("获取远程镜像信息失败" + images.Image_Name + ":" + images.Image_Tag)
@@ -42,6 +44,8 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 		if remoteSHA256 != localSHA256 {
 			logx.Info(images.Image_Name + ":" + images.Image_Tag + " need update")
 			i.Data[images.ID] = ImageCheckList{NeedUpdate: true}
+		} else {
+			logx.Info(images.Image_Name + ":" + images.Image_Tag + " not need update")
 		}
 
 	}
