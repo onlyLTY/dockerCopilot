@@ -24,7 +24,7 @@ type CreateContainerReq struct {
 	ImageNameAndTag string `json:"image_name_and_tag"`
 }
 
-type DeleteContainerReq struct {
+type RemoveContainerReq struct {
 	Name string `json:"name"`
 }
 

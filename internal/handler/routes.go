@@ -66,6 +66,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Path:    "/rename_container",
 					Handler: containersManager.RenameContainerHandler(serverCtx),
 				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/create_container",
+					Handler: containersManager.CreateContainerHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/remove_container",
+					Handler: containersManager.RemoveContainerHandler(serverCtx),
+				},
 			}...,
 		),
 		rest.WithPrefix("/containersManager"),

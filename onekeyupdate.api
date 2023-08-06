@@ -18,7 +18,7 @@ type CreateContainerReq {
 	NewName string `json:"new_name"`
 	ImageNameAndTag string `json:"image_name_and_tag"`
 }
-type DeleteContainerReq {
+type RemoveContainerReq {
 	Name string `json:"name"`
 }
 type getNewImageReq {
@@ -69,7 +69,7 @@ service oneKeyUpdate {
 	post /create_container (CreateContainerReq) returns (MsgResp)
 
 	@handler RemoveContainer
-	post /delete_container (DeleteContainerReq) returns (MsgResp)
+	post /remove_container (RemoveContainerReq) returns (MsgResp)
 }
 
 @server(
