@@ -95,6 +95,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Path:    "/get_new_image",
 					Handler: imagesManager.GetNewImageHandler(serverCtx),
 				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/remove_image",
+					Handler: imagesManager.RemoveImageHandler(serverCtx),
+				},
 			}...,
 		),
 		rest.WithPrefix("/imagesManager"),

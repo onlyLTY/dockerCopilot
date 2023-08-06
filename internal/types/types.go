@@ -32,6 +32,11 @@ type GetNewImageReq struct {
 	ImageNameAndTag string `json:"image_name_and_tag"`
 }
 
+type RemoveImageReq struct {
+	Force           bool   `json:"force"`
+	ImageNameAndTag string `json:"image_name_and_tag"`
+}
+
 type MsgResp struct {
 	Status string `json:"status"`
 	Msg    string `json:"msg"`

@@ -123,10 +123,10 @@
         function delImage(num, force = false) {
             return new Promise((resolve, reject) => {
                 var xhr = new XMLHttpRequest();
-                var url = "delete_image/";
+                var url = "imagesManager/delete_image/";
                 var method = "POST";
                 xhr.open(method, url, true);
-                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+                xhr.setRequestHeader("Content-Type", "application/json");
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 var data = {num: num, force: force};
                 var params = JSON.stringify(data);
