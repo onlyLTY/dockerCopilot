@@ -6,7 +6,6 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
 	"strings"
-	"time"
 )
 
 // 检查更新处理后的镜像列表
@@ -38,12 +37,9 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 			logx.Error("解析远程镜像信息失败" + images.Image_Name + ":" + images.Image_Tag)
 			continue
 		}
-		remoteImageCreateTime, err := time.Parse(time.RFC3339, strings.Replace(hubimage.TagLastPushed, "Z", "+00:00", 1))
-		if err != nil {
-			logx.Error("解析远程镜像创建时间失败" + images.Image_Name + ":" + images.Image_Tag)
-			continue
-		}
-		if remoteImageCreateTime.Unix() > images.Created {
+		remoteSHA256 := hubimage.Digest
+		localSHA256 := strings.Split(images.RepoDigests[0], "@")[1]
+		if remoteSHA256 != localSHA256 {
 			logx.Info(images.Image_Name + ":" + images.Image_Tag + " need update")
 			i.Data[images.ID] = ImageCheckList{NeedUpdate: true}
 		}
