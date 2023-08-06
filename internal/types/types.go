@@ -33,8 +33,8 @@ type GetNewImageReq struct {
 }
 
 type RemoveImageReq struct {
-	Force           bool   `json:"force"`
-	ImageNameAndTag string `json:"image_name_and_tag"`
+	Force   bool   `json:"force"`
+	ImageID string `json:"imageID"`
 }
 
 type MsgResp struct {

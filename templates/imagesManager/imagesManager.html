@@ -2,17 +2,17 @@
 
 
 {% block head_region %}
-    <title>一键升级</title>
+<title>一键升级</title>
 {% endblock %}
 
 {% block left_region %}
-    <li class="layui-nav-item"><a href="/containersManager">容器</a></li>
-    <li class="layui-nav-item layui-this"><a href="/imagesManager">镜像</a></li>
+<li class="layui-nav-item"><a href="/containersManager">容器</a></li>
+<li class="layui-nav-item layui-this"><a href="/imagesManager">镜像</a></li>
 {% endblock %}
 
 {% block button_region %}
-    <button id="del_image" type="button" class="layui-btn layui-btn-sm layui-btn-normal">删除镜像</button>
-    <button id="force_del_image" type="button" class="layui-btn layui-btn-sm layui-btn-normal">强制删除</button>
+<button class="layui-btn layui-btn-sm layui-btn-normal" id="remove_image" type="button">删除镜像</button>
+<button class="layui-btn layui-btn-sm layui-btn-normal" id="force_remove_image" type="button">强制删除</button>
 {% endblock %}
 
 <!--{#{% block data_region %}#}-->
@@ -20,155 +20,157 @@
 <!--{#{% endblock %}#}-->
 
 {% block data_region %}
-    <table class="layui-table" id="container_table" lay-skin="line"
-           lay-data="{limit: Number.MAX_VALUE, id:'container_table'}" lay-filter="container_table">
-        <colgroup>
-            <col style="width: 70px">
-        </colgroup>
+<table class="layui-table" id="container_table" lay-data="{limit: Number.MAX_VALUE, id:'container_table'}"
+       lay-filter="container_table" lay-skin="line">
+    <colgroup>
+        <col style="width: 70px">
+    </colgroup>
 
-        <thead>
-        <tr>
-            <th lay-data="{field:'name'}">镜像名称</th>
-            <th lay-data="{field:'tag'}">镜像标签</th>
-            <th lay-data="{field:'size'}">镜像大小</th>
-            <th lay-data="{field:'createTime'}">创建时间</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% if images_list %}
-            {% for image in images_list %}
-                {#                {% with name=container.Names.0|slice:"1:" %}#}
-                <tr>
-                    <td class="col-auto">{{ image.Image_Name }}
-                        {% if not image.States %}
-                            <span class="layui-badge layui-bg-orange">未使用</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ image.Image_Tag }}</td>
-                    <td>{{ image.SizeFormat }}</td>
-                    <td class="createTime">{{ image.Created }}</td>
-                </tr>
-                {#                {% endwith %}#}
-            {% endfor %}
-        {% else %}
-            <p>列表为空</p>
-        {% endif %}
-        </tbody>
-    </table>
+    <thead>
+    <tr>
+        <th lay-data="{field:'name'}">镜像名称</th>
+        <th lay-data="{field:'tag'}">镜像标签</th>
+        <th lay-data="{field:'imageId', width:400}">镜像ID</th>
+        <th lay-data="{field:'size'}">镜像大小</th>
+        <th lay-data="{field:'createTime'}">创建时间</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% if images_list %}
+    {% for image in images_list %}
+    {# {% with name=container.Names.0|slice:"1:" %}#}
+    <tr>
+        <td class="col-auto">{{ image.Image_Name }}
+            {% if not image.States %}
+            <span class="layui-badge layui-bg-orange">未使用</span>
+            {% endif %}
+        </td>
+        <td>{{ image.Image_Tag }}</td>
+        <td>{{ image.ID }}</td>
+        <td>{{ image.SizeFormat }}</td>
+        <td class="createTime">{{ image.Created }}</td>
+    </tr>
+    {# {% endwith %}#}
+    {% endfor %}
+    {% else %}
+    <p>列表为空</p>
+    {% endif %}
+    </tbody>
+</table>
 {% endblock %}
 
 {% block footer_region %}
-    <span> <span id="rowCountDisplay"></span> 个镜像</span>
+<span> <span id="rowCountDisplay"></span> 个镜像</span>
 {% endblock %}
 
 {% block scripts %}
-    <script src="/static/layui/layui.js"></script>
-    <!-- 具体的 JavaScript 代码 -->
+<script src="/static/layui/layui.js"></script>
+<!-- 具体的 JavaScript 代码 -->
 
-    <script>
-        layui.use('table', function () {
-            var table = layui.table;
-            //监听行单击事件（双击事件为：rowDouble）
-            table.on('row(container_table)', function (obj) {
-                //标注选中样式
-                obj.tr.addClass('layui-bg-blue active').siblings().removeClass('layui-bg-blue active');
-            });
+<script>
+    layui.use('table', function () {
+        var table = layui.table;
+        //监听行单击事件（双击事件为：rowDouble）
+        table.on('row(container_table)', function (obj) {
+            //标注选中样式
+            obj.tr.addClass('layui-bg-blue active').siblings().removeClass('layui-bg-blue active');
         });
-    </script>
+    });
+</script>
 
-    <script>
-        var cells = document.querySelectorAll('td.createTime');     // 获取所有类名为"createTime"的单元格
-        for (var i = 0; i < cells.length; i++) {                   // 遍历单元格列表
-            var timestamp = cells[i].textContent;                    // 获取时间戳
-            var date = new Date(timestamp * 1000);                   // 将时间戳转换为Date对象
-            cells[i].textContent = date.toLocaleString();                       // 替换原始内容为日期字符串
-        }
-    </script>
+<script>
+    var cells = document.querySelectorAll('td.createTime');     // 获取所有类名为"createTime"的单元格
+    for (var i = 0; i < cells.length; i++) {                   // 遍历单元格列表
+        var timestamp = cells[i].textContent;                    // 获取时间戳
+        var date = new Date(timestamp * 1000);                   // 将时间戳转换为Date对象
+        cells[i].textContent = date.toLocaleString();                       // 替换原始内容为日期字符串
+    }
+</script>
 
-    <script>
-        var del_image = document.getElementById('del_image');
-        del_image.onclick = function () {
-            var activeElements = document.getElementsByClassName("layui-bg-blue active");
-            num = activeElements[0].getAttribute("data-index");
-            delImage(num)
-                .then(() => {
-                    delayedReload();
-                })
-                .catch((error) => {
-                    console.error("An error occurred:", error);
-                });
-        }
-
-        var force_del_image = document.getElementById('force_del_image');
-        force_del_image.onclick = function () {
-            var activeElements = document.getElementsByClassName("layui-bg-blue active");
-            num = activeElements[0].getAttribute("data-index");
-            layer.msg('请谨慎使用强制删除', {
-                time: 0 //不自动关闭
-                , btn: ['确认使用', '我再想想']
-                , yes: function (index) {
-                    layer.close(index);
-                    delImage(num, true)
-                        .then(() => {
-                            delayedReload();
-                        })
-                        .catch((error) => {
-                            console.error("An error occurred:", error);
-                        });
-                }
+<script>
+    var remove_image = document.getElementById('remove_image');
+    remove_image.onclick = function () {
+        var activeElements = document.getElementsByClassName("layui-bg-blue active");
+        imageID = activeElements[0].querySelector('td[data-field="imageId"]').textContent
+        removeImage(imageID)
+            .then(() => {
+                delayedReload();
+            })
+            .catch((error) => {
+                console.error("An error occurred:", error);
             });
+    }
 
-        }
+    var force_remove_image = document.getElementById('force_remove_image');
+    force_remove_image.onclick = function () {
+        var activeElements = document.getElementsByClassName("layui-bg-blue active");
+        imageID = activeElements[0].querySelector('td[data-field="imageId"]').textContent
+        layer.msg('请谨慎使用强制删除', {
+            time: 0 //不自动关闭
+            , btn: ['确认使用', '我再想想']
+            , yes: function (index) {
+                layer.close(index);
+                removeImage(imageID, true)
+                    .then(() => {
+                        delayedReload();
+                    })
+                    .catch((error) => {
+                        console.error("An error occurred:", error);
+                    });
+            }
+        });
 
-        function delImage(num, force = false) {
-            return new Promise((resolve, reject) => {
-                var xhr = new XMLHttpRequest();
-                var url = "imagesManager/delete_image/";
-                var method = "POST";
-                xhr.open(method, url, true);
-                xhr.setRequestHeader("Content-Type", "application/json");
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                var data = {num: num, force: force};
-                var params = JSON.stringify(data);
-                xhr.onreadystatechange = function () {
-                    if (xhr.readyState === 4) {
-                        try {
-                            var response = JSON.parse(xhr.responseText);
-                            console.log(response);
-                            if (response['status'] === 'delete_success') {
-                                layer.msg('删除镜像成功', {time: 0});
-                                resolve();
-                            } else if (response['status'] === "can_not_delete") {
-                                layer.alert(response['info'], {icon: 5});
-                                reject();
-                            } else if (response['status'] === 'delete_failed') {
-                                layer.alert('删除镜像失败', {icon: 5});
-                                reject();
-                            }
-                        } catch (error) {
-                            console.error("Failed to parse JSON response:", error);
-                            layer.alert('删除镜像出现错误，请联系开发者', {icon: 5});
+    }
+
+    function removeImage(imageID, force = false) {
+        console.log(imageID);
+        return new Promise((resolve, reject) => {
+            var xhr = new XMLHttpRequest();
+            var url = "imagesManager/remove_image/";
+            var method = "POST";
+            xhr.open(method, url, true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            var data = {imageID: imageID, force: force};
+            var params = JSON.stringify(data);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        console.log(response);
+                        if (response['status'] === '200') {
+                            layer.msg('删除镜像成功', {time: 0});
+                            resolve();
+                        } else if (response['status'] === "409") {
+                            layer.alert(response['msg'], {icon: 5});
+                            reject();
+                        } else {
+                            layer.alert('删除镜像失败' + response['msg'], {icon: 5});
+                            reject();
                         }
+                    } catch (error) {
+                        console.error("Failed to parse JSON response:", error);
+                        layer.alert('删除镜像出现错误，请联系开发者', {icon: 5});
                     }
-                };
-                layer.msg('正在删除镜像', {time: 0});
-                setTimeout(function () {
-                    xhr.send(params);
-                }, 1500); // 暂缓3秒执行xhr.send(params)
-            });
-        }
-
-        function delayedReload() {
+                }
+            };
+            layer.msg('正在删除镜像', {time: 0});
             setTimeout(function () {
-                location.reload();
-            }, 2500); // 延迟3秒钟（或3000毫秒）
-        }
+                xhr.send(params);
+            }, 1500); // 暂缓3秒执行xhr.send(params)
+        });
+    }
 
-    </script>
+    function delayedReload() {
+        setTimeout(function () {
+            location.reload();
+        }, 2500); // 延迟3秒钟（或3000毫秒）
+    }
 
-    <script>
-        const table = document.getElementById('container_table');
-        const rowCount = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr').length;
-        document.getElementById('rowCountDisplay').innerText = rowCount;
-    </script>
+</script>
+
+<script>
+    const table = document.getElementById('container_table');
+    const rowCount = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr').length;
+    document.getElementById('rowCountDisplay').innerText = rowCount;
+</script>
 {% endblock %}

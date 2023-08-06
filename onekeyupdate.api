@@ -24,9 +24,9 @@ type RemoveContainerReq {
 type getNewImageReq {
 	ImageNameAndTag string `json:"image_name_and_tag"`
 }
-type RemoveImageReq {
+type removeImageReq {
 	Force bool `json:"force"`
-	ImageNameAndTag string `json:"image_name_and_tag"`
+	ImageID string `json:"imageID"`
 }
 type MsgResp {
 	Status string `json:"status"`
@@ -89,5 +89,5 @@ service oneKeyUpdate {
 	post /get_new_image (getNewImageReq) returns (MsgResp)
 
 	@handler RemoveImage
-	post /remove_image (RemoveImageReq) returns (MsgResp)
+	post /remove_image (removeImageReq) returns (MsgResp)
 }

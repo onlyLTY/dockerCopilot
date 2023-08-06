@@ -26,6 +26,6 @@ func NewRemoveImageLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Remov
 
 func (l *RemoveImageLogic) RemoveImage(req *types.RemoveImageReq) (resp *types.MsgResp, err error) {
 	// todo: add your logic here and delete this line
-	msg, err := utiles.RemoveImage(l.svcCtx, req.ImageNameAndTag, req.Force)
+	msg, err := utiles.RemoveImage(l.svcCtx, req.ImageID, req.Force)
 	return &msg, err
 }

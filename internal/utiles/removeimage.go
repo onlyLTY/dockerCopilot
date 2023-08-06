@@ -6,14 +6,16 @@ import (
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
-func RemoveImage(ctx *svc.ServiceContext, imageNameAndTag string, force bool) (types.MsgResp, error) {
+func RemoveImage(ctx *svc.ServiceContext, imageID string, force bool) (types.MsgResp, error) {
 	jwt, endpointsId, err := GetNewJwt(ctx)
 	if err != nil {
 		return types.MsgResp{}, err
 	}
-	url := domain + "/api/endpoints/" + endpointsId + "/docker/images/"
+	imageID = strings.Split(imageID, ":")[1]
+	url := domain + "/api/endpoints/" + endpointsId + "/docker/images/" + imageID
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return types.MsgResp{}, err
@@ -37,8 +39,7 @@ func RemoveImage(ctx *svc.ServiceContext, imageNameAndTag string, force bool) (t
 	type ErrorResponse struct {
 		Message string `json:"message"`
 	}
-	// 对于204不解析
-	if response.StatusCode != http.StatusNoContent {
+	if response.StatusCode != http.StatusOK {
 		// 对于其他状态码，我们尝试解析响应体中的JSON错误消息
 		errorResponse := ErrorResponse{}
 		err = json.NewDecoder(response.Body).Decode(&errorResponse)
