@@ -116,7 +116,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Handler: version.VersionIndexHandler(serverCtx),
 				},
 				{
-					Method:  http.MethodPost,
+					Method:  http.MethodGet,
 					Path:    "/get_version",
 					Handler: version.GetVersionsHandler(serverCtx),
 				},

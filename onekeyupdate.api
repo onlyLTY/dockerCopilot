@@ -107,7 +107,7 @@ service oneKeyUpdate {
 	get / () returns ()
 
 	@handler getVersions
-	post /get_version () returns (VersionMsgResp)
+	get /get_version () returns (VersionMsgResp)
 
 	@handler update
 	post /update () returns (VersionMsgResp)
