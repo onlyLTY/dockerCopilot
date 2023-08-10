@@ -51,7 +51,7 @@ func GetImagesList(ctx *svc.ServiceContext) ([]types.Image, error) {
 }
 func splitImageNameAndTag(imagesList []types.Image) []types.Image {
 	for i, image := range imagesList {
-		if image.RepoTags != nil {
+		if len(image.RepoTags) != 0 {
 			imagesList[i].Image_Name = strings.Split(image.RepoTags[0], ":")[0]
 			imagesList[i].Image_Tag = strings.Split(image.RepoTags[0], ":")[1]
 		} else {
