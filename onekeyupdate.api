@@ -33,6 +33,11 @@ type MsgResp {
 	Msg string `json:"msg"`
 }
 
+type VersionMsgResp {
+	Version string `json:"version"`
+	BuildDate string `json:"build_date"`
+}
+
 service oneKeyUpdate {
 	@handler webindex
 	get / () returns ()
@@ -90,4 +95,20 @@ service oneKeyUpdate {
 
 	@handler RemoveImage
 	post /remove_image (removeImageReq) returns (MsgResp)
+}
+
+@server(
+	prefix: /version
+	group: version
+	middleware: CookieCheckMiddleware
+)
+service oneKeyUpdate {
+	@handler versionIndex
+	get / () returns ()
+
+	@handler getVersions
+	post /get_version () returns (VersionMsgResp)
+
+	@handler update
+	post /update () returns (VersionMsgResp)
 }

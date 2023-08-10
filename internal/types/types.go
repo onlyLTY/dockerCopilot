@@ -41,3 +41,8 @@ type MsgResp struct {
 	Status string `json:"status"`
 	Msg    string `json:"msg"`
 }
+
+type VersionMsgResp struct {
+	Version   string `json:"version"`
+	BuildDate string `json:"build_date"`
+}

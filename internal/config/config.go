@@ -8,3 +8,8 @@ type Config struct {
 	Account      string `json:",string"`
 	AccessExpire int64  `json:",default=86000"`
 }
+
+var (
+	Version   string
+	BuildDate string
+)
