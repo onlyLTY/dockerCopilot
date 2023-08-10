@@ -20,7 +20,7 @@ FROM alpine
 # 从构建环境中拷贝编译好的应用程序
 COPY --from=build-env /app/onekeyupdate /onekeyupdate
 
-ENV Account="" \
+ENV account="" \
     secretKey="" \
     hubURL="https://hub.docker.com"
 
