@@ -54,8 +54,11 @@ func splitImageNameAndTag(imagesList []types.Image) []types.Image {
 		if len(image.RepoTags) != 0 {
 			imagesList[i].Image_Name = strings.Split(image.RepoTags[0], ":")[0]
 			imagesList[i].Image_Tag = strings.Split(image.RepoTags[0], ":")[1]
-		} else {
+		} else if len(image.RepoDigests) != 0 {
 			imagesList[i].Image_Name = strings.Split(image.RepoDigests[0], "@")[0]
+			imagesList[i].Image_Tag = "None"
+		} else {
+			imagesList[i].Image_Name = "None"
 			imagesList[i].Image_Tag = "None"
 		}
 	}
