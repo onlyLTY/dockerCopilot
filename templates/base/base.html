@@ -33,6 +33,12 @@
                 {% endblock %}
 
             </ul>
+            <div class="layui-col-md1" style="bottom: 0; height: 30px; position: fixed;text-align: center;">
+                <span id="versionSpan">V1.0.0</span>
+                <button class="layui-btn layui-btn-xs layui-btn-radius layui-btn-normal"
+                        style="margin-left: 5px;display: none;">更新程序
+                </button>
+            </div>
         </div>
     </div>
 
@@ -83,6 +89,19 @@ $(document).ready(function() {
     });
 });
 
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch('/version/get_version')
+            .then(response => response.json())
+            .then(data => {
+                console.log('version:', data.version);
+                document.getElementById('versionSpan').textContent = data.version;
+            })
+            .catch(error => {
+                console.error('Error fetching version:', error);
+            });
+    });
 </script>
 </body>
 </html>
