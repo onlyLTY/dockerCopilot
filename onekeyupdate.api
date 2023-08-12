@@ -1,0 +1,114 @@
+syntax = "v1"
+
+type DoLoginReq {
+	SecretKey string `form:"secret_key,optional"`
+}
+type StartContainerReq {
+	Name string `json:"name"`
+}
+type StopContainerReq {
+	Name string `json:"name"`
+}
+type RenameContainerReq {
+	OldName string `json:"oldName"`
+	NewName string `json:"newName"`
+}
+type CreateContainerReq {
+	OldName         string `json:"old_name"`
+	NewName         string `json:"new_name"`
+	ImageNameAndTag string `json:"image_name_and_tag"`
+}
+type RemoveContainerReq {
+	Name string `json:"name"`
+}
+type getNewImageReq {
+	ImageNameAndTag string `json:"image_name_and_tag"`
+}
+type removeImageReq {
+	Force   bool   `json:"force"`
+	ImageID string `json:"imageID"`
+}
+type MsgResp {
+	Status string `json:"status"`
+	Msg    string `json:"msg"`
+}
+
+type VersionMsgResp {
+	Version   string `json:"version"`
+	BuildDate string `json:"build_date"`
+}
+
+service oneKeyUpdate {
+	@handler webindex
+	get / () returns ()
+}
+
+@server(
+	prefix: /
+	group: Login
+	middleware: IndexCheckMiddleware
+)
+service oneKeyUpdate {
+	@handler DoLogin
+	post /login (DoLoginReq) returns ()
+
+	@handler LoginIndex
+	get /login () returns ()
+}
+
+@server(
+	prefix: /containersManager
+	group: containersManager
+	middleware: CookieCheckMiddleware
+)
+service oneKeyUpdate {
+	@handler ContainersManagerIndex
+	get / () returns ()
+
+	@handler StartContainer
+	post /start_container (StartContainerReq) returns (MsgResp)
+
+	@handler StopContainer
+	post /stop_container (StopContainerReq) returns (MsgResp)
+
+	@handler RenameContainer
+	post /rename_container (RenameContainerReq) returns (MsgResp)
+
+	@handler CreateContainer
+	post /create_container (CreateContainerReq) returns (MsgResp)
+
+	@handler RemoveContainer
+	post /remove_container (RemoveContainerReq) returns (MsgResp)
+}
+
+@server(
+	prefix: /imagesManager
+	group: imagesManager
+	middleware: CookieCheckMiddleware
+)
+service oneKeyUpdate {
+	@handler imagesManagerIndex
+	get / () returns ()
+
+	@handler getNewImage
+	post /get_new_image (getNewImageReq) returns (MsgResp)
+
+	@handler RemoveImage
+	post /remove_image (removeImageReq) returns (MsgResp)
+}
+
+@server(
+	prefix: /version
+	group: version
+	middleware: CookieCheckMiddleware
+)
+service oneKeyUpdate {
+	@handler versionIndex
+	get / () returns ()
+
+	@handler getVersions
+	get /get_version () returns (VersionMsgResp)
+
+	@handler update
+	post /update () returns (VersionMsgResp)
+}
