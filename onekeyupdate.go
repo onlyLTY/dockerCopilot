@@ -7,6 +7,7 @@ import (
 	loader "github.com/nathan-osman/pongo2-embed-loader"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/utiles"
+	"github.com/robfig/cron/v3"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"github.com/zeromicro/x/errors"
 	xhttp "github.com/zeromicro/x/http"
