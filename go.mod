@@ -1,4 +1,4 @@
-module oneKeyUpdateUGOS
+module github.com/onlyLTY/oneKeyUpdate/UGREEN
 
 go 1.20
 
