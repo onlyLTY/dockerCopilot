@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
 	myTypes "github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
 	"io/ioutil"
@@ -12,6 +14,12 @@ import (
 	"net/http"
 	"strconv"
 )
+
+type configWrapper struct {
+	*container.Config
+	HostConfig       *container.HostConfig
+	NetworkingConfig *network.NetworkingConfig
+}
 
 func CreateContainer(ctx *svc.ServiceContext, oldName string, newName string, imageNameAndTag string) (myTypes.MsgResp, error) {
 	containers, err := GetContainerList(ctx)
@@ -50,7 +58,15 @@ func CreateContainer(ctx *svc.ServiceContext, oldName string, newName string, im
 	inspectedContainer.Config.Hostname = ""
 	inspectedContainer.Config.Image = imageNameAndTag
 	inspectedContainer.Image = imageNameAndTag
-	postData, err := json.Marshal(inspectedContainer)
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: inspectedContainer.NetworkSettings.Networks,
+	}
+	body := configWrapper{
+		Config:           inspectedContainer.Config,
+		HostConfig:       inspectedContainer.HostConfig,
+		NetworkingConfig: networkingConfig,
+	}
+	postData, err := json.Marshal(body)
 	if err != nil {
 		log.Fatal(err)
 	}
