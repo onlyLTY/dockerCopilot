@@ -3,8 +3,8 @@ package utiles
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
 	"log"
 	"net/http"
 	"strings"

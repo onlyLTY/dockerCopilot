@@ -2,9 +2,9 @@ package version
 
 import (
 	"context"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/config"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/config"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 

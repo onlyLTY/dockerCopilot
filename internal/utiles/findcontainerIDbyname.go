@@ -2,7 +2,7 @@ package utiles
 
 import (
 	"errors"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
 	"strings"
 )
 

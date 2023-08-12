@@ -5,8 +5,8 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
 
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/logic/imagesManager"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/logic/imagesManager"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 

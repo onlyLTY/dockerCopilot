@@ -3,7 +3,7 @@ package middleware
 import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"net/http"
 )

@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"io/ioutil"

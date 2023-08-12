@@ -5,8 +5,8 @@ import (
 	"flag"
 	"fmt"
 	loader "github.com/nathan-osman/pongo2-embed-loader"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/handler"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/utiles"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/utiles"
 	"github.com/robfig/cron/v3"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"github.com/zeromicro/x/errors"
@@ -15,8 +15,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/config"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/config"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"

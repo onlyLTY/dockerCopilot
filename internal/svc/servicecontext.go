@@ -4,9 +4,9 @@ import (
 	"github.com/flosch/pongo2"
 	"github.com/google/uuid"
 	loader "github.com/nathan-osman/pongo2-embed-loader"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/config"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/middleware"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/module"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/config"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/middleware"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/module"
 	"github.com/zeromicro/go-zero/rest"
 )
 

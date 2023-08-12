@@ -2,9 +2,9 @@ package imagesManager
 
 import (
 	"context"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/utiles"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/utiles"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 

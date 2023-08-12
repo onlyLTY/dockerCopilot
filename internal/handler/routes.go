@@ -4,11 +4,11 @@ package handler
 import (
 	"net/http"
 
-	Login "github.com/onlyLTY/oneKeyUpdate/v2/internal/handler/Login"
-	containersManager "github.com/onlyLTY/oneKeyUpdate/v2/internal/handler/containersManager"
-	imagesManager "github.com/onlyLTY/oneKeyUpdate/v2/internal/handler/imagesManager"
-	version "github.com/onlyLTY/oneKeyUpdate/v2/internal/handler/version"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
+	Login "github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler/Login"
+	containersManager "github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler/containersManager"
+	imagesManager "github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler/imagesManager"
+	version "github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler/version"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 )

@@ -2,8 +2,8 @@ package containersManager
 
 import (
 	"github.com/flosch/pongo2"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/logic/containersManager"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/svc"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/logic/containersManager"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"net/http"

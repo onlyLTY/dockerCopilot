@@ -2,7 +2,7 @@ package module
 
 import (
 	"encoding/json"
-	"github.com/onlyLTY/oneKeyUpdate/v2/internal/types"
+	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
 	"os"

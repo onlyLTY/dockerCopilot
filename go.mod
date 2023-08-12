@@ -1,4 +1,4 @@
-module github.com/onlyLTY/oneKeyUpdate/v2
+module github.com/onlyLTY/oneKeyUpdate/zspace
 
 go 1.20
 
