@@ -22,7 +22,7 @@ func NewLoginIndexLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginI
 }
 
 func (l *LoginIndexLogic) LoginIndex() error {
-	// todo: add your logic here and delete this line
+	// 这个logic没啥用 别看了 要看就去看handler
 
 	return nil
 }

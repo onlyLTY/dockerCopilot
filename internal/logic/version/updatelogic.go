@@ -23,7 +23,7 @@ func NewUpdateLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateLogi
 	}
 }
 
-func (l *UpdateLogic) Update() (resp *types.VersionMsgResp, err error) {
+func (l *UpdateLogic) Update() (resp *types.MsgResp, err error) {
 	// todo: add your logic here and delete this line
 
 	return

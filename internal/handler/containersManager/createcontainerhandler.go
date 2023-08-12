@@ -1,6 +1,7 @@
 package containersManager
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/logic/containersManager"
@@ -12,7 +13,7 @@ import (
 func CreateContainerHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.CreateContainerReq
-		if err := httpx.Parse(r, &req); err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}

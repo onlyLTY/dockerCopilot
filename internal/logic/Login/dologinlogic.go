@@ -2,6 +2,7 @@ package Login
 
 import (
 	"context"
+	"errors"
 
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
@@ -25,6 +26,8 @@ func NewDoLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DoLoginLo
 
 func (l *DoLoginLogic) DoLogin(req *types.DoLoginReq) error {
 	// todo: add your logic here and delete this line
-
+	if req.SecretKey != l.svcCtx.Config.SecretKey {
+		return errors.New("秘钥错误")
+	}
 	return nil
 }

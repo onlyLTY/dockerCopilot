@@ -2,10 +2,9 @@ package version
 
 import (
 	"context"
-
+	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -24,7 +23,8 @@ func NewGetVersionsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetVe
 }
 
 func (l *GetVersionsLogic) GetVersions() (resp *types.VersionMsgResp, err error) {
-	// todo: add your logic here and delete this line
-
-	return
+	return &types.VersionMsgResp{
+		Version:   config.Version,
+		BuildDate: config.BuildDate,
+	}, nil
 }

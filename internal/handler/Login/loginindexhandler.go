@@ -1,7 +1,10 @@
 package Login
 
 import (
+	"github.com/flosch/pongo2"
+	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
+	"time"
 
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/logic/Login"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
@@ -15,6 +18,17 @@ func LoginIndexHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
+			t, _ := svcCtx.Template.FromFile("templates/login/login.html")
+
+			execute, err := t.ExecuteBytes(pongo2.Context{"current_year": time.Now()})
+			if err != nil {
+				logx.Error(err)
+			}
+			_, err = w.Write(execute)
+			if err != nil {
+				logx.Error(err)
+			}
+
 			httpx.Ok(w)
 		}
 	}

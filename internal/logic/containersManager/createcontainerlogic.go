@@ -2,6 +2,7 @@ package containersManager
 
 import (
 	"context"
+	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/utiles"
 
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
@@ -24,7 +25,6 @@ func NewCreateContainerLogic(ctx context.Context, svcCtx *svc.ServiceContext) *C
 }
 
 func (l *CreateContainerLogic) CreateContainer(req *types.CreateContainerReq) (resp *types.MsgResp, err error) {
-	// todo: add your logic here and delete this line
-
-	return
+	msg, err := utiles.CreateContainer(l.svcCtx, req.OldName, req.NewName, req.ImageNameAndTag)
+	return &msg, err
 }

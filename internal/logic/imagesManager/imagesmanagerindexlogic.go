@@ -2,6 +2,8 @@ package imagesManager
 
 import (
 	"context"
+	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/utiles"
 
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -21,8 +23,10 @@ func NewImagesManagerIndexLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *ImagesManagerIndexLogic) ImagesManagerIndex() error {
-	// todo: add your logic here and delete this line
-
-	return nil
+func (l *ImagesManagerIndexLogic) ImagesManagerIndex() ([]types.Image, error) {
+	list, err := utiles.GetImagesList(l.svcCtx)
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
 }
