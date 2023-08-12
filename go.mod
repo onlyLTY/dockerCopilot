@@ -2,7 +2,14 @@ module github.com/onlyLTY/oneKeyUpdate/UGREEN
 
 go 1.20
 
-require github.com/zeromicro/go-zero v1.5.4
+require (
+	github.com/flosch/pongo2 v0.0.0-20200913210552-0d938eb266f3
+	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/google/uuid v1.3.0
+	github.com/nathan-osman/pongo2-embed-loader v1.0.1
+	github.com/zeromicro/go-zero v1.5.4
+	github.com/zeromicro/x v0.0.0-20230424055333-01c7fb9548d4
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -11,9 +18,7 @@ require (
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
