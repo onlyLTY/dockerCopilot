@@ -11,8 +11,8 @@ type Image struct {
 	SharedSize  int               `json:"SharedSize"`
 	Size        int               `json:"Size"`
 	VirtualSize int               `json:"VirtualSize"`
-	Image_Name  string            `json:"image_name"`
-	Image_Tag   string            `json:"image_tag"`
+	ImageName   string            `json:"image_name"`
+	ImageTag    string            `json:"image_tag"`
 	States      int               `json:"States"`
 	SizeFormat  string            `json:"SizeFormat"`
 }

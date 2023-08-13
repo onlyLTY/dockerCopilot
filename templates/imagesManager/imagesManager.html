@@ -40,12 +40,12 @@
     {% for image in images_list %}
     {# {% with name=container.Names.0|slice:"1:" %}#}
     <tr>
-        <td class="col-auto">{{ image.Image_Name }}
+        <td class="col-auto">{{ image.ImageName }}
             {% if not image.States %}
             <span class="layui-badge layui-bg-orange">未使用</span>
             {% endif %}
         </td>
-        <td>{{ image.Image_Tag }}</td>
+        <td>{{ image.ImageTag }}</td>
         <td>{{ image.ID }}</td>
         <td>{{ image.SizeFormat }}</td>
         <td class="createTime">{{ image.Created }}</td>

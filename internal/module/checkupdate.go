@@ -24,28 +24,28 @@ func NewImageCheck() *ImageUpdateData {
 }
 func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 	for _, images := range imageList {
-		imagename := removeProxy(images.Image_Name)
+		imagename := removeProxy(images.ImageName)
 		baseURL := os.Getenv("hubURL")
 		r, err := http.Get(baseURL + "/v2/repositories/" + imagename +
-			"/tags/" + images.Image_Tag)
+			"/tags/" + images.ImageTag)
 		if err != nil || r.StatusCode != 200 {
-			logx.Error("获取远程镜像信息失败" + images.Image_Name + ":" + images.Image_Tag)
+			logx.Error("获取远程镜像信息失败" + images.ImageName + ":" + images.ImageTag)
 			continue
 		}
 		defer r.Body.Close()
 		hubimage := types.HubImageInfo{}
 		err = json.NewDecoder(r.Body).Decode(&hubimage)
 		if err != nil {
-			logx.Error("解析远程镜像信息失败" + images.Image_Name + ":" + images.Image_Tag)
+			logx.Error("解析远程镜像信息失败" + images.ImageName + ":" + images.ImageTag)
 			continue
 		}
 		remoteSHA256 := hubimage.Digest
 		localSHA256 := strings.Split(images.RepoDigests[0], "@")[1]
 		if remoteSHA256 != localSHA256 {
-			logx.Info(images.Image_Name + ":" + images.Image_Tag + " need update")
+			logx.Info(images.ImageName + ":" + images.ImageTag + " need update")
 			i.Data[images.ID] = ImageCheckList{NeedUpdate: true}
 		} else {
-			logx.Info(images.Image_Name + ":" + images.Image_Tag + " not need update")
+			logx.Info(images.ImageName + ":" + images.ImageTag + " not need update")
 		}
 
 	}
