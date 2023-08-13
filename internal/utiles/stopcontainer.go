@@ -1,11 +1,11 @@
 package utiles
 
 import (
-	"encoding/json"
+	"context"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
-	"net/http"
-	"strconv"
 )
 
 func StopContainer(ctx *svc.ServiceContext, name string) (types.MsgResp, error) {
@@ -13,38 +13,18 @@ func StopContainer(ctx *svc.ServiceContext, name string) (types.MsgResp, error) 
 	if err != nil {
 		return types.MsgResp{}, err
 	}
-	jwt, endpointsId, err := GetNewJwt(ctx)
 	containerID, err := findContainerIDByName(containers, name)
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		return types.MsgResp{}, err
+		panic(err)
 	}
-	url := domain + "/api/endpoints/" + endpointsId + "/docker/containers/" + containerID + "/stop"
-	req, err := http.NewRequest("POST", url, nil)
+	timeout := 10
+	stopOptions := container.StopOptions{
+		Timeout: &timeout,
+	}
+	err = cli.ContainerStop(context.Background(), containerID, stopOptions)
 	if err != nil {
-		return types.MsgResp{}, err
+		return types.MsgResp{Msg: err.Error()}, err
 	}
-	req.Header.Add("Authorization", jwt)
-	client := &http.Client{}
-	response, err := client.Do(req)
-	if err != nil {
-		return types.MsgResp{}, nil
-	}
-	defer response.Body.Close()
-	resp := types.MsgResp{Status: strconv.Itoa(response.StatusCode), Msg: response.Status}
-	type ErrorResponse struct {
-		Message string `json:"message"`
-	}
-	// 对于204和304，我们不需要尝试解析响应体中的内容
-	if response.StatusCode != http.StatusNoContent && response.StatusCode != http.StatusNotModified {
-		// 对于其他状态码，我们尝试解析响应体中的JSON错误消息
-		errorResponse := ErrorResponse{}
-		err = json.NewDecoder(response.Body).Decode(&errorResponse)
-		if err != nil {
-			// 在此处处理JSON解码错误
-			return types.MsgResp{}, err
-		}
-		// 如果解析成功，将错误消息设置为resp的Msg字段
-		resp.Msg = errorResponse.Message
-	}
-	return resp, nil
+	return types.MsgResp{}, nil
 }

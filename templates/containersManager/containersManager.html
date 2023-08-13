@@ -271,16 +271,12 @@
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
                     try {
-                        var response = JSON.parse(xhr.responseText);
-                        console.log(response);
-                        if (response['status'] === '204') {
+
+                        if (xhr.status === 200) {
                             layer.msg('停止容器成功', {time: 0});
                             resolve();
-                        } else if (response['status'] === '304') {
-                            layer.alert('容器已经停止', {icon: 0});
-                            reject();
-                        } else if (response['status'] === '404' || response['status'] === '500') {
-                            layer.alert('停止容器失败\n' + response['msg'], {icon: 5});
+                        } else {
+                            layer.alert('停止容器失败\n' + xhr.responseText, {icon: 5});
                             reject();
                         }
                     } catch (error) {
