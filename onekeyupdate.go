@@ -17,7 +17,6 @@ import (
 
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
 )
@@ -33,7 +32,7 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c, conf.UseEnv())
 
-	server := rest.MustNewServer(c.RestConf)
+	server := rest.MustNewServer(c.RestConf, rest.WithCors("*"))
 	defer server.Stop()
 	ctx := svc.NewServiceContext(c, &loader.Loader{Content: content})
 	list, err := utiles.GetImagesList(ctx)
