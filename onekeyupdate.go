@@ -40,7 +40,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	ctx.HubImageInfo.CheckUpdate(list)
+	go ctx.HubImageInfo.CheckUpdate(list)
 	corndanmu := cron.New(cron.WithParser(cron.NewParser(
 		cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
 	)))
