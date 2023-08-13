@@ -398,21 +398,17 @@
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
                     try {
-                        var response = JSON.parse(xhr.responseText);
-                        console.log(response);
-                        if (response['status'] === '204') {
+                        console.log(xhr.responseText);
+                        if (xhr.status === 200) {
                             layer.msg('删除旧容器成功', {time: 0});
                             resolve();
-                        } else if (response['status'] === '409') {
-                            layer.alert('删除旧容器失败' + response['msg'], {icon: 5});
-                            reject();
                         } else {
-                            layer.alert('删除旧容器失败', {icon: 5});
+                            layer.alert('删除旧容器失败' + xhr.responseText, {icon: 5});
                             reject();
                         }
                     } catch (error) {
                         console.error("delete_container Failed");
-                        layer.alert('删除旧容器出现错误，请联系开发者' + response['msg'], {icon: 5});
+                        layer.alert('删除旧容器出现错误，请联系开发者' + xhr.responseText, {icon: 5});
                     }
                 }
             };
