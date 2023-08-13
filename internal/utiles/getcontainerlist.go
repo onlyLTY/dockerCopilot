@@ -1,47 +1,36 @@
 package utiles
 
 import (
-	"encoding/json"
+	"context"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
-	"net/http"
+	MyType "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
 )
 
-func GetContainerList(ctx *svc.ServiceContext) ([]types.Container, error) {
-	containerlistdata := []types.Container{}
-	params := map[string]string{
-		"all": "true",
-	}
-	jwt, endpointsId, err := GetNewJwt(ctx)
+func GetContainerList(ctx *svc.ServiceContext) ([]MyType.Container, error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return containerlistdata, err
+		panic(err)
 	}
-	url := domain + "/api/endpoints/" + endpointsId + "/docker/containers/json"
-	req, err := http.NewRequest("GET", url, nil)
+	// 获取所有容器（包括停止的容器）
+	dockerContainerList, err := cli.ContainerList(context.Background(), types.ContainerListOptions{
+		All: true, // 设置为true来获取所有容器
+	})
 	if err != nil {
-		return containerlistdata, err
+		panic(err)
 	}
-	req.Header.Add("Authorization", jwt)
-	query := req.URL.Query()
-	for k, v := range params {
-		query.Add(k, v)
+	var containerList []MyType.Container
+	for _, dockerContainerInfo := range dockerContainerList {
+		containerInfo := MyType.Container{
+			Container: dockerContainerInfo,
+		}
+		containerList = append(containerList, containerInfo)
 	}
-	req.URL.RawQuery = query.Encode()
-	client := &http.Client{}
-	response, err := client.Do(req)
-	if err != nil {
-		return containerlistdata, err
-	}
-	defer response.Body.Close()
-
-	err = json.NewDecoder(response.Body).Decode(&containerlistdata)
-	if err != nil {
-		return containerlistdata, err
-	}
-	return containerlistdata, nil
+	return containerList, nil
 }
 
-func CheckImageUpdate(ctx *svc.ServiceContext, containerlistdata []types.Container) []types.Container {
+func CheckImageUpdate(ctx *svc.ServiceContext, containerlistdata []MyType.Container) []MyType.Container {
 	for i, v := range containerlistdata {
 		if _, ok := ctx.HubImageInfo.Data[v.ImageID]; ok {
 			if ctx.HubImageInfo.Data[v.ImageID].NeedUpdate {
