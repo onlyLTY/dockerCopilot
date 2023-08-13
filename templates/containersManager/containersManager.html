@@ -329,21 +329,17 @@
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
                     try {
-                        var response = JSON.parse(xhr.responseText);
-                        console.log(response);
-                        if (response['status'] === '200') {
+                        console.log(xhr.responseText);
+                        if (xhr.status === 200) {
                             layer.msg('拉取新镜像成功', {time: 0});
                             resolve();
-                        } else if (response['status'] === '404') {
-                            layer.alert('没有找到该镜像' + response['msg'], {icon: 5});
-                            reject();
                         } else {
-                            layer.alert('拉取新镜像失败' + response['msg'], {icon: 5});
+                            layer.alert('拉取新镜像失败' + xhr.responseText, {icon: 5});
                             reject();
                         }
                     } catch (error) {
                         console.error("Failed to parse JSON response:", error);
-                        layer.alert('拉取新镜像出现错误，请检查网络，可以尝试更换docker仓库' + response['msg'], {icon: 5});
+                        layer.alert('拉取新镜像出现错误，请检查网络，可以尝试更换docker仓库' + xhr.responseText, {icon: 5});
                     }
                 } else if (xhr.status === 500) {
                     layer.alert('拉取新镜像超时，请重试', {icon: 5});

@@ -1,85 +1,55 @@
 package utiles
 
 import (
-	"bufio"
+	"context"
 	"encoding/json"
-	"fmt"
+	dockerTypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	dockerMsgType "github.com/docker/docker/pkg/jsonmessage"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	myTypes "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/zeromicro/go-zero/core/logx"
 	"io"
-	"net/http"
-	"strconv"
+	"log"
 )
 
-func GetNewImage(ctx *svc.ServiceContext, imageNameAndTag string) (types.MsgResp, error) {
-	jwt, endpointsId, err := GetNewJwt(ctx)
+func GetNewImage(ctx *svc.ServiceContext, imageNameAndTag string) (myTypes.MsgResp, error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		return types.MsgResp{}, err
+		log.Fatalf("Failed to create Docker client: %s", err)
 	}
-	url := domain + "/api/endpoints/" + endpointsId + "/docker/images/create"
-	req, err := http.NewRequest("POST", url, nil)
+
+	// Ensure the client is compatible with the server version
+	cli.NegotiateAPIVersion(context.TODO())
 	if err != nil {
-		return types.MsgResp{}, err
+		return myTypes.MsgResp{}, err
 	}
-	req.Header.Add("Authorization", jwt)
-	params := map[string]string{
-		"fromImage": imageNameAndTag,
-	}
-	query := req.URL.Query()
-	for k, v := range params {
-		query.Add(k, v)
-	}
-	req.URL.RawQuery = query.Encode()
-	client := &http.Client{}
-	response, err := client.Do(req)
+	reader, err := cli.ImagePull(context.TODO(), imageNameAndTag, dockerTypes.ImagePullOptions{})
 	if err != nil {
-		return types.MsgResp{}, nil
+		log.Fatalf("Failed to pull image: %s", err)
 	}
-	defer response.Body.Close()
-	// 这里是流传输，得想办法处理
-	// 使用bufio读取响应体
-	reader := bufio.NewReader(response.Body)
+	defer reader.Close()
+
+	decodePullResponse(reader)
+	return myTypes.MsgResp{}, nil
+}
+
+func decodePullResponse(reader io.Reader) {
+	decoder := json.NewDecoder(reader)
 	for {
-		line, err := reader.ReadBytes('\n')
-		if err != nil && err != io.EOF {
-			fmt.Println("读取错误:", err)
-			break
-		}
-		if err == io.EOF {
-			break
+		var msg dockerMsgType.JSONMessage
+		if err := decoder.Decode(&msg); err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.Fatalf("Failed to decode pull image response: %s", err)
 		}
 
-		// 打印每行响应或进行其他处理
-		fmt.Println(string(line))
-	}
-
-	// 打印响应状态
-	fmt.Println("响应状态:", response.Status)
-	resp := types.MsgResp{Status: strconv.Itoa(response.StatusCode), Msg: response.Status}
-	type ErrorResponse struct {
-		Message string `json:"message"`
-	}
-	// 对于204和304，我们不需要尝试解析响应体中的内容
-	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated {
-		// 处理成功的响应
-		fmt.Println("拉取成功")
-		resp := types.MsgResp{Status: strconv.Itoa(response.StatusCode), Msg: "成功"}
-		return resp, nil
-	} else if response.StatusCode != http.StatusNoContent && response.StatusCode != http.StatusNotModified {
-		// 对于错误的响应，尝试解析错误消息
-		errorResponse := ErrorResponse{}
-		err = json.NewDecoder(response.Body).Decode(&errorResponse)
-		if err != nil {
-			// 在此处处理JSON解码错误
-			return types.MsgResp{}, err
+		// Print the progress or error information from the response
+		if msg.Error != nil {
+			logx.Error("Error: %s", msg.Error)
+		} else {
+			logx.Info("%s: %s\n", msg.Status, msg.Progress)
 		}
-		// 如果解析成功，将错误消息设置为resp的Msg字段
-		resp.Msg = errorResponse.Message
-		return resp, nil
-	} else {
-		// 处理其他情况，例如无内容的响应或不修改的响应
-		resp := types.MsgResp{Status: strconv.Itoa(response.StatusCode), Msg: response.Status}
-		return resp, nil
 	}
-
 }
