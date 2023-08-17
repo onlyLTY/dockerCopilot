@@ -1,15 +1,21 @@
 package utiles
 
 import (
+	"archive/tar"
+	"compress/gzip"
+	"context"
 	"fmt"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	myTypes "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 const (
@@ -17,46 +23,119 @@ const (
 	releaseBaseURL = "https://ghproxy.com/https://github.com/onlyLTY/oneKeyUpdate/releases/download"
 )
 
-func UpdateProgram(ctx *svc.ServiceContext) (types.MsgResp, error) {
+func UpdateProgram(ctx *svc.ServiceContext) (myTypes.MsgResp, error) {
 	resp, err := http.Get(versionURL)
 	if err != nil {
-		logx.Info("Error fetching version info:", err)
-		return types.MsgResp{}, nil
+		logx.Info("没有获取到最新版本信息:", err)
+		return myTypes.MsgResp{}, nil
 	}
 	defer resp.Body.Close()
 
 	versionData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logx.Info("Error reading version data:", err)
-		return types.MsgResp{}, nil
+		logx.Info("没有获取到最新版本信息:", err)
+		return myTypes.MsgResp{}, nil
 	}
 
 	version := strings.TrimSpace(string(versionData))
-
+	logx.Info("获取到最新版本：", version)
 	// 2. 构造下载链接
-	downloadURL := fmt.Sprintf("%s/%s/onekeyupdate", releaseBaseURL, version)
+	downloadURL := fmt.Sprintf("%s/%s/onekeyupdate.tar.gz", releaseBaseURL, version)
 
-	// 3. 下载文件
-	resp, err = http.Get(downloadURL)
+	dest := "onekeyupdate.tar.gz"
+
+	if err := downloadFile(downloadURL, dest); err != nil {
+		logx.Error("下载失败:", err)
+		panic(err)
+	}
+	logx.Info("下载成功")
+
+	if err := decompressTarGz(dest, "."); err != nil {
+		logx.Info("解压缩失败:", err)
+		return myTypes.MsgResp{Msg: err.Error()}, err
+	}
+	logx.Info("解压缩成功")
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		logx.Info("Error downloading the asset:", err)
-		return types.MsgResp{}, nil
+		panic(err)
+	}
+
+	containerID, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+
+	logx.Info("将在五秒后重启...")
+	time.Sleep(5 * time.Second)
+	if err := cli.ContainerRestart(context.Background(), containerID, container.StopOptions{}); err != nil {
+		panic(err)
+	}
+
+	return myTypes.MsgResp{}, nil
+}
+
+func downloadFile(url string, dest string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
 	}
 	defer resp.Body.Close()
 
-	outFile, err := os.Create("onekeyupdate")
+	out, err := os.Create(dest)
 	if err != nil {
-		logx.Info("Error creating the asset file:", err)
-		return types.MsgResp{}, nil
+		return err
 	}
-	defer outFile.Close()
+	defer out.Close()
 
-	_, err = io.Copy(outFile, resp.Body)
+	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
+func decompressTarGz(gzFilePath string, dest string) error {
+	file, err := os.Open(gzFilePath)
 	if err != nil {
-		logx.Info("Error saving the asset:", err)
-		return types.MsgResp{}, nil
+		return err
+	}
+	defer file.Close()
+
+	gzr, err := gzip.NewReader(file)
+	if err != nil {
+		return err
+	}
+	defer gzr.Close()
+
+	tarReader := tar.NewReader(gzr)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		target := dest + "/" + header.Name
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, os.FileMode(header.Mode)); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			outFile, err := os.Create(target)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(outFile, tarReader); err != nil {
+				outFile.Close()
+				return err
+			}
+			outFile.Close()
+		default:
+			return fmt.Errorf("未知类型: %v in %s", header.Typeflag, header.Name)
+		}
 	}
 
-	logx.Info("Downloaded successfully!")
-	return types.MsgResp{}, nil
+	return nil
 }
