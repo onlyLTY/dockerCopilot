@@ -3,10 +3,7 @@ package utiles
 import (
 	"archive/tar"
 	"compress/gzip"
-	"context"
 	"fmt"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 	myTypes "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -15,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 )
 
 const (
@@ -55,21 +51,6 @@ func UpdateProgram(ctx *svc.ServiceContext) (myTypes.MsgResp, error) {
 		return myTypes.MsgResp{Msg: err.Error()}, err
 	}
 	logx.Info("解压缩成功")
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		panic(err)
-	}
-
-	containerID, err := os.Hostname()
-	if err != nil {
-		panic(err)
-	}
-
-	logx.Info("将在五秒后重启...")
-	time.Sleep(5 * time.Second)
-	if err := cli.ContainerRestart(context.Background(), containerID, container.StopOptions{}); err != nil {
-		panic(err)
-	}
 
 	return myTypes.MsgResp{}, nil
 }
