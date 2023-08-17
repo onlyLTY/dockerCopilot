@@ -14,7 +14,7 @@ func StartContainer(ctx *svc.ServiceContext, name string) (myTypes.MsgResp, erro
 		return myTypes.MsgResp{}, err
 	}
 	containerID, err := findContainerIDByName(containers, name)
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		panic(err)
 	}

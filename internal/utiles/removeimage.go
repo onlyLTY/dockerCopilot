@@ -10,7 +10,7 @@ import (
 )
 
 func RemoveImage(ctx *svc.ServiceContext, imageID string, force bool) (myTypes.MsgResp, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Fatalf("Failed to create Docker client: %s", err)
 	}

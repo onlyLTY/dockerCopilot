@@ -22,7 +22,7 @@ func CreateContainer(ctx *svc.ServiceContext, oldName string, newName string, im
 		return myTypes.MsgResp{}, err
 	}
 	containerID, err := findContainerIDByName(containers, oldName)
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		panic(err)
 	}

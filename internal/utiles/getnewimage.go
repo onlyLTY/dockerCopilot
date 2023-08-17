@@ -14,7 +14,7 @@ import (
 )
 
 func GetNewImage(ctx *svc.ServiceContext, imageNameAndTag string) (myTypes.MsgResp, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Fatalf("Failed to create Docker client: %s", err)
 	}

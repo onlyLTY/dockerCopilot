@@ -14,7 +14,7 @@ func StopContainer(ctx *svc.ServiceContext, name string) (types.MsgResp, error) 
 		return types.MsgResp{}, err
 	}
 	containerID, err := findContainerIDByName(containers, name)
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		panic(err)
 	}
