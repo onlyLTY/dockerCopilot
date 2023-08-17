@@ -111,4 +111,7 @@ service oneKeyUpdate {
 
 	@handler updateprogram
 	get /updateprogram () returns (VersionMsgResp)
+
+	@handler checkprogramupdate
+	get /checkprogramupdate () returns (VersionMsgResp)
 }
