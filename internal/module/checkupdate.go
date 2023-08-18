@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 // 检查更新处理后的镜像列表
@@ -23,29 +24,34 @@ func NewImageCheck() *ImageUpdateData {
 	}
 }
 func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
-	for _, images := range imageList {
-		imagename := removeProxy(images.ImageName)
+	for _, image := range imageList {
+		imagename := removeProxy(image.ImageName)
 		baseURL := os.Getenv("hubURL")
 		r, err := http.Get(baseURL + "/v2/repositories/" + imagename +
-			"/tags/" + images.ImageTag)
+			"/tags/" + image.ImageTag)
 		if err != nil || r.StatusCode != 200 {
-			logx.Error("获取远程镜像信息失败" + images.ImageName + ":" + images.ImageTag)
+			logx.Error("获取远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
 			continue
 		}
 		defer r.Body.Close()
 		hubimage := types.HubImageInfo{}
 		err = json.NewDecoder(r.Body).Decode(&hubimage)
 		if err != nil {
-			logx.Error("解析远程镜像信息失败" + images.ImageName + ":" + images.ImageTag)
+			logx.Error("解析远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
 			continue
 		}
-		remoteSHA256 := hubimage.Digest
-		localSHA256 := strings.Split(images.RepoDigests[0], "@")[1]
-		if remoteSHA256 != localSHA256 {
-			logx.Info(images.ImageName + ":" + images.ImageTag + " need update")
-			i.Data[images.ID] = ImageCheckList{NeedUpdate: true}
+		layout := "2006-01-02T15:04:05.999999Z"
+		t, err := time.Parse(layout, hubimage.LastUpdated)
+		if err != nil {
+			logx.Error("解析远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
+		}
+		remoteTime := t.Unix()
+		localTime := image.Created
+		if localTime > remoteTime {
+			logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
+			i.Data[image.ID] = ImageCheckList{NeedUpdate: true}
 		} else {
-			logx.Info(images.ImageName + ":" + images.ImageTag + " not need update")
+			logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
 		}
 
 	}
