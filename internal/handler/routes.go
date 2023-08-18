@@ -121,9 +121,14 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Handler: version.GetVersionsHandler(serverCtx),
 				},
 				{
-					Method:  http.MethodPost,
-					Path:    "/update",
-					Handler: version.UpdateHandler(serverCtx),
+					Method:  http.MethodGet,
+					Path:    "/updateprogram",
+					Handler: version.UpdateprogramHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/checkprogramupdate",
+					Handler: version.CheckprogramupdateHandler(serverCtx),
 				},
 			}...,
 		),

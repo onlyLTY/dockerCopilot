@@ -42,6 +42,10 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 		remoteSHA256 := hubimage.Digest
 		localSHA256 := strings.Split(images.RepoDigests[0], "@")[1]
 		if remoteSHA256 != localSHA256 {
+			if remoteSHA256 == "" || localSHA256 == "" {
+				logx.Error("获取远程镜像信息失败" + images.ImageName + ":" + images.ImageTag)
+				continue
+			}
 			logx.Info(images.ImageName + ":" + images.ImageTag + " need update")
 			i.Data[images.ID] = ImageCheckList{NeedUpdate: true}
 		} else {

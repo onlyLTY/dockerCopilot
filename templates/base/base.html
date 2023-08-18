@@ -11,7 +11,7 @@
 <div class="layui-layout layui-layout-admin">
     <div class="layui-header">
         <!-- 头部区域（可配合layui 已有的水平导航） -->
-        <div class="layui-logo">oneKey Update</div>
+        <img alt="oneKey Update" class="layui-logo" src="/static/base/img/logo.png"/>
         <ul class="layui-nav layui-layout-right">
             <li class="layui-nav-item">
                 <button id="reward" class="layui-btn layui-btn-danger">打赏</button>
@@ -19,8 +19,10 @@
         </ul>
         <div id="tong" style="display: none;">
             <p class="layui-bg-red">如果喜欢的话，欢迎打赏，谢谢老板</p>
-            <img layer-src="/static/reward/zhifubao.jpg" src="/static/reward/zhifubao.jpg" alt="支付宝打赏码" style="width: 200px; height: auto;">
-            <img layer-src="/static/reward/wechat.jpg" src="/static/reward/wechat.jpg" alt="微信打赏码" style="width: 200px; height: auto;">
+            <img alt="支付宝打赏码" layer-src="/static/reward/zhifubao.jpg" src="/static/reward/zhifubao.jpg"
+                 style="width: 200px; height: auto;">
+            <img alt="微信打赏码" layer-src="/static/reward/wechat.jpg" src="/static/reward/wechat.jpg"
+                 style="width: 200px; height: auto;">
         </div>
     </div>
 
@@ -35,7 +37,7 @@
             </ul>
             <div class="layui-col-md1" style="bottom: 0; height: 30px; position: fixed;text-align: center;">
                 <span id="versionSpan"></span>
-                <button class="layui-btn layui-btn-xs layui-btn-radius layui-btn-normal"
+                <button class="layui-btn layui-btn-xs layui-btn-radius layui-btn-normal" id="updateProgram"
                         style="margin-left: 5px;display: none;">更新程序
                 </button>
             </div>
@@ -72,22 +74,22 @@
 {% endblock %}
 <script src="/static/jquery/jquery_3.5.1_min.js"></script>
 <script>
-$(document).ready(function() {
-    layui.use(['layer', 'jquery'], function() {
-        var layer = layui.layer;
-        var $ = layui.jquery;
-        // Attach an onclick handler to the button
-        $('#reward').click(function() {
-            layer.open({
+    $(document).ready(function () {
+        layui.use(['layer', 'jquery'], function () {
+            var layer = layui.layer;
+            var $ = layui.jquery;
+            // Attach an onclick handler to the button
+            $('#reward').click(function () {
+                layer.open({
                     type: 1,
                     title: false,
                     closeBtn: 0,
                     shadeClose: true,
                     content: $('#tong').html()
                 });
+            });
         });
     });
-});
 
 </script>
 <script>
@@ -102,6 +104,81 @@ $(document).ready(function() {
                 console.error('Error fetching version:', error);
             });
     });
+</script>
+
+<script>
+    // 使用 XMLHttpRequest 发送请求
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/version/checkprogramupdate', true);
+    xhr.onreadystatechange = function () {
+        // 如果请求完成并且状态码为 200 (成功)
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            var response = JSON.parse(xhr.responseText);
+            if (response.msg === "need") {
+                // 如果 msg 是 "need"，则显示按钮
+                let btn = document.getElementById('updateProgram');
+                btn.style.display = 'block';
+            }
+        }
+    };
+    xhr.send();
+</script>
+
+<script>
+    var btn = document.getElementById('updateProgram');
+
+    btn.addEventListener('click', function () {
+        // 显示提示并保存返回的索引
+        var index = layer.msg('正在更新程序', {time: 0});
+
+        // 发起请求到 /version/updateprogram
+        fetch('/version/updateprogram')
+            .then(response => {
+                layer.close(index);  // 关闭提示
+                if (response.ok) {
+                    layer.msg('更新程序成功，请重启容器', {time: 0});
+                } else {
+                    layer.alert('更新程序失败\n' + xhr.responseText, {icon: 5});
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                layer.close(index);  // 关闭提示
+                layer.alert('更新程序出现错误，请联系开发者' + xhr.responseText, {icon: 5});
+            });
+    });
+
+
+    function update_program() {
+        return new Promise((resolve, reject) => {
+            var xhr = new XMLHttpRequest();
+            var url = "version/updateprogram";
+            var method = "GET";
+            xhr.open(method, url, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    try {
+                        console.log(xhr.responseText);
+                        if (xhr.status === 200) {
+                            layer.msg('更新程序成功，请重启容器', {time: 0});
+                            resolve();
+                        } else {
+                            layer.alert('更新程序失败\n' + xhr.responseText, {icon: 5});
+                            reject();
+                        }
+                    } catch (error) {
+                        console.error("Failed to parse JSON response:", error);
+                        layer.alert('更新程序出现错误，请联系开发者' + xhr.responseText, {icon: 5});
+                    }
+                }
+            };
+            xhr.send(params);
+            layer.msg('正在更新程序', {time: 0});
+            // setTimeout(function () {
+            //     xhr.send(params);
+            // }, 1500); // 暂缓3秒执行xhr.send(params)
+        });
+    }
 </script>
 </body>
 </html>
