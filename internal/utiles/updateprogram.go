@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	versionURL     = "https://ghproxy.com/https://raw.githubusercontent.com/onlyLTY/oneKeyUpdate/UGREEN/version"
+	versionURL     = "https://ghproxy.com/https://raw.githubusercontent.com/onlyLTY/oneKeyUpdate/zspace/version"
 	releaseBaseURL = "https://ghproxy.com/https://github.com/onlyLTY/oneKeyUpdate/releases/download"
 )
 
