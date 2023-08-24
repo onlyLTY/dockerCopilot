@@ -1,3 +1,11 @@
+<a href="https://www.gnu.org/licenses/agpl-3.0.en.html">
+    <img alt="License: AGPLv3" src="https://shields.io/badge/License-AGPL%20v3-blue.svg">
+  </a>
+
+----
+
+
+
 首先，我们打开绿联客户端的设备管理，点到调试功能，打开调试功能会看到如下画面
 
 ![image-20230819220259596](./assets/image-20230819220259596.png)
@@ -65,3 +73,9 @@ mac可以直接在**启动台**在搜索栏中键入**终端**，打开终端
 在镜像管理页面，会把没有在使用的镜像标记出来，方便管理
 
 ![image-20230819224824010](./assets/image-20230819224824010.png)
+
+---
+
+# 赞助商
+
+![UGREEN](./assets/UGREEN.png)
