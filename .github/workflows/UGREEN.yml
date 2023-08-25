@@ -1,0 +1,41 @@
+name: UGREEN
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - UGREEN
+    paths:
+      - version
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+
+    - name: Get version from file
+      id: get_version
+      run: |
+        echo "version=$(cat version)" >> $GITHUB_ENV
+
+    - name: Build
+      run: go build -ldflags="-X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate .
+
+    - name: Compress binary
+      run: |
+        tar czvf onekeyupdate.tar.gz onekeyupdate
+
+    - name: List current directory
+      run: ls -la
+
+    - name: Create GitHub Release and Upload Asset
+      run: |
+        gh release create ${{ env.version }} onekeyupdate.tar.gz --title "${{ env.version }}" --notes "Release of version ${{ env.version }}"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
