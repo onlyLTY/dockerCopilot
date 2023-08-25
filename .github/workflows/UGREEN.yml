@@ -1,0 +1,44 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Go
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - UGREEN
+    paths:
+      - version
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+
+    - name: Get version from file
+      id: get_version
+      run: |
+        echo "::set-output name=version::$(cat version)"
+
+    - name: Build
+      run: go build -ldflags="-X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ steps.get_version.outputs.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate .
+
+    - name: Compress binary
+      run: |
+        tar czvf ${{ steps.get_version.outputs.version }}.tar.gz onekeyupdate
+
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v2.1.1
+      with:
+        # Artifact name
+        name: ${{ steps.get_version.outputs.version }}
+        # Destination path
+        path: ./${{ steps.get_version.outputs.version }}
