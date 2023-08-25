@@ -35,6 +35,9 @@ jobs:
       run: |
         tar czvf ${{ steps.get_version.outputs.version }}.tar.gz onekeyupdate
 
+    - name: List current directory
+      run: ls -la
+      
     - name: Download a Build Artifact
       uses: actions/download-artifact@v2.1.1
       with:
