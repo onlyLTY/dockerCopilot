@@ -29,6 +29,10 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 		if baseURL == "https://hub.docker.com" {
 			baseURL = "https://docker.nju.edu.cn"
 		}
+		if image.ImageTag == "None" {
+			logx.Error("镜像tag为空" + image.ImageName + ":" + image.ImageTag)
+			continue
+		}
 		URL := baseURL + "/v2/" + imageName + "/manifests/" + image.ImageTag
 		req, err := http.NewRequest("GET", URL, nil)
 		if err != nil {
@@ -54,13 +58,13 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 
 		repoDigest := resp.Header.Get("Docker-Content-Digest")
 		if repoDigest == "" {
-			logx.Error("获取远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
+			logx.Error("未获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
 			continue
 		}
 		localSHA256 := strings.Split(image.RepoDigests[0], "@")[1]
 		if repoDigest != localSHA256 {
 			if repoDigest == "" || localSHA256 == "" {
-				logx.Error("获取远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
+				logx.Error("Digest为空" + image.ImageName + ":" + image.ImageTag)
 				continue
 			}
 			logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
