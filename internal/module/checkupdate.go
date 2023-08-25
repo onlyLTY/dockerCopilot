@@ -1,16 +1,15 @@
 package module
 
 import (
-	"encoding/json"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
+	"io"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 )
 
-// 检查更新处理后的镜像列表
+// ImageCheckList 检查更新处理后的镜像列表
 type ImageCheckList struct {
 	NeedUpdate bool
 }
@@ -25,35 +24,50 @@ func NewImageCheck() *ImageUpdateData {
 }
 func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 	for _, image := range imageList {
-		imagename := removeProxy(image.ImageName)
+		imageName := removeProxy(image.ImageName)
 		baseURL := os.Getenv("hubURL")
-		r, err := http.Get(baseURL + "/v2/repositories/" + imagename +
-			"/tags/" + image.ImageTag)
-		if err != nil || r.StatusCode != 200 {
+		if baseURL == "https://hub.docker.com" {
+			baseURL = "https://docker.nju.edu.cn"
+		}
+		URL := baseURL + "/v2/" + imageName + "/manifests/" + image.ImageTag
+		req, err := http.NewRequest("GET", URL, nil)
+		if err != nil {
+			panic(err)
+		}
+		req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				panic(err)
+			}
+		}(resp.Body)
+
+		if resp.StatusCode != 200 {
 			logx.Error("获取远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
 			continue
 		}
-		defer r.Body.Close()
-		hubimage := types.HubImageInfo{}
-		err = json.NewDecoder(r.Body).Decode(&hubimage)
-		if err != nil {
-			logx.Error("解析远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
+
+		repoDigest := resp.Header.Get("Docker-Content-Digest")
+		if repoDigest == "" {
+			logx.Error("获取远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
 			continue
 		}
-		layout := "2006-01-02T15:04:05.999999Z"
-		t, err := time.Parse(layout, hubimage.LastUpdated)
-		if err != nil {
-			logx.Error("解析远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
-		}
-		remoteTime := t.Unix()
-		localTime := image.Created
-		if localTime > remoteTime {
+		localSHA256 := strings.Split(image.RepoDigests[0], "@")[1]
+		if repoDigest != localSHA256 {
+			if repoDigest == "" || localSHA256 == "" {
+				logx.Error("获取远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
+				continue
+			}
 			logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
 			i.Data[image.ID] = ImageCheckList{NeedUpdate: true}
 		} else {
 			logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
 		}
-
 	}
 
 }
