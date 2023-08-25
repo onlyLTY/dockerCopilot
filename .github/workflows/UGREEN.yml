@@ -38,10 +38,8 @@ jobs:
     - name: List current directory
       run: ls -la
       
-    - name: Download a Build Artifact
-      uses: actions/download-artifact@v2.1.1
+    - name: Upload binary tarball
+      uses: actions/upload-artifact@v2
       with:
-        # Artifact name
         name: ${{ steps.get_version.outputs.version }}.tar.gz
-        # Destination path
         path: ./${{ steps.get_version.outputs.version }}.tar.gz
