@@ -5,6 +5,6 @@ WORKDIR /app
 COPY . .
 
 ENV secretKey="" \
-    hubURL="https://hub.docker.com"
+    hubURL="https://docker.nju.edu.cn"
 
 CMD ["./onekeyupdate"]
