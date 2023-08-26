@@ -36,13 +36,15 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 		URL := baseURL + "/v2/" + imageName + "/manifests/" + image.ImageTag
 		req, err := http.NewRequest("GET", URL, nil)
 		if err != nil {
-			panic(err)
+			logx.Error("出现异常" + err.Error() + "URL:" + URL)
+			continue
 		}
 		req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			panic(err)
+			logx.Error("出现异常" + err.Error() + "URL:" + URL)
+			continue
 		}
 		defer func(Body io.ReadCloser) {
 			err := Body.Close()
@@ -58,7 +60,11 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 
 		repoDigest := resp.Header.Get("Docker-Content-Digest")
 		if repoDigest == "" {
-			logx.Error("未获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
+			logx.Error("未从远程获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
+			continue
+		}
+		if len(image.RepoDigests) == 0 {
+			logx.Error("未在本地获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
 			continue
 		}
 		localSHA256 := strings.Split(image.RepoDigests[0], "@")[1]
