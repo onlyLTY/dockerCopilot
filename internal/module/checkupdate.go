@@ -55,6 +55,8 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 
 		if resp.StatusCode != 200 {
 			logx.Error("获取远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
+			logx.Error("StatusCode:" + resp.Status)
+			logx.Error("URL:" + URL)
 			continue
 		}
 
