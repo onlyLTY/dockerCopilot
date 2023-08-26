@@ -29,7 +29,7 @@ go版本：1.20+
 ------
 
 1. 拉取 0nlylty/one-key-update:zspace镜像
-2. 创建容器，需要host模式，环境内填写极空间的账号，nas的ip以及cookie，cookie可以从网页端或者pc端获取
+2. 创建容器，需要host模式，环境内填写极空间的账号，nas的ip
 3. 访问ip:12712
 4. enjoy it
 
