@@ -25,11 +25,11 @@ jobs:
         echo "version=$(cat version)" >> $GITHUB_ENV
 
     - name: Build
-      run: go build -ldflags="-X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate .
+      run: go build -ldflags="-X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-new .
 
     - name: Compress binary
       run: |
-        tar czvf onekeyupdate.tar.gz onekeyupdate
+        tar -czvf onekeyupdate.tar.gz onekeyupdate-new
 
     - name: List current directory
       run: ls -la
