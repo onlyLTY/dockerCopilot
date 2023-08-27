@@ -28,11 +28,11 @@ jobs:
         echo "version=$(cat version)" >> $GITHUB_ENV
 
     - name: Build
-      run: CGO_ENABLED=0 GOARCH=${{ matrix.goarch }} go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-${{ matrix.goarch }} .
+      run: CGO_ENABLED=0 GOARCH=${{ matrix.goarch }} go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-new .
 
     - name: Compress binary
       run: |
-        tar -czvf onekeyupdate-${{ matrix.goarch }}.tar.gz onekeyupdate-${{ matrix.goarch }}
+        tar -czvf onekeyupdate-${{ matrix.goarch }}.tar.gz onekeyupdate-new
 
     - name: List current directory
       run: ls -la
