@@ -9,6 +9,7 @@ COPY dist/$TARGETPLATFORM/onekeyupdate /app/onekeyupdate
 
 # 复制其他需要的文件或目录，例如 start.sh
 COPY . ${WORKDIR}
+RUN chmod +x ${WORKDIR}/start.sh
 
 # 设置环境变量
 ENV secretKey="" \
