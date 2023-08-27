@@ -1,15 +1,15 @@
 package module
 
 import (
-	"encoding/json"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
+	"io"
 	"net/http"
 	"os"
 	"strings"
 )
 
-// 检查更新处理后的镜像列表
+// ImageCheckList 检查更新处理后的镜像列表
 type ImageCheckList struct {
 	NeedUpdate bool
 }
@@ -23,33 +23,62 @@ func NewImageCheck() *ImageUpdateData {
 	}
 }
 func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
-	for _, images := range imageList {
-		imagename := removeProxy(images.ImageName)
+	for _, image := range imageList {
+		imageName := removeProxy(image.ImageName)
 		baseURL := os.Getenv("hubURL")
-		r, err := http.Get(baseURL + "/v2/repositories/" + imagename +
-			"/tags/" + images.ImageTag)
-		if err != nil || r.StatusCode != 200 {
-			logx.Error("获取远程镜像信息失败" + images.ImageName + ":" + images.ImageTag)
+		if baseURL == "https://hub.docker.com" {
+			baseURL = "https://docker.nju.edu.cn"
+		}
+		if image.ImageTag == "None" {
+			logx.Error("镜像tag为空" + image.ImageName + ":" + image.ImageTag)
 			continue
 		}
-		defer r.Body.Close()
-		hubimage := types.HubImageInfo{}
-		err = json.NewDecoder(r.Body).Decode(&hubimage)
+		URL := baseURL + "/v2/" + imageName + "/manifests/" + image.ImageTag
+		req, err := http.NewRequest("GET", URL, nil)
 		if err != nil {
-			logx.Error("解析远程镜像信息失败" + images.ImageName + ":" + images.ImageTag)
+			logx.Error("出现异常" + err.Error() + "URL:" + URL)
 			continue
 		}
-		remoteSHA256 := hubimage.Digest
-		localSHA256 := strings.Split(images.RepoDigests[0], "@")[1]
-		if remoteSHA256 != localSHA256 {
-			if remoteSHA256 == "" || localSHA256 == "" {
-				logx.Error("获取远程镜像信息失败" + images.ImageName + ":" + images.ImageTag)
+		req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			logx.Error("出现异常" + err.Error() + "URL:" + URL)
+			continue
+		}
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				panic(err)
+			}
+		}(resp.Body)
+
+		if resp.StatusCode != 200 {
+			logx.Error("获取远程镜像信息失败" + image.ImageName + ":" + image.ImageTag)
+			logx.Error("StatusCode:" + resp.Status)
+			logx.Error("URL:" + URL)
+			continue
+		}
+
+		repoDigest := resp.Header.Get("Docker-Content-Digest")
+		if repoDigest == "" {
+			logx.Error("未从远程获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
+			continue
+		}
+		if len(image.RepoDigests) == 0 {
+			logx.Error("未在本地获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
+			continue
+		}
+		localSHA256 := strings.Split(image.RepoDigests[0], "@")[1]
+		if repoDigest != localSHA256 {
+			if repoDigest == "" || localSHA256 == "" {
+				logx.Error("Digest为空" + image.ImageName + ":" + image.ImageTag)
 				continue
 			}
-			logx.Info(images.ImageName + ":" + images.ImageTag + " need update")
-			i.Data[images.ID] = ImageCheckList{NeedUpdate: true}
+			logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
+			i.Data[image.ID] = ImageCheckList{NeedUpdate: true}
 		} else {
-			logx.Info(images.ImageName + ":" + images.ImageTag + " not need update")
+			logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
 		}
 
 	}
