@@ -1,4 +1,4 @@
-name: UGREEN
+name: docker-build-push
 
 on:
   workflow_dispatch:
@@ -19,7 +19,28 @@ jobs:
       run: |
         echo "version=$(cat version)" >> $GITHUB_ENV
 
-    - name: Build
-      run: CGO_ENABLED=0 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate .
+    - name: Build for amd64
+      run: |
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o dist/amd64/onekeyupdate .
 
+    - name: Build for arm64
+      run: |
+        CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o dist/arm64/onekeyupdate .
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./docker/Dockerfile
+        platforms: linux/amd64,linux/arm64
+        tags: 0nlylty/one-key-update:dev
+        push: true
