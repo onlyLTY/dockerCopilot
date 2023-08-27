@@ -28,48 +28,17 @@ jobs:
         echo "version=$(cat version)" >> $GITHUB_ENV
 
     - name: Build
-      run: |
-        CGO_ENABLED=0 GOARCH=${{ matrix.goarch }} go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-${{ matrix.goarch }} .
-        mv onekeyupdate-${{ matrix.goarch }} onekeyupdate-new
-        tar -czvf onekeyupdate-${{ matrix.goarch }}.tar.gz onekeyupdate-new
+      run: CGO_ENABLED=0 GOARCH=${{ matrix.goarch }} go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-${{ matrix.goarch }} .
 
-    - name: Upload binaries as artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: onekeyupdate-${{ matrix.goarch }}.tar.gz
-        path: onekeyupdate-${{ matrix.goarch }}.tar.gz
+    - name: Compress binary
+      run: |
+        tar -czvf onekeyupdate-${{ matrix.goarch }}.tar.gz onekeyupdate-${{ matrix.goarch }}
 
     - name: List current directory
       run: ls -la
 
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v2
-      with:
-        path: artifacts
-
-    - name: Checkout
-      uses: actions/checkout@v3
-
-    - name: Download artifacts
-      uses: actions/download-artifact@v2
-      with:
-        path: artifacts
-
-    - name: Create GitHub Release
+    - name: Create GitHub Release and Upload Asset for ${{ matrix.goarch }}
       run: |
-        gh release create ${{ needs.build.outputs.version }} \
-          artifacts/onekeyupdate-amd64.tar.gz/onekeyupdate-amd64.tar.gz \
-          artifacts/onekeyupdate-arm64.tar.gz/onekeyupdate-arm64.tar.gz \
-          --title "${{ needs.build.outputs.version }}" \
-          --notes "Release of version ${{ needs.build.outputs.version }}"
+        gh release create ${{ env.version }}-arch-${{ matrix.goarch }} onekeyupdate-${{ matrix.goarch }}.tar.gz --title "${{ env.version }} for ${{ matrix.goarch }}" --notes "Release of version ${{ env.version }} for ${{ matrix.goarch }}"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
