@@ -30,9 +30,10 @@ jobs:
     - name: Build
       run: CGO_ENABLED=0 GOARCH=${{ matrix.goarch }} go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-${{ matrix.goarch }} .
 
-    - name: Compress binary
+    - name: Rename and Compress binary
       run: |
-        tar -czvf onekeyupdate-${{ matrix.goarch }}.tar.gz onekeyupdate-${{ matrix.goarch }}
+        mv onekeyupdate-${{ matrix.goarch }} onekeyupdate-new
+        tar -czvf onekeyupdate-${{ matrix.goarch }}.tar.gz onekeyupdate-new
 
     - name: List current directory
       run: ls -la
