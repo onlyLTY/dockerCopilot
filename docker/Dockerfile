@@ -1,10 +1,10 @@
 # 使用 Alpine 作为基础镜像
-FROM --platform=$TARGETPLATFORM alpine
+FROM alpine
 LABEL authors="onlyLTY"
 WORKDIR /app
 
 # 复制适当的平台二进制文件
-COPY dist/$TARGETPLATFORM/onekeyupdate /app/onekeyupdate
+COPY dist/${TARGETPLATFORM}/onekeyupdate /app/onekeyupdate
 
 # 复制其他需要的文件或目录，例如 start.sh
 COPY start.sh /app/start.sh
