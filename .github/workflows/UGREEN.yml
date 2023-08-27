@@ -17,7 +17,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.20'
+        go-version: '1.20.7'
 
     - name: Get version from file
       id: get_version
@@ -25,7 +25,7 @@ jobs:
         echo "version=$(cat version)" >> $GITHUB_ENV
 
     - name: Build
-      run: go build -ldflags="-X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-new .
+      run: CGO_ENABLED=0 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-new .
 
     - name: Compress binary
       run: |
