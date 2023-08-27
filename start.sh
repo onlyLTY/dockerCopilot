@@ -1,5 +1,5 @@
 #!/bin/sh
-
+cd "${WORKDIR}" || exit
 # 判断当前目录下是否存在名为 onekeyupdate-new 的二进制文件
 if [ -f "./onekeyupdate-new" ]; then
     # 如果存在，则用它覆盖 onekeyupdate
