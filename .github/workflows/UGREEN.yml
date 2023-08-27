@@ -11,13 +11,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
     steps:
     - uses: actions/checkout@v3
 
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.20'
+        go-version: '1.20.7'
 
     - name: Get version from file
       id: get_version
@@ -25,17 +28,17 @@ jobs:
         echo "version=$(cat version)" >> $GITHUB_ENV
 
     - name: Build
-      run: CGO_ENABLED=0 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-new .
+      run: CGO_ENABLED=0 GOARCH=${{ matrix.goarch }} go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-${{ matrix.goarch }} .
 
     - name: Compress binary
       run: |
-        tar -czvf onekeyupdate.tar.gz onekeyupdate-new
+        tar -czvf onekeyupdate-${{ matrix.goarch }}.tar.gz onekeyupdate-${{ matrix.goarch }}
 
     - name: List current directory
       run: ls -la
 
-    - name: Create GitHub Release and Upload Asset
+    - name: Create GitHub Release and Upload Asset for ${{ matrix.goarch }}
       run: |
-        gh release create ${{ env.version }} onekeyupdate.tar.gz --title "${{ env.version }}" --notes "Release of version ${{ env.version }}"
+        gh release create ${{ env.version }}-arch-${{ matrix.goarch }} onekeyupdate-${{ matrix.goarch }}.tar.gz --title "${{ env.version }} for ${{ matrix.goarch }}" --notes "Release of version ${{ env.version }} for ${{ matrix.goarch }}"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
