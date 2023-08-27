@@ -37,8 +37,31 @@ jobs:
     - name: List current directory
       run: ls -la
 
-    - name: Create GitHub Release and Upload Asset for ${{ matrix.goarch }}
+    - name: Check if release already exists
+      id: check_release
       run: |
-        gh release create ${{ env.version }}-arch-${{ matrix.goarch }} onekeyupdate-${{ matrix.goarch }}.tar.gz --title "${{ env.version }} for ${{ matrix.goarch }}" --notes "Release of version ${{ env.version }} for ${{ matrix.goarch }}"
+        exists=$(gh release view ${{ env.version }} 2>&1 | grep "release not found" || true)
+        if [[ -z "$exists" ]]; then
+          echo "Release exists"
+          echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
+        else
+          echo "Release does not exist"
+          echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create GitHub Release if not exists
+      if: env.RELEASE_EXISTS == 'false'
+      run: |
+        gh release create ${{ env.version }} \
+          --title "${{ env.version }}" \
+          --notes "Release of version ${{ env.version }}"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Asset for ${{ matrix.goarch }}
+      run: |
+        gh release upload ${{ env.version }} onekeyupdate-${{ matrix.goarch }}.tar.gz
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
