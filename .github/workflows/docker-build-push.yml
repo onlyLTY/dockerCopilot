@@ -21,11 +21,11 @@ jobs:
 
       - name: Build for amd64
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/zspace/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o dist/amd64/onekeyupdate .
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/zspace/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o dist/linux/amd64/onekeyupdate .
 
       - name: Build for arm64
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/zspace/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o dist/arm64/onekeyupdate .
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/zspace/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o dist/linux/arm64/onekeyupdate .
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -42,5 +42,5 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           platforms: linux/amd64,linux/arm64
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/one-key-update:dev
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/one-key-update:zspace
           push: true
