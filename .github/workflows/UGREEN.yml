@@ -31,7 +31,13 @@ jobs:
       run: |
         CGO_ENABLED=0 GOARCH=${{ matrix.goarch }} go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate-${{ matrix.goarch }} .
         mv onekeyupdate-${{ matrix.goarch }} onekeyupdate-new
-        tar -czvf onekeyupdate-new-${{ matrix.goarch }}.tar.gz onekeyupdate-new
+        tar -czvf onekeyupdate-${{ matrix.goarch }}.tar.gz onekeyupdate-new
+
+    - name: Upload binaries as artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: onekeyupdate-${{ matrix.goarch }}.tar.gz
+        path: onekeyupdate-${{ matrix.goarch }}.tar.gz
 
     - name: List current directory
       run: ls -la
@@ -43,6 +49,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v2
+      with:
+        path: artifacts
+
     - name: Checkout
       uses: actions/checkout@v3
 
@@ -54,8 +65,8 @@ jobs:
     - name: Create GitHub Release
       run: |
         gh release create ${{ needs.build.outputs.version }} \
-          artifacts/onekeyupdate-new-amd64.tar.gz \
-          artifacts/onekeyupdate-new-arm64.tar.gz \
+          artifacts/onekeyupdate-amd64.tar.gz \
+          artifacts/onekeyupdate-arm64.tar.gz \
           --title "${{ needs.build.outputs.version }}" \
           --notes "Release of version ${{ needs.build.outputs.version }}"
       env:
