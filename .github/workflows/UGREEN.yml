@@ -65,9 +65,10 @@ jobs:
     - name: Create GitHub Release
       run: |
         gh release create ${{ needs.build.outputs.version }} \
-          artifacts/onekeyupdate-amd64.tar.gz \
-          artifacts/onekeyupdate-arm64.tar.gz \
+          artifacts/onekeyupdate-amd64.tar.gz/onekeyupdate-amd64.tar.gz \
+          artifacts/onekeyupdate-arm64.tar.gz/onekeyupdate-arm64.tar.gz \
           --title "${{ needs.build.outputs.version }}" \
           --notes "Release of version ${{ needs.build.outputs.version }}"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
