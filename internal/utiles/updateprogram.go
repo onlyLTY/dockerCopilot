@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -36,7 +37,7 @@ func UpdateProgram(ctx *svc.ServiceContext) (myTypes.MsgResp, error) {
 	version := strings.TrimSpace(string(versionData))
 	logx.Info("获取到最新版本：", version)
 	// 2. 构造下载链接
-	downloadURL := fmt.Sprintf("%s/%s/onekeyupdate.tar.gz", releaseBaseURL, version)
+	downloadURL := fmt.Sprintf("%s/%s/onekeyupdate-%s.tar.gz", releaseBaseURL, version, runtime.GOARCH)
 
 	dest := "onekeyupdate.tar.gz"
 
