@@ -1,0 +1,25 @@
+name: UGREEN
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20.7'
+
+    - name: Get version from file
+      id: get_version
+      run: |
+        echo "version=$(cat version)" >> $GITHUB_ENV
+
+    - name: Build
+      run: CGO_ENABLED=0 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/oneKeyUpdate/internal/config.BuildDate=$(date)'" -o onekeyupdate .
+
+
