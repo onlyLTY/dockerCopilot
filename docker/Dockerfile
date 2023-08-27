@@ -3,8 +3,9 @@ LABEL authors="onlyLTY"
 WORKDIR /app
 
 COPY . .
+RUN chmod +x start.sh
 
 ENV secretKey="" \
     hubURL="https://docker.nju.edu.cn"
 
-CMD ["./onekeyupdate"]
+CMD ["./start.sh"]
