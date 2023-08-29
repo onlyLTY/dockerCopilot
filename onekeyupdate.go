@@ -44,7 +44,7 @@ func main() {
 	corndanmu := cron.New(cron.WithParser(cron.NewParser(
 		cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
 	)))
-	_, err = corndanmu.AddFunc("0 */12 * * *", func() {
+	_, err = corndanmu.AddFunc("30 * * * *", func() {
 		list, err := utiles.GetImagesList(ctx)
 		if err != nil {
 			panic(err)
