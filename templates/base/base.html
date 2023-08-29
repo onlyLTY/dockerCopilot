@@ -36,12 +36,11 @@
 
             </ul>
             <div class="layui-col-md1" style="bottom: 0; height: 30px; position: fixed;text-align: center;">
-                <span id="versionSpan"></span>
-            </div>
-            <div class="layui-col-md2" style="bottom: 0; height: 30px; position: fixed;text-align: center;">
+                <span id="versionSpan">v1.0.0
                 <button id="updateProgram" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-normal"
-                        style="margin-left: 5px;display: none;">更新程序
-            </button>
+                        style="margin-left: 5px;display: none;">更新
+                </button></span>
+            </div>
             </div>
         </div>
     </div>
@@ -69,7 +68,6 @@
             {% endblock %}
         </div>
     </div>
-</div>
 
 {% block scripts %}
 
@@ -119,7 +117,7 @@
             if (response.msg === "need") {
                 // 如果 msg 是 "need"，则显示按钮
                 let btn = document.getElementById('updateProgram');
-                btn.style.display = 'block';
+                btn.style.display = 'inline';
             }
         }
     };
@@ -129,26 +127,26 @@
 <script>
     var btn = document.getElementById('updateProgram');
 
-    btn.addEventListener('click', function() {
-    // 显示提示并保存返回的索引
-    var index = layer.msg('正在更新程序', {time: 0});
+    btn.addEventListener('click', function () {
+        // 显示提示并保存返回的索引
+        var index = layer.msg('正在更新程序', {time: 0});
 
-    // 发起请求到 /version/updateprogram
-    fetch('/version/updateprogram')
-        .then(response => {
-            layer.close(index);  // 关闭提示
-            if (response.ok) {
-                 layer.msg('更新程序成功，请重启容器', {time: 0});
-            } else {
-                layer.alert('更新程序失败\n' + xhr.responseText, {icon: 5});
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            layer.close(index);  // 关闭提示
-            layer.alert('更新程序出现错误，请联系开发者' + xhr.responseText, {icon: 5});
-        });
-});
+        // 发起请求到 /version/updateprogram
+        fetch('/version/updateprogram')
+            .then(response => {
+                layer.close(index);  // 关闭提示
+                if (response.ok) {
+                    layer.msg('更新程序成功，请重启容器', {time: 0});
+                } else {
+                    layer.alert('更新程序失败\n' + xhr.responseText, {icon: 5});
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                layer.close(index);  // 关闭提示
+                layer.alert('更新程序出现错误，请联系开发者' + xhr.responseText, {icon: 5});
+            });
+    });
 
 
     function update_program() {
