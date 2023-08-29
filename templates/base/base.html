@@ -38,7 +38,7 @@
             <div class="layui-col-md1" style="bottom: 0; height: 30px; position: fixed;text-align: center;">
                 <span id="versionSpan"></span>
                 <button class="layui-btn layui-btn-xs layui-btn-radius layui-btn-normal" id="updateProgram"
-                        style="margin-left: 5px;display: none;">更新程序
+                        style="margin-left: 5px;display: none;">更新
                 </button>
             </div>
         </div>
@@ -117,7 +117,7 @@
             if (response.msg === "need") {
                 // 如果 msg 是 "need"，则显示按钮
                 let btn = document.getElementById('updateProgram');
-                btn.style.display = 'block';
+                btn.style.display = 'inline';
             }
         }
     };
