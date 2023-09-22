@@ -43,7 +43,7 @@ func UpdateProgram(ctx *svc.ServiceContext) (myTypes.MsgResp, error) {
 
 	if err := downloadFile(downloadURL, dest); err != nil {
 		logx.Error("下载失败:", err)
-		panic(err)
+		return myTypes.MsgResp{Msg: err.Error()}, err
 	}
 	logx.Info("下载成功")
 
