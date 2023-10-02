@@ -5,6 +5,14 @@ type DoLoginReq struct {
 	SecretKey string `form:"secret_key,optional"`
 }
 
+type LoginReq struct {
+	SecretKey string `form:"secretKey,optional"`
+}
+
+type LoginResp struct {
+	Token string `json:"token"`
+}
+
 type StartContainerReq struct {
 	Name string `json:"name"`
 }

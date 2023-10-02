@@ -3,6 +3,12 @@ syntax = "v1"
 type DoLoginReq {
 	SecretKey string `form:"secret_key,optional"`
 }
+type LoginReq {
+	SecretKey string `form:"secretKey,optional"`
+}
+type LoginResp {
+	Token string `json:"token"`
+}
 type StartContainerReq {
 	Name string `json:"name"`
 }
@@ -114,4 +120,14 @@ service oneKeyUpdate {
 
 	@handler checkprogramupdate
 	get /checkprogramupdate () returns (VersionMsgResp)
+}
+
+@server(
+	prefix: /api
+	group: api
+	middleware: IndexCheckMiddleware
+)
+service oneKeyUpdate {
+	@handler Login
+	post /auth (LoginReq) returns (LoginResp);
 }
