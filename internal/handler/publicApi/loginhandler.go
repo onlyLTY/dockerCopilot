@@ -1,9 +1,9 @@
-package api
+package publicApi
 
 import (
 	"errors"
 	"github.com/golang-jwt/jwt"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/logic/api"
+	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/logic/publicApi"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
@@ -18,7 +18,7 @@ func LoginHandler(ctx *svc.ServiceContext) http.HandlerFunc {
 			httpx.Error(w, err)
 			return
 		}
-		l := api.NewLoginLogic(r.Context(), ctx)
+		l := publicApi.NewLoginLogic(r.Context(), ctx)
 		secretKey, err := l.Login(&req)
 		if err != nil {
 			httpx.Error(w, err)

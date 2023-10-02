@@ -124,10 +124,17 @@ service oneKeyUpdate {
 
 @server(
 	prefix: /api
-	group: api
-	middleware: IndexCheckMiddleware
+	group: publicApi
 )
 service oneKeyUpdate {
 	@handler Login
 	post /auth (LoginReq) returns (LoginResp);
+}
+
+@server(
+	prefix: /api
+	group: protectApi
+	middleware: BearerTokenCheckMiddleware
+)
+service oneKeyUpdate {
 }

@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	Login "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/Login"
-	api "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/api"
 	containersManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/containersManager"
 	imagesManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/imagesManager"
+	publicApi "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/publicApi"
 	version "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/version"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 
@@ -137,15 +137,20 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	)
 
 	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/auth",
+				Handler: publicApi.LoginHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.IndexCheckMiddleware},
-			[]rest.Route{
-				{
-					Method:  http.MethodPost,
-					Path:    "/auth",
-					Handler: api.LoginHandler(serverCtx),
-				},
-			}...,
+			[]rest.Middleware{serverCtx.BearerTokenCheckMiddleware},
+			[]rest.Route{}...,
 		),
 		rest.WithPrefix("/api"),
 	)
