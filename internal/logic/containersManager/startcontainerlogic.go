@@ -25,6 +25,7 @@ func NewStartContainerLogic(ctx context.Context, svcCtx *svc.ServiceContext) *St
 }
 
 func (l *StartContainerLogic) StartContainer(req *types.StartContainerReq) (resp *types.MsgResp, err error) {
-	msg, err := utiles.StartContainer(l.svcCtx, req.Name)
+	err = utiles.StartContainer(l.svcCtx, req.Name)
+	var msg types.MsgResp
 	return &msg, err
 }

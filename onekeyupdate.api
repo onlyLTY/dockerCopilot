@@ -38,6 +38,15 @@ type MsgResp {
 	Status string `json:"status"`
 	Msg    string `json:"msg"`
 }
+type Resp {
+	Code int `json:"code"`
+	Msg string `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
+type ContainerIdReq {
+	Id string `path:"id"`
+}
 
 type VersionMsgResp {
 	Version   string `json:"version"`
@@ -124,7 +133,7 @@ service oneKeyUpdate {
 
 @server(
 	prefix: /api
-	group: publicApi
+	group: auth
 )
 service oneKeyUpdate {
 	@handler Login
@@ -133,8 +142,13 @@ service oneKeyUpdate {
 
 @server(
 	prefix: /api
-	group: protectApi
+	group: container
 	middleware: BearerTokenCheckMiddleware
 )
 service oneKeyUpdate {
+	@handler list
+	get /container/list returns (Resp)
+
+	@handler start
+	post /container/:id/start (ContainerIdReq) returns (Resp)
 }

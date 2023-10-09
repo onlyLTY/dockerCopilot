@@ -50,6 +50,16 @@ type MsgResp struct {
 	Msg    string `json:"msg"`
 }
 
+type Resp struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
+type ContainerIdReq struct {
+	Id string `path:"id"`
+}
+
 type VersionMsgResp struct {
 	Version   string `json:"version"`
 	BuildDate string `json:"build_date"`
