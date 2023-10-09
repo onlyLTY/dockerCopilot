@@ -13,7 +13,9 @@ func StopContainer(ctx *svc.ServiceContext, id string) error {
 		panic(err)
 	}
 	timeout := 10
+	signal := "SIGINT"
 	stopOptions := container.StopOptions{
+		Signal:  signal,
 		Timeout: &timeout,
 	}
 	err = cli.ContainerStop(context.Background(), id, stopOptions)
