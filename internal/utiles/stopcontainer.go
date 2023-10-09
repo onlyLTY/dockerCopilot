@@ -5,15 +5,9 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
 )
 
-func StopContainer(ctx *svc.ServiceContext, name string) (types.MsgResp, error) {
-	containers, err := GetContainerList(ctx)
-	if err != nil {
-		return types.MsgResp{}, err
-	}
-	containerID, err := findContainerIDByName(containers, name)
+func StopContainer(ctx *svc.ServiceContext, id string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		panic(err)
@@ -22,9 +16,9 @@ func StopContainer(ctx *svc.ServiceContext, name string) (types.MsgResp, error) 
 	stopOptions := container.StopOptions{
 		Timeout: &timeout,
 	}
-	err = cli.ContainerStop(context.Background(), containerID, stopOptions)
+	err = cli.ContainerStop(context.Background(), id, stopOptions)
 	if err != nil {
-		return types.MsgResp{Msg: err.Error()}, err
+		return err
 	}
-	return types.MsgResp{}, nil
+	return nil
 }

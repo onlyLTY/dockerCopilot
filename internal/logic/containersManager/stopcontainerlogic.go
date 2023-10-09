@@ -26,6 +26,6 @@ func NewStopContainerLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Sto
 
 func (l *StopContainerLogic) StopContainer(req *types.StopContainerReq) (resp *types.MsgResp, err error) {
 	// todo: add your logic here and delete this line
-	msg, err := utiles.StopContainer(l.svcCtx, req.Name)
-	return &msg, err
+	err = utiles.StopContainer(l.svcCtx, req.Name)
+	return &types.MsgResp{}, err
 }
