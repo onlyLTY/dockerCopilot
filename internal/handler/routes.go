@@ -167,6 +167,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Path:    "/container/:id/stop",
 					Handler: container.StopHandler(serverCtx),
 				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/container/:id/restart",
+					Handler: container.RestartHandler(serverCtx),
+				},
 			}...,
 		),
 		rest.WithPrefix("/api"),

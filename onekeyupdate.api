@@ -154,4 +154,7 @@ service oneKeyUpdate {
 
 	@handler stop
 	post /container/:id/stop (ContainerIdReq) returns (Resp)
+
+	@handler restart
+	post /container/:id/restart (ContainerIdReq) returns (Resp)
 }
