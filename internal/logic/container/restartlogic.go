@@ -28,7 +28,7 @@ func (l *RestartLogic) Restart(req *types.ContainerIdReq) (resp *types.Resp, err
 	resp = &types.Resp{}
 	err = utiles.RestartContainer(l.svcCtx, req.Id)
 	if err != nil {
-		resp.Code = 500
+		resp.Code = 400
 		resp.Msg = err.Error()
 		return resp, err
 	}

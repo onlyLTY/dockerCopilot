@@ -28,7 +28,7 @@ func (l *StopLogic) Stop(req *types.ContainerIdReq) (resp *types.Resp, err error
 	resp = &types.Resp{}
 	err = utiles.StopContainer(l.svcCtx, req.Id)
 	if err != nil {
-		resp.Code = 500
+		resp.Code = 400
 		resp.Msg = err.Error()
 		return resp, err
 	}
