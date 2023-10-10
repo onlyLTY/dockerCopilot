@@ -60,6 +60,11 @@ type ContainerIdReq struct {
 	Id string `path:"id"`
 }
 
+type ContainerRenameReq struct {
+	ContainerIdReq
+	NewName string `form:"newName"`
+}
+
 type VersionMsgResp struct {
 	Version   string `json:"version"`
 	BuildDate string `json:"build_date"`

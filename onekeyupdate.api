@@ -48,6 +48,11 @@ type ContainerIdReq {
 	Id string `path:"id"`
 }
 
+type ContainerRenameReq {
+	ContainerIdReq
+	NewName string `form:"newName"`
+}
+
 type VersionMsgResp {
 	Version   string `json:"version"`
 	BuildDate string `json:"build_date"`
@@ -157,4 +162,7 @@ service oneKeyUpdate {
 
 	@handler restart
 	post /container/:id/restart (ContainerIdReq) returns (Resp)
+
+	@handler rename
+	post /container/:id/rename (ContainerRenameReq) returns (Resp)
 }
