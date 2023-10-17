@@ -53,6 +53,12 @@ type ContainerRenameReq {
 	NewName string `form:"newName"`
 }
 
+type ContainerUpdateReq {
+	ContainerIdReq
+	DelOldContainer bool `form:"delOldContainer"`
+	Proxy string `form:"proxy,optional"`
+}
+
 type VersionMsgResp {
 	Version   string `json:"version"`
 	BuildDate string `json:"build_date"`
@@ -165,4 +171,7 @@ service oneKeyUpdate {
 
 	@handler rename
 	post /container/:id/rename (ContainerRenameReq) returns (Resp)
+
+	@handler update
+	post /container/:id/update (ContainerUpdateReq) returns (Resp)
 }

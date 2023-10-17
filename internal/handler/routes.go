@@ -177,6 +177,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Path:    "/container/:id/rename",
 					Handler: container.RenameHandler(serverCtx),
 				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/container/:id/update",
+					Handler: container.UpdateHandler(serverCtx),
+				},
 			}...,
 		),
 		rest.WithPrefix("/api"),

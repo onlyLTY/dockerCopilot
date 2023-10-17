@@ -65,6 +65,12 @@ type ContainerRenameReq struct {
 	NewName string `form:"newName"`
 }
 
+type ContainerUpdateReq struct {
+	ContainerIdReq
+	DelOldContainer bool   `form:"delOldContainer"`
+	Proxy           string `form:"proxy,optional"`
+}
+
 type VersionMsgResp struct {
 	Version   string `json:"version"`
 	BuildDate string `json:"build_date"`
