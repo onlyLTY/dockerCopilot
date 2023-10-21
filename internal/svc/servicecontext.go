@@ -20,7 +20,16 @@ type ServiceContext struct {
 	PortainerJwt               string
 	HubImageInfo               *module.ImageUpdateData
 	IndexCheckMiddleware       rest.Middleware
+	ProgressStore              ProgressStoreType
 }
+
+type TaskProgress struct {
+	Percentage int
+	Message    string
+	IsDone     bool
+}
+
+type ProgressStoreType map[string]TaskProgress
 
 func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext {
 	uuidtmp := uuid.New().String()
@@ -34,5 +43,6 @@ func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext 
 		Template:                   pongo2.NewSet("", loaders),
 		HubImageInfo:               module.NewImageCheck(),
 		IndexCheckMiddleware:       middleware.NewIndexCheckMiddleware(uuidtmp).Handle,
+		ProgressStore:              make(ProgressStoreType),
 	}
 }

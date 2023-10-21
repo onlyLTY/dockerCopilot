@@ -9,6 +9,9 @@ type LoginReq {
 type LoginResp {
 	Token string `json:"token"`
 }
+type GetProgressReq {
+	TaskId string `path:"taskid"`
+}
 type StartContainerReq {
 	Name string `json:"name"`
 }
@@ -57,6 +60,8 @@ type ContainerUpdateReq {
 	ContainerIdReq
 	DelOldContainer bool `form:"delOldContainer"`
 	Proxy string `form:"proxy,optional"`
+	ImageNameAndTag string `form:"imageNameAndTag"`
+	Name string `form:"name"`
 }
 
 type VersionMsgResp {
@@ -149,6 +154,15 @@ service oneKeyUpdate {
 service oneKeyUpdate {
 	@handler Login
 	post /auth (LoginReq) returns (LoginResp);
+}
+
+@server(
+	prefix: /api
+	group: progress
+)
+service oneKeyUpdate {
+	@handler GetProgress
+	get /progress/:taskid (GetProgressReq) returns (Resp);
 }
 
 @server(

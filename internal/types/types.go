@@ -13,6 +13,10 @@ type LoginResp struct {
 	Token string `json:"token"`
 }
 
+type GetProgressReq struct {
+	TaskId string `path:"taskid"`
+}
+
 type StartContainerReq struct {
 	Name string `json:"name"`
 }
@@ -69,6 +73,8 @@ type ContainerUpdateReq struct {
 	ContainerIdReq
 	DelOldContainer bool   `form:"delOldContainer"`
 	Proxy           string `form:"proxy,optional"`
+	ImageNameAndTag string `form:"imageNameAndTag"`
+	Name            string `form:"name"`
 }
 
 type VersionMsgResp struct {

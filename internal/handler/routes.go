@@ -9,6 +9,7 @@ import (
 	container "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/container"
 	containersManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/containersManager"
 	imagesManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/imagesManager"
+	progress "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/progress"
 	version "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/version"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 
@@ -143,6 +144,17 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/auth",
 				Handler: auth.LoginHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/progress/:taskid",
+				Handler: progress.GetProgressHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api"),
