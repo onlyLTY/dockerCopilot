@@ -64,6 +64,10 @@ type ContainerIdReq struct {
 	Id string `path:"id"`
 }
 
+type ContainerRestoreReq struct {
+	Filename string `path:"filename"`
+}
+
 type ContainerRenameReq struct {
 	ContainerIdReq
 	NewName string `form:"newName"`

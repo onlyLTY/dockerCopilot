@@ -166,7 +166,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			[]rest.Route{
 				{
 					Method:  http.MethodGet,
-					Path:    "/container/list",
+					Path:    "/containers",
 					Handler: container.ListHandler(serverCtx),
 				},
 				{
@@ -198,6 +198,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Method:  http.MethodGet,
 					Path:    "/container/backup",
 					Handler: container.BackupHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/container/listBackups",
+					Handler: container.ListBackupsHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/container/backups/:filename/restore",
+					Handler: container.RestoreHandler(serverCtx),
 				},
 			}...,
 		),

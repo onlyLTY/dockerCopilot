@@ -51,6 +51,10 @@ type ContainerIdReq {
 	Id string `path:"id"`
 }
 
+type ContainerRestoreReq {
+	Filename string `path:"filename"`
+}
+
 type ContainerRenameReq {
 	ContainerIdReq
 	NewName string `form:"newName"`
@@ -172,7 +176,7 @@ service oneKeyUpdate {
 )
 service oneKeyUpdate {
 	@handler list
-	get /container/list returns (Resp)
+	get /containers returns (Resp)
 
 	@handler start
 	post /container/:id/start (ContainerIdReq) returns (Resp)
@@ -191,4 +195,10 @@ service oneKeyUpdate {
 
 	@handler backup
 	get /container/backup returns (Resp)
+
+	@handler listBackups
+	get /container/listBackups returns (Resp)
+
+	@handler restore
+	post /container/backups/:filename/restore (ContainerRestoreReq) returns (Resp)
 }
