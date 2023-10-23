@@ -3,6 +3,15 @@ syntax = "v1"
 type DoLoginReq {
 	SecretKey string `form:"secret_key,optional"`
 }
+type LoginReq {
+	SecretKey string `form:"secretKey,optional"`
+}
+type LoginResp {
+	Token string `json:"token"`
+}
+type GetProgressReq {
+	TaskId string `path:"taskid"`
+}
 type StartContainerReq {
 	Name string `json:"name"`
 }
@@ -31,6 +40,32 @@ type removeImageReq {
 type MsgResp {
 	Status string `json:"status"`
 	Msg string `json:"msg"`
+}
+type Resp {
+	Code int `json:"code"`
+	Msg string `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
+type ContainerIdReq {
+	Id string `path:"id"`
+}
+
+type ContainerRestoreReq {
+	Filename string `path:"filename"`
+}
+
+type ContainerRenameReq {
+	ContainerIdReq
+	NewName string `form:"newName"`
+}
+
+type ContainerUpdateReq {
+	ContainerIdReq
+	DelOldContainer bool `form:"delOldContainer"`
+	Proxy string `form:"proxy,optional"`
+	ImageNameAndTag string `form:"imageNameAndTag"`
+	Name string `form:"name"`
 }
 
 type VersionMsgResp {
@@ -114,4 +149,19 @@ service oneKeyUpdate {
 
 	@handler checkprogramupdate
 	get /checkprogramupdate () returns (VersionMsgResp)
+}
+
+@server(
+	prefix: /api
+	group: container
+)
+service oneKeyUpdate {
+	@handler backup
+	get /container/backup returns (Resp)
+
+	@handler listBackups
+	get /container/listBackups returns (Resp)
+
+	@handler restore
+	post /container/backups/:filename/restore (ContainerRestoreReq) returns (Resp)
 }

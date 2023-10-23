@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	Login "github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler/Login"
+	container "github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler/container"
 	containersManager "github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler/containersManager"
 	imagesManager "github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler/imagesManager"
 	version "github.com/onlyLTY/oneKeyUpdate/zspace/internal/handler/version"
@@ -133,5 +134,26 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			}...,
 		),
 		rest.WithPrefix("/version"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/container/backup",
+				Handler: container.BackupHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/container/listBackups",
+				Handler: container.ListBackupsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/container/backups/:filename/restore",
+				Handler: container.RestoreHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api"),
 	)
 }

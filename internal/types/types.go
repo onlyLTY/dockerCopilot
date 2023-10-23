@@ -5,6 +5,18 @@ type DoLoginReq struct {
 	SecretKey string `form:"secret_key,optional"`
 }
 
+type LoginReq struct {
+	SecretKey string `form:"secretKey,optional"`
+}
+
+type LoginResp struct {
+	Token string `json:"token"`
+}
+
+type GetProgressReq struct {
+	TaskId string `path:"taskid"`
+}
+
 type StartContainerReq struct {
 	Name string `json:"name"`
 }
@@ -40,6 +52,33 @@ type RemoveImageReq struct {
 type MsgResp struct {
 	Status string `json:"status"`
 	Msg    string `json:"msg"`
+}
+
+type Resp struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
+type ContainerIdReq struct {
+	Id string `path:"id"`
+}
+
+type ContainerRestoreReq struct {
+	Filename string `path:"filename"`
+}
+
+type ContainerRenameReq struct {
+	ContainerIdReq
+	NewName string `form:"newName"`
+}
+
+type ContainerUpdateReq struct {
+	ContainerIdReq
+	DelOldContainer bool   `form:"delOldContainer"`
+	Proxy           string `form:"proxy,optional"`
+	ImageNameAndTag string `form:"imageNameAndTag"`
+	Name            string `form:"name"`
 }
 
 type VersionMsgResp struct {

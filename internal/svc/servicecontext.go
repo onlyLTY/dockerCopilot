@@ -11,23 +11,38 @@ import (
 )
 
 type ServiceContext struct {
-	Config                config.Config
-	CookieCheckMiddleware rest.Middleware
-	Template              *pongo2.TemplateSet
-	PortainerJwt          string
-	HubImageInfo          *module.ImageUpdateData
-	IndexCheckMiddleware  rest.Middleware
-	Jwtuuid               string
+	Config                     config.Config
+	CookieCheckMiddleware      rest.Middleware
+	Jwtuuid                    string
+	BearerTokenCheckMiddleware rest.Middleware
+	JwtSecret                  string
+	Template                   *pongo2.TemplateSet
+	PortainerJwt               string
+	HubImageInfo               *module.ImageUpdateData
+	IndexCheckMiddleware       rest.Middleware
+	ProgressStore              ProgressStoreType
 }
+
+type TaskProgress struct {
+	Percentage int
+	Message    string
+	IsDone     bool
+}
+
+type ProgressStoreType map[string]TaskProgress
 
 func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext {
 	uuidtmp := uuid.New().String()
+	jwtSecret := c.SecretKey
 	return &ServiceContext{
 		Config:                c,
 		CookieCheckMiddleware: middleware.NewCookieCheckMiddleware(uuidtmp).Handle,
-		Template:              pongo2.NewSet("", loaders),
-		HubImageInfo:          module.NewImageCheck(),
 		Jwtuuid:               uuidtmp,
-		IndexCheckMiddleware:  middleware.NewIndexCheckMiddleware(uuidtmp).Handle,
+		//BearerTokenCheckMiddleware: middleware.NewBearerTokenCheckMiddleware(jwtSecret).Handle,
+		JwtSecret:            jwtSecret,
+		Template:             pongo2.NewSet("", loaders),
+		HubImageInfo:         module.NewImageCheck(),
+		IndexCheckMiddleware: middleware.NewIndexCheckMiddleware(uuidtmp).Handle,
+		ProgressStore:        make(ProgressStoreType),
 	}
 }
