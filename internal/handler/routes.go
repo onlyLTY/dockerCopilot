@@ -194,6 +194,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Path:    "/container/:id/update",
 					Handler: container.UpdateHandler(serverCtx),
 				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/container/backup",
+					Handler: container.BackupHandler(serverCtx),
+				},
 			}...,
 		),
 		rest.WithPrefix("/api"),

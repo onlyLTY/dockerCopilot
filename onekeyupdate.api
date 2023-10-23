@@ -188,4 +188,7 @@ service oneKeyUpdate {
 
 	@handler update
 	post /container/:id/update (ContainerUpdateReq) returns (Resp)
+
+	@handler backup
+	get /container/backup returns (Resp)
 }
