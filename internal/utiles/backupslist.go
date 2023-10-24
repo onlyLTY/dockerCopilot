@@ -8,7 +8,7 @@ import (
 
 func BackupList(ctx *svc.ServiceContext) ([]string, error) {
 	var backupList []string
-	dir := `/data/backup` // 指定您的目录
+	dir := `D:\MyProject\oneKeyUpdateGo` // 指定您的目录
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		panic(err)

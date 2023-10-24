@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	docker "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,10 +17,9 @@ import (
 
 func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 	var errList []string
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return nil, err
-	}
+	jwtToken, endpointsId, err := GetNewJwt(ctx)
+	headers := make(map[string]string)
+	headers["Authorization"] = "Bearer " + jwtToken
 	containerList, err := GetContainerList(ctx)
 	if err != nil {
 		return nil, err
@@ -27,8 +27,30 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 	var backerupList []docker.ContainerCreateConfig
 	for i, v := range containerList {
 		containerID := containerList[i].ID
-		cli.NegotiateAPIVersion(context.TODO())
-		inspectedContainer, err := cli.ContainerInspect(context.TODO(), containerID)
+		baseURL := domain + "/api/endpoints/" + endpointsId
+		url := baseURL + "/docker/containers/" + containerID + "/json"
+		req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
+		if err != nil {
+			log.Println("创建请求失败")
+			log.Fatal(err)
+		}
+		req.Header.Set("Authorization", "Bearer "+jwtToken)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Println("获取容器信息失败")
+			log.Fatal(err)
+		}
+		defer resp.Body.Close()
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Println("读取响应体失败")
+			log.Fatal(err)
+		}
+
+		var inspectedContainer docker.ContainerJSON
+		err = json.Unmarshal(data, &inspectedContainer)
+
 		if err != nil {
 			log.Println("获取容器信息失败")
 			log.Fatal(err)
@@ -63,7 +85,7 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 		logx.Error("Error marshalling data:", err)
 		return nil, err
 	}
-	backupDir := `/data/backup`
+	backupDir := `D:\MyProject\oneKeyUpdateGo`
 	currentDate := time.Now().Format("2006-01-02")
 	fileName := "backup-" + currentDate + ".json"
 	fullPath := filepath.Join(backupDir, fileName)

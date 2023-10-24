@@ -9,7 +9,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	myTypes "github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -42,7 +42,7 @@ func CreateContainer(ctx *svc.ServiceContext, oldName string, newName string, im
 	}
 	defer resp.Body.Close()
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("读取响应体失败")
 		log.Fatal(err)
@@ -83,7 +83,7 @@ func CreateContainer(ctx *svc.ServiceContext, oldName string, newName string, im
 	}
 	defer createResp.Body.Close()
 
-	createData, err := ioutil.ReadAll(createResp.Body)
+	createData, err := io.ReadAll(createResp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}

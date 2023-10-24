@@ -8,18 +8,18 @@ import (
 )
 
 func GetContainerList(ctx *svc.ServiceContext) ([]types.Container, error) {
-	containerlistdata := []types.Container{}
+	var containerList []types.Container
 	params := map[string]string{
 		"all": "true",
 	}
 	jwt, endpointsId, err := GetNewJwt(ctx)
 	if err != nil {
-		return containerlistdata, err
+		return containerList, err
 	}
 	url := domain + "/api/endpoints/" + endpointsId + "/docker/containers/json"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return containerlistdata, err
+		return containerList, err
 	}
 	req.Header.Add("Authorization", jwt)
 	query := req.URL.Query()
@@ -30,15 +30,15 @@ func GetContainerList(ctx *svc.ServiceContext) ([]types.Container, error) {
 	client := &http.Client{}
 	response, err := client.Do(req)
 	if err != nil {
-		return containerlistdata, err
+		return containerList, err
 	}
 	defer response.Body.Close()
 
-	err = json.NewDecoder(response.Body).Decode(&containerlistdata)
+	err = json.NewDecoder(response.Body).Decode(&containerList)
 	if err != nil {
-		return containerlistdata, err
+		return containerList, err
 	}
-	return containerlistdata, nil
+	return containerList, nil
 }
 
 func CheckImageUpdate(ctx *svc.ServiceContext, containerlistdata []types.Container) []types.Container {
