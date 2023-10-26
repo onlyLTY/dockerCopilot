@@ -153,6 +153,15 @@ service oneKeyUpdate {
 
 @server(
 	prefix: /api
+	group: progress
+)
+service oneKeyUpdate {
+	@handler GetProgress
+	get /progress/:taskid (GetProgressReq) returns (Resp);
+}
+
+@server(
+	prefix: /api
 	group: container
 )
 service oneKeyUpdate {

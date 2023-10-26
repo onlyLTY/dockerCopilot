@@ -5,11 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	docker "github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -33,17 +31,12 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		logx.Error("Failed to parse json: %s", err)
 		return err
 	}
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
 	for i, containerInfo := range configList {
 		info := "正在恢复第" + strconv.Itoa(i+1) + "个容器"
 		ctx.ProgressStore[taskID] = svc.TaskProgress{
 			Percentage: 0,
 			Message:    info,
 		}
-		cli.NegotiateAPIVersion(context.TODO())
 		if err != nil {
 			backupList = append(backupList, "出现错误"+err.Error())
 			return err
@@ -81,23 +74,28 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		}
 		postData, err := json.Marshal(body)
 		if err != nil {
-			log.Fatal(err)
+			logx.Error("Failed to create container: %s", err)
 		}
 		baseURL := domain + "/api/endpoints/" + endpointsId
 		createURL := baseURL + "/docker/containers/create?name=" + containerInfo.Name
 		createReq, err := http.NewRequestWithContext(context.Background(), "POST", createURL, bytes.NewBuffer(postData))
 		if err != nil {
-			log.Fatal(err)
+			logx.Error("Failed to create container: %s", err)
 		}
 		createReq.Header.Set("Authorization", "Bearer "+jwt)
 		createReq.Header.Set("Content-Type", "application/json")
 		createResp, err := http.DefaultClient.Do(createReq)
 		if err != nil {
-			log.Fatal(err)
+			logx.Error("Failed to create container: %s", err)
 		}
-		defer createResp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				logx.Error("defer error: %s", err)
+			}
+		}(createResp.Body)
 
-		_, err = io.ReadAll(createResp.Body)
+		createData, err := io.ReadAll(createResp.Body)
 		if err != nil {
 			logx.Error("Failed to create container: %s", err)
 			info = "正在恢复第" + strconv.Itoa(i+1) + "个容器"
@@ -105,56 +103,56 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 				Percentage: 0,
 				Message:    info,
 			}
-			backupList = append(backupList, containerInfo.Name+"恢复失败"+err.Error())
+			backupList = append(backupList, containerInfo.Name+"恢复失败"+string(createData))
 		} else {
 			switch createResp.StatusCode {
 			case http.StatusOK:
+				info = "正在恢复第" + strconv.Itoa(i+1) + "个容器"
+				ctx.ProgressStore[taskID] = svc.TaskProgress{
+					Percentage: 0,
+					Message:    info,
+				}
 				backupList = append(backupList, containerInfo.Name+"恢复成功")
-				info = "正在恢复第" + strconv.Itoa(i+1) + "个容器"
-				ctx.ProgressStore[taskID] = svc.TaskProgress{
-					Percentage: 0,
-					Message:    info,
-				}
 			case http.StatusBadRequest:
-				logx.Error("Failed to create container: %s", err)
+				logx.Error("Failed to create container: %s", string(createData))
 				info = "正在恢复第" + strconv.Itoa(i+1) + "个容器"
 				ctx.ProgressStore[taskID] = svc.TaskProgress{
 					Percentage: 0,
 					Message:    info,
 				}
-				backupList = append(backupList, containerInfo.Name+"恢复失败"+err.Error())
+				backupList = append(backupList, containerInfo.Name+"恢复失败"+string(createData))
 			case http.StatusNotFound:
-				logx.Error("Failed to create container: %s", err)
+				logx.Error("Failed to create container: %v", createResp)
 				info = "正在恢复第" + strconv.Itoa(i+1) + "个容器"
 				ctx.ProgressStore[taskID] = svc.TaskProgress{
 					Percentage: 0,
 					Message:    info,
 				}
-				backupList = append(backupList, containerInfo.Name+"恢复失败"+err.Error())
+				backupList = append(backupList, containerInfo.Name+"恢复失败"+string(createData))
 			case http.StatusConflict:
-				logx.Error("Failed to create container: %s", err)
+				logx.Error("Failed to create container: %v", createResp)
 				info = "正在恢复第" + strconv.Itoa(i+1) + "个容器"
 				ctx.ProgressStore[taskID] = svc.TaskProgress{
 					Percentage: 0,
 					Message:    info,
 				}
-				backupList = append(backupList, containerInfo.Name+"恢复失败"+err.Error())
+				backupList = append(backupList, containerInfo.Name+"恢复失败"+string(createData))
 			case http.StatusInternalServerError:
-				logx.Error("Failed to create container: %s", err)
+				logx.Error("Failed to create container: %v", createResp)
 				info = "正在恢复第" + strconv.Itoa(i+1) + "个容器"
 				ctx.ProgressStore[taskID] = svc.TaskProgress{
 					Percentage: 0,
 					Message:    info,
 				}
-				backupList = append(backupList, containerInfo.Name+"恢复失败"+err.Error())
+				backupList = append(backupList, containerInfo.Name+"恢复失败"+string(createData))
 			default:
-				logx.Error("Failed to create container: %s", err)
+				logx.Error("Failed to create container: %v", createResp)
 				info = "正在恢复第" + strconv.Itoa(i+1) + "个容器"
 				ctx.ProgressStore[taskID] = svc.TaskProgress{
 					Percentage: 0,
 					Message:    info,
 				}
-				backupList = append(backupList, containerInfo.Name+"恢复失败"+err.Error())
+				backupList = append(backupList, containerInfo.Name+"恢复失败"+string(createData))
 			}
 
 		}

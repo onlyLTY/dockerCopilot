@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/utiles"
+	"runtime/debug"
 
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
@@ -32,7 +33,7 @@ func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp
 		// Catch any panic and log the error
 		defer func() {
 			if r := recover(); r != nil {
-				logx.Errorf("Recovered from panic in restoreContainer: %v", r)
+				logx.Errorf("Recovered from panic in restoreContainer: %v\n%s", r, debug.Stack())
 			}
 		}()
 		err := utiles.RestoreContainer(l.svcCtx, req.Filename, taskID)
