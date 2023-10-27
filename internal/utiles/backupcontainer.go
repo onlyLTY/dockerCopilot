@@ -85,7 +85,7 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 		logx.Error("Error marshalling data:", err)
 		return nil, err
 	}
-	backupDir := `D:\MyProject\oneKeyUpdateGo`
+	backupDir := `/data/backups`
 	currentDate := time.Now().Format("2006-01-02")
 	fileName := "backup-" + currentDate + ".json"
 	fullPath := filepath.Join(backupDir, fileName)

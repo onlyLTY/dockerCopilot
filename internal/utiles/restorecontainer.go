@@ -17,7 +17,7 @@ import (
 
 func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) error {
 	var backupList []string
-	basePath := `D:\MyProject\oneKeyUpdateGo`
+	basePath := `/data/backups`
 	fullPath := filepath.Join(basePath, filename+".json")
 
 	content, err := os.ReadFile(fullPath)
