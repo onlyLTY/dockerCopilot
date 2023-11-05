@@ -13,7 +13,9 @@ RUN chmod +x start.sh
 
 ENV account="" \
     secretKey="" \
-    hubURL="https://docker.nju.edu.cn"
+    hubURL="https://docker.nju.edu.cn" \
+    githubProxy="https://gh-proxy.com/" \
 
+VOLUME ["/data"]
 # 指定容器启动时运行的命令
 ENTRYPOINT ["./start.sh"]
