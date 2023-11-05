@@ -49,5 +49,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/one-key-update:zspace
-            ${{ secrets.DOCKERHUB_USERNAME }}/one-key-update:${{ env.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/one-key-update:zspace-${{ env.version }}
           push: true
