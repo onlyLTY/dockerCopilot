@@ -5,6 +5,7 @@ import (
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/config"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
@@ -27,13 +28,16 @@ func NewCheckprogramupdateLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-const versionURL = "https://ghproxy.com/https://raw.githubusercontent.com/onlyLTY/oneKeyUpdate/zspace/version"
-
 func (l *CheckprogramupdateLogic) CheckProgramUpdate() (resp *types.MsgResp, err error) {
+	githubProxy := os.Getenv("githubProxy")
+	if githubProxy != "" {
+		githubProxy = strings.TrimRight(githubProxy, "/") + "/"
+	}
+	versionURL := githubProxy + "https://raw.githubusercontent.com/onlyLTY/oneKeyUpdate/zspace/version"
 	remoteVersion, err := fetchVersionFromURL(versionURL)
 	if err != nil {
-		logx.Info("获取版本错误", err)
-		return
+		logx.Error("获取最新版本错误", err)
+		return &types.MsgResp{Msg: "error"}, nil
 	}
 
 	localVersion := config.Version

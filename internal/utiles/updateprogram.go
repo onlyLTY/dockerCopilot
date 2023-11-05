@@ -15,12 +15,13 @@ import (
 	"strings"
 )
 
-const (
-	versionURL     = "https://ghproxy.com/https://raw.githubusercontent.com/onlyLTY/oneKeyUpdate/zspace/version"
-	releaseBaseURL = "https://ghproxy.com/https://github.com/onlyLTY/oneKeyUpdate/releases/download"
-)
-
 func UpdateProgram(ctx *svc.ServiceContext) (myTypes.MsgResp, error) {
+	githubProxy := os.Getenv("githubProxy")
+	if githubProxy != "" {
+		githubProxy = strings.TrimRight(githubProxy, "/") + "/"
+	}
+	versionURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://raw.githubusercontent.com/onlyLTY/oneKeyUpdate/zspace/version"
+	releaseBaseURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://github.com/onlyLTY/oneKeyUpdate/releases/download"
 	resp, err := http.Get(versionURL)
 	if err != nil {
 		logx.Info("没有获取到最新版本信息:", err)
