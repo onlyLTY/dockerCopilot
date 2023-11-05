@@ -25,7 +25,7 @@ func NewImageCheck() *ImageUpdateData {
 func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 	for _, image := range imageList {
 		imageName := removeProxy(image.ImageName)
-		if imageName == "0nlylty/one-key-update" {
+		if strings.Contains(imageName, "0nlylty/one-key-update") {
 			continue
 		}
 		baseURL := os.Getenv("hubURL")
