@@ -23,12 +23,20 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		logx.Error("Failed to read file: %s", err)
+		ctx.ProgressStore[taskID] = svc.TaskProgress{
+			Percentage: 0,
+			Message:    "读取文件失败或者未找到文件",
+		}
 		return err
 	}
 	var configList []docker.ContainerCreateConfig
 	err = json.Unmarshal(content, &configList)
 	if err != nil {
 		logx.Error("Failed to parse json: %s", err)
+		ctx.ProgressStore[taskID] = svc.TaskProgress{
+			Percentage: 0,
+			Message:    "解析文件失败",
+		}
 		return err
 	}
 	for i, containerInfo := range configList {
