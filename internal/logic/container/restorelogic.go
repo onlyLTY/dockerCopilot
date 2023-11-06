@@ -26,7 +26,6 @@ func NewRestoreLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RestoreLo
 }
 
 func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp, err error) {
-	// todo: add your logic here and delete this line
 	resp = &types.Resp{}
 	taskID := uuid.New().String()
 	go func() {

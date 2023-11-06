@@ -15,17 +15,25 @@ import (
 
 func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) error {
 	var backupList []string
-	basePath := `/data/backup` // 指定您的目录
+	basePath := `/data/backups` // 指定您的目录
 	fullPath := filepath.Join(basePath, filename+".json")
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		logx.Error("Failed to read file: %s", err)
+		ctx.ProgressStore[taskID] = svc.TaskProgress{
+			Percentage: 0,
+			Message:    "读取文件失败或者未找到文件",
+		}
 	}
 	var configList []docker.ContainerCreateConfig
 	err = json.Unmarshal(content, &configList)
 	if err != nil {
 		logx.Error("Failed to parse json: %s", err)
+		ctx.ProgressStore[taskID] = svc.TaskProgress{
+			Percentage: 0,
+			Message:    "解析文件失败",
+		}
 	}
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
