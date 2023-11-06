@@ -63,7 +63,15 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 		logx.Error("Error marshalling data:", err)
 		return nil, err
 	}
-	backupDir := `/data/backup`
+	backupDir := `/data/backups`
+	_, err = os.Stat(backupDir)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(backupDir, 0755)
+		if err != nil {
+			logx.Error("Error creating backup directory:", err)
+			return nil, err
+		}
+	}
 	currentDate := time.Now().Format("2006-01-02")
 	fileName := "backup-" + currentDate + ".json"
 	fullPath := filepath.Join(backupDir, fileName)
