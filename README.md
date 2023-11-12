@@ -38,7 +38,7 @@ mac可以直接在**启动台**在搜索栏中键入**终端**，打开终端
 
 ![image-20230819221903447](./assets/image-20230819221903447.png)
 
-这里输入我们的安装命令`docker run -d --privileged -p 12712:12712 -e secretKey=自己设置访问密码 -e hubURL=https://docker.nju.edu.cn  -v /var/run/docker.sock:/var/run/docker.sock --restart=always --name onekey 0nlylty/one-key-update:UGREEN` 比如我设置的密码是123，则可以这样输入
+这里输入我们的安装命令`docker run -d --privileged -p 12712:12712 -e secretKey=自己设置访问密码 -e hubURL=https://docker.nju.edu.cn  -v /var/run/docker.sock:/var/run/docker.sock -v 保存数据的目录:/data --restart=always --name onekey 0nlylty/one-key-update:UGREEN` 比如我设置的密码是123，则可以这样输入
 注意：请勿随意替换hubURL，如果要替换，请确保能获取到manifests，否则会导致检查更新出现异常
 
 ![image-20230819222251730](./assets/image-20230819222251730.png)
