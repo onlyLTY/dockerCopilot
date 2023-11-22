@@ -1,0 +1,200 @@
+/* 设置整个页面的布局为Flexbox */
+body {
+    display: flex;
+    justify-content: center; /* 水平居中 */
+    align-items: center; /* 垂直居中 */
+    min-height: 100vh; /* 视口高度，确保整个页面充满整个视口 */
+    margin: 0; /* 移除默认的margin */
+    background-color: #abc6f8;
+    background-image: radial-gradient(closest-side, rgb(255, 255, 255), rgba(235, 105, 78, 0)), radial-gradient(closest-side, rgb(250, 203, 203), rgba(243, 11, 164, 0)), radial-gradient(closest-side, rgb(237, 252, 202), rgba(254, 234, 131, 0)), radial-gradient(closest-side, rgb(197, 248, 241), rgba(170, 142, 245, 0)), radial-gradient(closest-side, rgb(206, 200, 243), rgba(248, 192, 147, 0));
+    background-size: 130vmax 130vmax, 80vmax 80vmax, 90vmax 90vmax, 110vmax 110vmax, 90vmax 90vmax;
+    background-position: -80vmax -80vmax, 60vmax -30vmax, 10vmax 10vmax, -30vmax -10vmax, 50vmax 50vmax;
+    background-repeat: no-repeat;
+    animation: 10s movement linear infinite;
+    font-family: "Aguazyuan", Courier, monospace;
+}
+
+/* 添加一些自定义样式以突出显示容器 */
+.container-lg {
+    width: 55vw;
+    height: 75vh;
+    min-height: 50vh; /* 最小高度设置为视口高度的50% */
+    max-height: 90vh; /* 最大高度设置为视口高度的80% */
+    border-radius: 40px;
+    margin-top: 20px;
+    transform: translate(0, -5%);
+}
+
+.row {
+    border-radius: 40px;
+    background-color: #ffffff;
+    margin-bottom: 10px;
+    text-align: center;
+    overflow: auto;
+    width: 100%; /* 设置宽度为父容器的100% */
+    height: 100%; /* 设置高度为父容器的100% */
+}
+
+.left-box {
+    border-top-left-radius: 40px;
+    border-bottom-left-radius: 40px;
+    background: url(/static/asset/background.png) no-repeat;
+    background-size: 100% 100%;
+}
+
+.right-box {
+    display: inline-block;
+    font-weight: 600;
+    font-size: 20px;
+    width: 100%; /* 设置宽度为父容器的100% */
+    height: 100%; /* 设置高度为父容器的100% */
+}
+
+.logo {
+    margin-top: 10%;
+    margin-bottom: 10%;
+    width: 100%;
+    height: auto;
+}
+
+.right-box h1 {
+    display: block; /* 使 label 占据整个行 */
+    margin-bottom: 5%;
+}
+
+.form-group {
+    position: relative;
+    margin-top: 20px;
+}
+
+.form-control {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px;
+    outline: none;
+    margin-bottom: 5%;
+}
+
+.form-label {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    color: #999;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.form-control:not(:placeholder-shown) + .form-label,
+.form-control:focus + .form-label {
+    top: -10px;
+    left: 10px;
+    font-size: 12px;
+    color: #666;
+}
+
+.form-group input {
+    text-align: left;
+    margin-top: 5%; /* Bootstrap默认列内边距是15px */
+    display: block; /* 使 label 占据整个行 */
+}
+
+.form-group button {
+    margin-top: 5%; /* Bootstrap默认列内边距是15px */
+    display: block; /* 使 label 占据整个行 */
+}
+
+.hr-text {
+    margin: 10px;
+    line-height: 1em;
+    position: relative;
+    outline: 0;
+    border: 0;
+    color: black;
+    text-align: center;
+    height: 1.5em;
+    opacity: .5;
+}
+
+.hr-text:before {
+    content: '';
+    background: linear-gradient(to right, transparent, #818078, transparent);
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+}
+
+.hr-text:after {
+    content: attr(data-content);
+    position: relative;
+    display: inline-block;
+    padding: 0 .5em;
+    line-height: 1.5em;
+    color: black;
+    background-color: #fcfcfa;
+}
+
+.icon-container {
+    display: flex; /* 使用 Flexbox 布局 */
+    justify-content: center; /* 使图标居中对齐 */
+    margin-top: 30px;
+}
+
+.icon-link {
+    margin-left: 10%;
+    margin-right: 20%; /* 右边距为10px */
+}
+
+.icon-link img {
+    width: 50px; /* 设定宽度 */
+    height: auto; /* 保持宽高比 */
+    transition: transform 0.3s ease; /* 平滑变换效果 */
+}
+
+/* 媒体查询 */
+@media (max-width: 768px) {
+    html, body {
+        height: 100%; /* 确保html和body元素的高度为100% */
+        margin: 0; /* 移除默认外边距 */
+        padding: 0; /* 移除默认内边距 */
+    }
+
+    .container-lg {
+        width: 100%; /* 将宽度设置为100% */
+        height: 100%; /* 将高度设置为100% */
+        max-height: 100vh;
+        margin: 0; /* 移除外边距 */
+        padding: 0; /* 如果需要，也移除内边距 */
+        border-radius: 0; /* 如果你想在小屏幕上移除圆角 */
+        transform: translate(0, 0); /* 移除偏移 */
+    }
+
+    .row {
+        border-radius: 0; /* 如果你想在小屏幕上移除圆角 */
+        margin-right: 0;
+        margin-left: 0;
+    }
+
+    .left-box {
+        border-radius: 0;
+    }
+
+    .logo {
+        display: none; /* 隐藏 logo */
+    }
+
+    .blank {
+        display: none; /* 隐藏空白 */
+    }
+
+    .form-label {
+        top: 10px; /* 在较小屏幕上增加顶部间距 */
+    }
+
+    .form-control:not(:placeholder-shown) + .form-label,
+    .form-control:focus + .form-label {
+        top: -5px; /* 调整移动时的位置 */
+        font-size: 14px; /* 可以调整字体大小以更好地适应小屏幕 */
+    }
+}
