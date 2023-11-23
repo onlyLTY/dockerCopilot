@@ -2,53 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="width=device-width,height=device-height, initial-scale=1.0" name="viewport">
     <title>Bootstrap Container-sm Demo</title>
-    <!-- 引入Bootstrap CSS -->
-    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/login/css/login.css" rel="stylesheet">
+    <link href="/static/bootstrap/icons/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="/bootstrap/css/bootstrap.min.css">
 </head>
 <body>
-<div class="container-lg">
-    <div class="row">
-        <!-- 左侧框 -->
-        <div class="col-md-7 left-box">
+<div class="login">
+    <h1>Docker Copilot</h1>
+    <form id="loginForm" method="post">
+        <div class="form-group">
+            <input class="form-control" id="secretKey" placeholder="" required="required" type="password"/>
+            <label class="form-label" for="secretKey">secretKey</label>
+            <button aria-label="Submit" class="submit-arrow" type="submit"><i class="bi bi-arrow-right-circle"></i>
+            </button>
         </div>
-
-        <!-- 右侧框 -->
-        <div class="col-md-4">
-            <div class="right-box">
-                <!-- 右侧内容 -->
-                <div class="logo">
-                    <img alt="logo" class="form-logo" src="/static/asset/Circular-logo.png">
-                </div>
-                <h1>Docker Copilot</h1>
-                <form action="/api/login" method="post">
-
-                    <div class="form-group">
-                        <input class="form-control" id="password" name="password" placeholder="" required
-                               type="password">
-                        <label class="form-label" for="password">secretKey</label>
-                    </div>
-                    <div class="form-group">
-                        <button class="btn btn-dark" type="submit">Log in</button>
-                    </div>
-                </form>
-                <div class="hr-text" data-content="onlyLTY"></div>
-                <div class="icon-container">
-                    <a class="icon-link icon-link-hover" href="https://github.com/onlyLTY/oneKeyUpdate/">
-                        <img alt="GitHub" src="/static/asset/github.png">
-                    </a>
-                    <a class="icon-link icon-link-hover" href="#">
-                        <img alt="Ugreen" src="/static/asset/ugreen.png">
-                    </a>
-                    </div>
-                </div>
-        </div>
+    </form>
     </div>
-</div>
-
-<!-- 引入Bootstrap JS -->
 <script src="/static/bootstrap/js/bootstrap.min.js"></script>
+<script src="/static/login/js/login.js"></script>
 </body>
 </html>
