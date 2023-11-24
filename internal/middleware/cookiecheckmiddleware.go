@@ -18,6 +18,7 @@ func NewCookieCheckMiddleware(uuid string) *CookieCheckMiddleware {
 
 func (m *CookieCheckMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		next(w, r)
 		cookies, err := r.Cookie("device_verified")
 		if err != nil {
 			if r.Method == http.MethodPost {

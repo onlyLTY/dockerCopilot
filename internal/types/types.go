@@ -10,7 +10,7 @@ type LoginReq struct {
 }
 
 type LoginResp struct {
-	Token string `json:"token"`
+	Jwt string `json:"jwt"`
 }
 
 type GetProgressReq struct {

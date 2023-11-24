@@ -6,8 +6,8 @@ type DoLoginReq {
 type LoginReq {
 	SecretKey string `form:"secretKey,optional"`
 }
-type LoginResp {
-	Token string `json:"token"`
+type VerifyJwtReq {
+	Jwt string `form:"jwt,optional"`
 }
 type GetProgressReq {
 	TaskId string `path:"taskid"`
@@ -157,7 +157,10 @@ service oneKeyUpdate {
 )
 service oneKeyUpdate {
 	@handler Login
-	post /auth (LoginReq) returns (LoginResp);
+	post /auth (LoginReq) returns (Resp);
+
+	@handler JwtValidate
+	get /auth/validate (LoginReq) returns (Resp);
 }
 
 @server(

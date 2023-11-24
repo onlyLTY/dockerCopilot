@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+/**
+ * @typedef {Object} LoginResponseData
+ * @property {string} jwt
+ * @property {string} msg
+ */
+
 document.getElementById('loginForm').addEventListener('submit', function (event) {
     // 阻止表单地默认提交行为
     event.preventDefault();
@@ -40,15 +46,52 @@ document.getElementById('loginForm').addEventListener('submit', function (event)
         body: formData
     })
         .then(response => response.json())
-        .then(data => {
-            // 存储 JWT 到 localStorage
-            localStorage.setItem('jwt', data.token);
+        .then(loginResponse => {
+            if (loginResponse.code === 201) {
+                // 存储 JWT 到 localStorage
+                localStorage.setItem('jwt', loginResponse.data.jwt);
+                window.location.href = '/containersManager';
+            } else {
+                alert('登录失败，请重试' + loginResponse.msg)
+            }
 
-            // 处理响应数据
         })
         .catch(error => {
             console.error('Error:', error);
             // 处理错误情况
+            alert('出现错误，请重试' + error)
         });
 });
+
+function isJwtExpired(jwt) {
+    try {
+        const payloadBase64 = jwt.split('.')[1];
+        const decodedPayload = atob(payloadBase64);
+        const payload = JSON.parse(decodedPayload);
+
+        // 获取当前时间的 Unix 时间戳（秒）
+        const now = Math.floor(Date.now() / 1000);
+
+        // 检查 exp 字段是否存在且是否已过期
+        return payload.exp && now >= payload.exp;
+
+         // JWT 未过期
+    } catch (error) {
+        console.error('校验 JWT 失败:', error);
+        return true; // 如果解析出错，默认为过期
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const jwt = localStorage.getItem('jwt');
+    if (!jwt) {
+        return;
+    }
+    const expired = isJwtExpired(jwt);
+    if (!expired) {
+        // JWT 未过期，跳转到管理页面
+        window.location.href = '/containersManager';
+    }
+});
+
 

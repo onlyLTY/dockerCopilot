@@ -6,15 +6,18 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
-	"time"
-
 	"github.com/zeromicro/go-zero/core/logx"
+	"time"
 )
 
 type LoginLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
+}
+
+type JwtResponse struct {
+	Jwt string `json:"jwt"`
 }
 
 func NewLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginLogic {
@@ -25,16 +28,24 @@ func NewLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginLogic 
 	}
 }
 
-func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.LoginResp, err error) {
+func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.Resp, err error) {
+	resp = &types.Resp{}
 	if l.svcCtx.Config.SecretKey != req.SecretKey {
-		return nil, errors.New("密钥错误")
+		resp.Code = 401
+		resp.Msg = "无效的secretKey"
+		return resp, errors.New("无效的secretKey")
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"exp": time.Now().Add(time.Hour * 720).Unix(),
 	})
-	tokenString, err := token.SignedString([]byte(req.SecretKey))
+	jwtString, err := token.SignedString([]byte(req.SecretKey))
 	if err != nil {
-		return nil, errors.New("无法生成 token，请重试")
+		resp.Code = 500
+		resp.Msg = "无法生成 token，请重试"
+		return resp, errors.New("生成 token出现错误，请重试")
 	}
-	return &types.LoginResp{Token: tokenString}, nil
+	resp.Code = 201
+	resp.Msg = "success"
+	resp.Data = JwtResponse{Jwt: jwtString}
+	return resp, nil
 }
