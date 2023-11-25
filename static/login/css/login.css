@@ -1,6 +1,6 @@
 body {
     /* 设置背景图片背景 图片相对于视口固定 */
-    background: url('/static/asset/1700693483176.jpeg') no-repeat fixed center;
+    background: url('/static/asset/background.jpeg') no-repeat fixed center;
     background-size: cover; /* 背景图片覆盖整个元素，可能被裁剪以适应 */
     width: 100%; /* 使用 100% 而不是 100vw 避免横向滚动条 */
     min-height: 100vh; /* 设置最小高度为视口高度 */
