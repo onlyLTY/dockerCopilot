@@ -8,7 +8,6 @@ import (
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,6 +21,7 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 	headers["Authorization"] = "Bearer " + jwtToken
 	containerList, err := GetContainerList(ctx)
 	if err != nil {
+		logx.Error(err)
 		return nil, err
 	}
 	var backerupList []docker.ContainerCreateConfig
@@ -31,29 +31,29 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 		url := baseURL + "/docker/containers/" + containerID + "/json"
 		req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
 		if err != nil {
-			log.Println("创建请求失败")
-			log.Fatal(err)
+			logx.Errorf("创建请求失败: %v", err)
+			return nil, err
 		}
 		req.Header.Set("Authorization", "Bearer "+jwtToken)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			log.Println("获取容器信息失败")
-			log.Fatal(err)
+			logx.Errorf("获取容器信息失败:%v", err)
+			return nil, err
 		}
 		defer resp.Body.Close()
 
 		data, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Println("读取响应体失败")
-			log.Fatal(err)
+			logx.Errorf("读取响应体失败:%v", err)
+			return nil, err
 		}
 
 		var inspectedContainer docker.ContainerJSON
 		err = json.Unmarshal(data, &inspectedContainer)
 
 		if err != nil {
-			log.Println("获取容器信息失败")
-			log.Fatal(err)
+			logx.Errorf("获取容器信息失败:%v", err)
+			return nil, err
 		}
 		var containerName, imageNameAndTag string
 		if len(v.Names) > 0 {

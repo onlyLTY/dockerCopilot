@@ -88,7 +88,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	}
 	inspectedContainer, err := cli.ContainerInspect(context.TODO(), id)
 	if err != nil {
-		log.Println("获取容器信息失败")
+		logx.Errorf("获取容器信息失败")
 		log.Fatal(err)
 	}
 	inspectedContainer.Config.Hostname = ""

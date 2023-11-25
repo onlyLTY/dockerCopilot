@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
+	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"net/http"
 	"strconv"
@@ -62,7 +63,7 @@ func GetNewImage(ctx *svc.ServiceContext, imageNameAndTag string) (types.MsgResp
 	// 对于204和304，我们不需要尝试解析响应体中的内容
 	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated {
 		// 处理成功的响应
-		fmt.Println("拉取成功")
+		logx.Info("拉取成功")
 		resp := types.MsgResp{Status: strconv.Itoa(response.StatusCode), Msg: "成功"}
 		return resp, nil
 	} else if response.StatusCode != http.StatusNoContent && response.StatusCode != http.StatusNotModified {

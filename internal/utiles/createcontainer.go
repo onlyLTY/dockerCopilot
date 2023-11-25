@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	myTypes "github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
+	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"log"
 	"net/http"
@@ -31,27 +32,27 @@ func CreateContainer(ctx *svc.ServiceContext, oldName string, newName string, im
 	url := baseURL + "/docker/containers/" + containerID + "/json"
 	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
 	if err != nil {
-		log.Println("创建请求失败")
+		logx.Errorf("创建请求失败")
 		log.Fatal(err)
 	}
 	req.Header.Set("Authorization", "Bearer "+jwtToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Println("获取容器信息失败")
+		logx.Errorf("获取容器信息失败")
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("读取响应体失败")
+		logx.Errorf("读取响应体失败")
 		log.Fatal(err)
 	}
 
 	var inspectedContainer types.ContainerJSON
 	err = json.Unmarshal(data, &inspectedContainer)
 	if err != nil {
-		log.Println("解析响应体失败")
+		logx.Errorf("解析响应体失败")
 		log.Fatal(err)
 	}
 
@@ -88,7 +89,7 @@ func CreateContainer(ctx *svc.ServiceContext, oldName string, newName string, im
 		log.Fatal(err)
 	}
 
-	log.Println("Response from create:", string(createData))
+	logx.Errorf("Response from create:", string(createData))
 	var responseMsg myTypes.MsgResp
 	switch createResp.StatusCode {
 	case http.StatusOK:

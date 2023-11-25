@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/svc"
 	"github.com/onlyLTY/oneKeyUpdate/zspace/internal/types"
-	"log"
+	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
 	"strings"
 )
@@ -22,7 +22,8 @@ func GetImagesList(ctx *svc.ServiceContext) ([]types.Image, error) {
 	url := domain + "/api/endpoints/" + endpointsId + "/docker/images/json"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal(err)
+		logx.Error(err)
+		return nil, err
 	}
 	req.Header.Add("Authorization", jwt)
 	query := req.URL.Query()
