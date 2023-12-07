@@ -19,8 +19,8 @@ type ListLogic struct {
 
 type Info struct {
 	Id          string `json:"id"`
-	Status      string `json:"Status"`
-	Name        string `json:"Name"`
+	Status      string `json:"status"`
+	Name        string `json:"name"`
 	UsingImage  string `json:"usingImage"`
 	CreateTime  string `json:"createTime"`
 	RunningTime string `json:"runningTime"`
