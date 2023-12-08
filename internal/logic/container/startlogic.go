@@ -31,7 +31,7 @@ func (l *StartLogic) Start(req *types.ContainerIdReq) (resp *types.Resp, err err
 		resp.Msg = err.Error()
 		return resp, err
 	}
-	resp.Code = 0
+	resp.Code = 200
 	resp.Msg = "success"
 	return resp, nil
 }

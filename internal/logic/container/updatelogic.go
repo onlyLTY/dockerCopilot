@@ -38,13 +38,13 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 		if req.Proxy != "" {
 			imageNameAndTag = req.Proxy + req.ImageNameAndTag
 		}
-		err := utiles.UpdateContainer(l.svcCtx, req.Id, req.Name, imageNameAndTag, req.DelOldContainer, taskID)
+		err := utiles.UpdateContainer(l.svcCtx, req.Id, req.ContainerName, imageNameAndTag, req.DelOldContainer, taskID)
 		if err != nil {
 			logx.Errorf("Error in UpdateContainer: %v", err)
 		}
 	}()
 	resp.Code = 200
 	resp.Msg = "success"
-	resp.Data = taskID
+	resp.Data = map[string]string{"taskID": taskID}
 	return resp, nil
 }

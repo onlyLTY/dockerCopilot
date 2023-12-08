@@ -42,8 +42,8 @@ type MsgResp {
 	Msg    string `json:"msg"`
 }
 type Resp {
-	Code int `json:"code"`
-	Msg string `json:"msg"`
+    Code int `json:"code"`
+    Msg string `json:"msg"`
 	Data interface{} `json:"data"`
 }
 
@@ -62,10 +62,10 @@ type ContainerRenameReq {
 
 type ContainerUpdateReq {
 	ContainerIdReq
-	DelOldContainer bool `form:"delOldContainer"`
-	Proxy string `form:"proxy,optional"`
+    DelOldContainer bool `form:"delOldContainer,default=true"`
+    Proxy string `form:"proxy,optional"`
 	ImageNameAndTag string `form:"imageNameAndTag"`
-	Name string `form:"name"`
+    ContainerName string `form:"containerName"`
 }
 
 type VersionMsgResp {

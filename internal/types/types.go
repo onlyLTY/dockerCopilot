@@ -9,8 +9,8 @@ type LoginReq struct {
 	SecretKey string `form:"secretKey,optional"`
 }
 
-type LoginResp struct {
-	Jwt string `json:"jwt"`
+type VerifyJwtReq struct {
+	Jwt string `form:"jwt,optional"`
 }
 
 type GetProgressReq struct {
@@ -75,10 +75,10 @@ type ContainerRenameReq struct {
 
 type ContainerUpdateReq struct {
 	ContainerIdReq
-	DelOldContainer bool   `form:"delOldContainer"`
+	DelOldContainer bool   `form:"delOldContainer,default=true"`
 	Proxy           string `form:"proxy,optional"`
 	ImageNameAndTag string `form:"imageNameAndTag"`
-	Name            string `form:"name"`
+	ContainerName   string `form:"containerName"`
 }
 
 type VersionMsgResp struct {
