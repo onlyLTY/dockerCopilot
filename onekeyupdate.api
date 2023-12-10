@@ -42,12 +42,12 @@ type MsgResp {
 	Msg    string `json:"msg"`
 }
 type Resp {
-    Code int `json:"code"`
-    Msg string `json:"msg"`
+	Code int `json:"code"`
+	Msg string `json:"msg"`
 	Data interface{} `json:"data"`
 }
 
-type ContainerIdReq {
+type IdReq {
 	Id string `path:"id"`
 }
 
@@ -56,16 +56,16 @@ type ContainerRestoreReq {
 }
 
 type ContainerRenameReq {
-	ContainerIdReq
+	IdReq
 	NewName string `form:"newName"`
 }
 
 type ContainerUpdateReq {
-	ContainerIdReq
-    DelOldContainer bool `form:"delOldContainer,default=true"`
-    Proxy string `form:"proxy,optional"`
+	IdReq
+	DelOldContainer bool `form:"delOldContainer,default=true"`
+	Proxy string `form:"proxy,optional"`
 	ImageNameAndTag string `form:"imageNameAndTag"`
-    ContainerName string `form:"containerName"`
+	ContainerName string `form:"containerName"`
 }
 
 type VersionMsgResp {
@@ -182,13 +182,13 @@ service oneKeyUpdate {
 	get /containers returns (Resp)
 
 	@handler start
-	post /container/:id/start (ContainerIdReq) returns (Resp)
+		post /container/:id/start (IdReq) returns (Resp)
 
 	@handler stop
-	post /container/:id/stop (ContainerIdReq) returns (Resp)
+		post /container/:id/stop (IdReq) returns (Resp)
 
 	@handler restart
-	post /container/:id/restart (ContainerIdReq) returns (Resp)
+		post /container/:id/restart (IdReq) returns (Resp)
 
 	@handler rename
 	post /container/:id/rename (ContainerRenameReq) returns (Resp)
@@ -204,4 +204,17 @@ service oneKeyUpdate {
 
 	@handler restore
 	post /container/backups/:filename/restore (ContainerRestoreReq) returns (Resp)
+}
+
+@server(
+	prefix: /api
+	group: image
+	middleware: BearerTokenCheckMiddleware
+)
+service oneKeyUpdate {
+	@handler list
+	get /images returns (Resp)
+
+	@handler remove
+	post /image/:id/remove (IdReq) returns (Resp)
 }

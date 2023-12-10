@@ -32,5 +32,7 @@ func (l *RenameLogic) Rename(req *types.ContainerRenameReq) (resp *types.Resp, e
 		resp.Msg = err.Error()
 		return resp, err
 	}
+	resp.Code = 200
+	resp.Msg = "success"
 	return resp, nil
 }

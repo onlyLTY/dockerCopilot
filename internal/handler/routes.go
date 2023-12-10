@@ -8,6 +8,7 @@ import (
 	auth "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/auth"
 	container "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/container"
 	containersManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/containersManager"
+	image "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/image"
 	imagesManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/imagesManager"
 	progress "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/progress"
 	version "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/version"
@@ -213,6 +214,25 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Method:  http.MethodPost,
 					Path:    "/container/backups/:filename/restore",
 					Handler: container.RestoreHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.BearerTokenCheckMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/images",
+					Handler: image.ListHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/image/:id/remove",
+					Handler: image.RemoveHandler(serverCtx),
 				},
 			}...,
 		),

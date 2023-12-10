@@ -24,7 +24,7 @@ func NewStopLogic(ctx context.Context, svcCtx *svc.ServiceContext) *StopLogic {
 	}
 }
 
-func (l *StopLogic) Stop(req *types.ContainerIdReq) (resp *types.Resp, err error) {
+func (l *StopLogic) Stop(req *types.IdReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	err = utiles.StopContainer(l.svcCtx, req.Id)
 	if err != nil {

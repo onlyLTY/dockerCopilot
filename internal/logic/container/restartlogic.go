@@ -24,7 +24,7 @@ func NewRestartLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RestartLo
 	}
 }
 
-func (l *RestartLogic) Restart(req *types.ContainerIdReq) (resp *types.Resp, err error) {
+func (l *RestartLogic) Restart(req *types.IdReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	err = utiles.RestartContainer(l.svcCtx, req.Id)
 	if err != nil {

@@ -60,7 +60,7 @@ type Resp struct {
 	Data interface{} `json:"data"`
 }
 
-type ContainerIdReq struct {
+type IdReq struct {
 	Id string `path:"id"`
 }
 
@@ -69,12 +69,12 @@ type ContainerRestoreReq struct {
 }
 
 type ContainerRenameReq struct {
-	ContainerIdReq
+	IdReq
 	NewName string `form:"newName"`
 }
 
 type ContainerUpdateReq struct {
-	ContainerIdReq
+	IdReq
 	DelOldContainer bool   `form:"delOldContainer,default=true"`
 	Proxy           string `form:"proxy,optional"`
 	ImageNameAndTag string `form:"imageNameAndTag"`
