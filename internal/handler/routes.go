@@ -230,8 +230,8 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Handler: image.ListHandler(serverCtx),
 				},
 				{
-					Method:  http.MethodPost,
-					Path:    "/image/:id/remove",
+					Method:  http.MethodDelete,
+					Path:    "/image/:id",
 					Handler: image.RemoveHandler(serverCtx),
 				},
 			}...,

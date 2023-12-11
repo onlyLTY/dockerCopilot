@@ -44,11 +44,6 @@ type GetNewImageReq struct {
 	ImageNameAndTag string `json:"image_name_and_tag"`
 }
 
-type RemoveImageReq struct {
-	Force   bool   `json:"force"`
-	ImageID string `json:"imageID"`
-}
-
 type MsgResp struct {
 	Status string `json:"status"`
 	Msg    string `json:"msg"`
@@ -71,6 +66,11 @@ type ContainerRestoreReq struct {
 type ContainerRenameReq struct {
 	IdReq
 	NewName string `form:"newName"`
+}
+
+type RemoveImageReq struct {
+	IdReq
+	Force bool `form:"force,default=false"`
 }
 
 type ContainerUpdateReq struct {
