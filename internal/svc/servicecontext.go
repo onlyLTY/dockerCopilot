@@ -4,9 +4,9 @@ import (
 	"github.com/flosch/pongo2"
 	"github.com/google/uuid"
 	loader "github.com/nathan-osman/pongo2-embed-loader"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/middleware"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/module"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/config"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/middleware"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/module"
 	"github.com/zeromicro/go-zero/rest"
 )
 

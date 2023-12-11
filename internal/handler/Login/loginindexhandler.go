@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/logic/Login"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/logic/Login"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 

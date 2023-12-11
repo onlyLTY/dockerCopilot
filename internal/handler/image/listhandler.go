@@ -3,8 +3,8 @@ package image
 import (
 	"net/http"
 
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/logic/image"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/logic/image"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 

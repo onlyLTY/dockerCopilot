@@ -3,7 +3,7 @@ package utiles
 import (
 	"context"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
 )
 
 func RenameContainer(ctx *svc.ServiceContext, id string, newName string) error {

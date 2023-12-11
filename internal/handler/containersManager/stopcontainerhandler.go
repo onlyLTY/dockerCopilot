@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/logic/containersManager"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/logic/containersManager"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 

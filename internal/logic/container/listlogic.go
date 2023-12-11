@@ -2,11 +2,11 @@ package container
 
 import (
 	"context"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/utiles"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/utiles"
 	"time"
 
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

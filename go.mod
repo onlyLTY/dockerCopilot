@@ -1,4 +1,4 @@
-module github.com/onlyLTY/oneKeyUpdate/UGREEN
+module github.com/onlyLTY/dokcerCopilot/UGREEN
 
 go 1.20
 

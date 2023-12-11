@@ -9,7 +9,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	dockerMsgType "github.com/docker/docker/pkg/jsonmessage"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"log"

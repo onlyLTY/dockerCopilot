@@ -3,9 +3,9 @@ package container
 import (
 	"context"
 	"github.com/google/uuid"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/utiles"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/utiles"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 

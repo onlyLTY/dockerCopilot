@@ -4,15 +4,15 @@ package handler
 import (
 	"net/http"
 
-	Login "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/Login"
-	auth "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/auth"
-	container "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/container"
-	containersManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/containersManager"
-	image "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/image"
-	imagesManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/imagesManager"
-	progress "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/progress"
-	version "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/version"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
+	Login "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/handler/Login"
+	auth "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/handler/auth"
+	container "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/handler/container"
+	containersManager "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/handler/containersManager"
+	image "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/handler/image"
+	imagesManager "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/handler/imagesManager"
+	progress "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/handler/progress"
+	version "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/handler/version"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 )

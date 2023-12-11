@@ -1,8 +1,7 @@
-package Login
+package auth
 
 import (
 	"context"
-	"errors"
 
 	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
 	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
@@ -10,24 +9,22 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type DoLoginLogic struct {
+type JwtValidateLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 }
 
-func NewDoLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DoLoginLogic {
-	return &DoLoginLogic{
+func NewJwtValidateLogic(ctx context.Context, svcCtx *svc.ServiceContext) *JwtValidateLogic {
+	return &JwtValidateLogic{
 		Logger: logx.WithContext(ctx),
 		ctx:    ctx,
 		svcCtx: svcCtx,
 	}
 }
 
-func (l *DoLoginLogic) DoLogin(req *types.DoLoginReq) error {
+func (l *JwtValidateLogic) JwtValidate(req *types.LoginReq) (resp *types.Resp, err error) {
 	// todo: add your logic here and delete this line
-	if req.SecretKey != l.svcCtx.Config.SecretKey {
-		return errors.New("秘钥错误")
-	}
-	return nil
+
+	return
 }

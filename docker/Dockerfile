@@ -5,7 +5,7 @@ WORKDIR /app
 
 ARG TARGETPLATFORM
 # 复制适当的平台二进制文件
-COPY dist/$TARGETPLATFORM/onekeyupdate /app/onekeyupdate
+COPY dist/$TARGETPLATFORM/dokcerCopilot /app/dokcerCopilot
 
 # 复制其他需要的文件或目录，例如 start.sh
 COPY . ${WORKDIR}

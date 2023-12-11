@@ -2,7 +2,7 @@ package utiles
 
 import (
 	"errors"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
 	"strings"
 )
 

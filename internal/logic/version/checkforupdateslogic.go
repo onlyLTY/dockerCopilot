@@ -2,14 +2,14 @@ package version
 
 import (
 	"context"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/config"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/config"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -34,7 +34,7 @@ func (l *CheckForUpdatesLogic) CheckForUpdates() (resp *types.Resp, err error) {
 	if githubProxy != "" {
 		githubProxy = strings.TrimRight(githubProxy, "/") + "/"
 	}
-	versionURL := githubProxy + "https://raw.githubusercontent.com/onlyLTY/oneKeyUpdate/zspace/version"
+	versionURL := githubProxy + "https://raw.githubusercontent.com/onlyLTY/dokcerCopilot/zspace/version"
 	remoteVersion, err := fetchVersionFromURL(versionURL)
 	if err != nil {
 		logx.Info("获取版本错误", err)

@@ -6,7 +6,7 @@ import (
 	docker "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"log"
 	"os"

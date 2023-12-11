@@ -74,7 +74,7 @@ type VersionMsgResp {
 	BuildDate string `json:"build_date"`
 }
 
-service oneKeyUpdate {
+service dokcerCopilot {
 	@handler webindex
 	get / () returns ()
 }
@@ -84,7 +84,7 @@ service oneKeyUpdate {
 	group: Login
 	middleware: IndexCheckMiddleware
 )
-service oneKeyUpdate {
+service dokcerCopilot {
 	@handler DoLogin
 	post /login (DoLoginReq) returns ()
 
@@ -97,7 +97,7 @@ service oneKeyUpdate {
 	group: containersManager
 	middleware: CookieCheckMiddleware
 )
-service oneKeyUpdate {
+service dokcerCopilot {
 	@handler ContainersManagerIndex
 	get / () returns ()
 
@@ -122,7 +122,7 @@ service oneKeyUpdate {
 	group: imagesManager
 	middleware: CookieCheckMiddleware
 )
-service oneKeyUpdate {
+service dokcerCopilot {
 	@handler imagesManagerIndex
 	get / () returns ()
 
@@ -137,7 +137,7 @@ service oneKeyUpdate {
 	prefix: /api
 	group: auth
 )
-service oneKeyUpdate {
+service dokcerCopilot {
 	@handler Login
 	post /auth (LoginReq) returns (Resp);
 
@@ -149,7 +149,7 @@ service oneKeyUpdate {
 	prefix: /api
 	group: progress
 )
-service oneKeyUpdate {
+service dokcerCopilot {
 	@handler GetProgress
 	get /progress/:taskid (GetProgressReq) returns (Resp);
 }
@@ -159,7 +159,7 @@ service oneKeyUpdate {
 	group: container
 	middleware: BearerTokenCheckMiddleware
 )
-service oneKeyUpdate {
+service dokcerCopilot {
 	@handler list
 	get /containers returns (Resp)
 
@@ -193,7 +193,7 @@ service oneKeyUpdate {
 	group: image
 	middleware: BearerTokenCheckMiddleware
 )
-service oneKeyUpdate {
+service dokcerCopilot {
 	@handler list
 	get /images returns (Resp)
 
@@ -206,7 +206,7 @@ service oneKeyUpdate {
 	group: version
 	middleware: BearerTokenCheckMiddleware
 )
-service oneKeyUpdate {
+service dokcerCopilot {
 	@handler version
 	get /version () returns (Resp);
 

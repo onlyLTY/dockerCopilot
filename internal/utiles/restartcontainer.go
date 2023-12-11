@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
+	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
 )
 
 func RestartContainer(ctx *svc.ServiceContext, id string) error {
