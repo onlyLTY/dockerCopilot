@@ -14,6 +14,7 @@ import (
 	xhttp "github.com/zeromicro/x/http"
 	"go/types"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/config"
@@ -31,7 +32,12 @@ func main() {
 	flag.Parse()
 
 	var c config.Config
-	conf.MustLoad(*configFile, &c, conf.UseEnv())
+	err := conf.Load(*configFile, &c, conf.UseEnv())
+	if err != nil {
+		logx.Errorf("无法加载配置文件: %v", err)
+		logx.Error("请重新拉取镜像")
+		os.Exit(1)
+	}
 	server := rest.MustNewServer(c.RestConf, rest.WithCors("*"))
 	defer server.Stop()
 	ctx := svc.NewServiceContext(c, &loader.Loader{Content: content})
