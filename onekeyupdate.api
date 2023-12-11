@@ -140,9 +140,6 @@ service dokcerCopilot {
 service dokcerCopilot {
 	@handler Login
 	post /auth (LoginReq) returns (Resp);
-
-	@handler JwtValidate
-	get /auth/validate (LoginReq) returns (Resp);
 }
 
 @server(
