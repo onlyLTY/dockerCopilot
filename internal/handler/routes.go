@@ -117,11 +117,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/auth",
 				Handler: auth.LoginHandler(serverCtx),
 			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/auth/validate",
-				Handler: auth.JwtValidateHandler(serverCtx),
-			},
 		},
 		rest.WithPrefix("/api"),
 	)
