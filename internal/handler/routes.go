@@ -111,35 +111,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	)
 
 	server.AddRoutes(
-		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.CookieCheckMiddleware},
-			[]rest.Route{
-				{
-					Method:  http.MethodGet,
-					Path:    "/",
-					Handler: version.VersionIndexHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/get_version",
-					Handler: version.GetVersionsHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/updateprogram",
-					Handler: version.UpdateprogramHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/checkprogramupdate",
-					Handler: version.CheckprogramupdateHandler(serverCtx),
-				},
-			}...,
-		),
-		rest.WithPrefix("/version"),
-	)
-
-	server.AddRoutes(
 		[]rest.Route{
 			{
 				Method:  http.MethodPost,
@@ -233,6 +204,30 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Method:  http.MethodDelete,
 					Path:    "/image/:id",
 					Handler: image.RemoveHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.BearerTokenCheckMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/version",
+					Handler: version.VersionHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/check",
+					Handler: version.CheckForUpdatesHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPut,
+					Path:    "/program",
+					Handler: version.UpdateProgramHandler(serverCtx),
 				},
 			}...,
 		),
