@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	myTypes "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"io/ioutil"
@@ -15,23 +14,24 @@ import (
 	"strings"
 )
 
-const (
-	versionURL     = "https://ghproxy.com/https://raw.githubusercontent.com/onlyLTY/oneKeyUpdate/UGREEN/version"
-	releaseBaseURL = "https://ghproxy.com/https://github.com/onlyLTY/oneKeyUpdate/releases/download"
-)
-
-func UpdateProgram(ctx *svc.ServiceContext) (myTypes.MsgResp, error) {
+func UpdateProgram(ctx *svc.ServiceContext) error {
+	githubProxy := os.Getenv("githubProxy")
+	if githubProxy != "" {
+		githubProxy = strings.TrimRight(githubProxy, "/") + "/"
+	}
+	versionURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://raw.githubusercontent.com/onlyLTY/oneKeyUpdate/zspace/version"
+	releaseBaseURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://github.com/onlyLTY/oneKeyUpdate/releases/download"
 	resp, err := http.Get(versionURL)
 	if err != nil {
 		logx.Info("没有获取到最新版本信息:", err)
-		return myTypes.MsgResp{}, nil
+		return nil
 	}
 	defer resp.Body.Close()
 
 	versionData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logx.Info("没有获取到最新版本信息:", err)
-		return myTypes.MsgResp{}, nil
+		return nil
 	}
 
 	version := strings.TrimSpace(string(versionData))
@@ -43,17 +43,17 @@ func UpdateProgram(ctx *svc.ServiceContext) (myTypes.MsgResp, error) {
 
 	if err := downloadFile(downloadURL, dest); err != nil {
 		logx.Error("下载失败:", err)
-		return myTypes.MsgResp{Msg: err.Error()}, err
+		return err
 	}
 	logx.Info("下载成功")
 
 	if err := decompressTarGz(dest, "."); err != nil {
 		logx.Info("解压缩失败:", err)
-		return myTypes.MsgResp{Msg: err.Error()}, err
+		return err
 	}
 	logx.Info("解压缩成功")
 
-	return myTypes.MsgResp{}, nil
+	return nil
 }
 
 func downloadFile(url string, dest string) error {

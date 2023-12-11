@@ -10,21 +10,29 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type UpdateprogramLogic struct {
+type UpdateProgramLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 }
 
-func NewUpdateprogramLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateprogramLogic {
-	return &UpdateprogramLogic{
+func NewUpdateProgramLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateProgramLogic {
+	return &UpdateProgramLogic{
 		Logger: logx.WithContext(ctx),
 		ctx:    ctx,
 		svcCtx: svcCtx,
 	}
 }
 
-func (l *UpdateprogramLogic) UpdateProgram() (resp *types.MsgResp, err error) {
-	msg, err := utiles.UpdateProgram(l.svcCtx)
-	return &msg, err
+func (l *UpdateProgramLogic) UpdateProgram() (resp *types.Resp, err error) {
+	resp = &types.Resp{}
+	err = utiles.UpdateProgram(l.svcCtx)
+	if err != nil {
+		resp.Code = 500
+		resp.Msg = err.Error()
+		return resp, err
+	}
+	resp.Code = 200
+	resp.Msg = "success"
+	return resp, nil
 }
