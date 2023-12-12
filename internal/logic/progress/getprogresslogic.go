@@ -32,10 +32,7 @@ func (l *GetProgressLogic) GetProgress(req *types.GetProgressReq) (resp *types.R
 		return
 	}
 	resp.Code = 200
-	resp.Msg = "success"
-	resp.Data = map[string]string{"schedule": progress.Message}
-	if progress.IsDone {
-		delete(l.svcCtx.ProgressStore, req.TaskId)
-	}
+	resp.Msg = progress.Message
+	resp.Data = progress
 	return resp, nil
 }
