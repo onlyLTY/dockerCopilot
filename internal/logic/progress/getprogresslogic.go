@@ -37,6 +37,7 @@ func (l *GetProgressLogic) GetProgress(req *types.GetProgressReq) (resp *types.R
 		"percentage":    progress.Percentage,
 		"message":       progress.Message,
 		"containerName": progress.ContainerName,
+		"pullImageMsg":  progress.PullImageMsg,
 		"isDone":        progress.IsDone,
 	}
 	return resp, nil

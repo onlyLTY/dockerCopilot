@@ -27,6 +27,7 @@ type TaskProgress struct {
 	Percentage    int
 	Message       string
 	ContainerName string
+	PullImageMsg  string
 	IsDone        bool
 }
 
