@@ -24,9 +24,10 @@ type ServiceContext struct {
 }
 
 type TaskProgress struct {
-	Percentage int
-	Message    string
-	IsDone     bool
+	Percentage    int
+	Message       string
+	ContainerName string
+	IsDone        bool
 }
 
 type ProgressStoreType map[string]TaskProgress

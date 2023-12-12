@@ -23,8 +23,9 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	timeout := 10
 	signal := "SIGINT"
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 0,
-		Message:    "正在停止容器",
+		Percentage:    0,
+		ContainerName: name,
+		Message:       "正在停止容器",
 	}
 	stopOptions := container.StopOptions{
 		Signal:  signal,
@@ -33,19 +34,22 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	err = cli.ContainerStop(context.Background(), id, stopOptions)
 	if err != nil {
 		ctx.ProgressStore[taskID] = svc.TaskProgress{
-			Percentage: 0,
-			Message:    "停止容器失败" + err.Error(),
-			IsDone:     true,
+			Percentage:    0,
+			ContainerName: name,
+			Message:       "停止容器失败" + err.Error(),
+			IsDone:        true,
 		}
 		return err
 	}
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 20,
-		Message:    "容器停止成功",
+		Percentage:    20,
+		ContainerName: name,
+		Message:       "容器停止成功",
 	}
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 20,
-		Message:    "正在拉取新镜像",
+		Percentage:    20,
+		ContainerName: name,
+		Message:       "正在拉取新镜像",
 	}
 	cli.NegotiateAPIVersion(context.TODO())
 	if err != nil {
@@ -54,37 +58,43 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	reader, err := cli.ImagePull(context.TODO(), imageNameAndTag, dockerTypes.ImagePullOptions{})
 	if err != nil {
 		ctx.ProgressStore[taskID] = svc.TaskProgress{
-			Percentage: 0,
-			Message:    "拉取镜像失败" + err.Error(),
-			IsDone:     true,
+			Percentage:    0,
+			ContainerName: name,
+			Message:       "拉取镜像失败" + err.Error(),
+			IsDone:        true,
 		}
 		logx.Errorf("Failed to pull image: %s", err)
 	}
 	decodePullResp(reader, ctx, taskID)
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 40,
-		Message:    "镜像拉取成功",
+		Percentage:    40,
+		ContainerName: name,
+		Message:       "镜像拉取成功",
 	}
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 40,
-		Message:    "正在重命名旧容器",
+		Percentage:    40,
+		ContainerName: name,
+		Message:       "正在重命名旧容器",
 	}
 	err = cli.ContainerRename(context.Background(), id, name+"-old")
 	if err != nil {
 		ctx.ProgressStore[taskID] = svc.TaskProgress{
-			Percentage: 0,
-			Message:    "重命名旧容器失败" + err.Error(),
-			IsDone:     true,
+			Percentage:    0,
+			ContainerName: name,
+			Message:       "重命名旧容器失败" + err.Error(),
+			IsDone:        true,
 		}
 		return err
 	}
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 60,
-		Message:    "重命名旧容器成功",
+		Percentage:    60,
+		ContainerName: name,
+		Message:       "重命名旧容器成功",
 	}
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 60,
-		Message:    "正在创建新容器",
+		Percentage:    60,
+		ContainerName: name,
+		Message:       "正在创建新容器",
 	}
 	inspectedContainer, err := cli.ContainerInspect(context.TODO(), id)
 	if err != nil {
@@ -103,25 +113,29 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	_, err = cli.ContainerCreate(context.TODO(), config, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
 		ctx.ProgressStore[taskID] = svc.TaskProgress{
-			Percentage: 0,
-			Message:    "创建新容器失败" + err.Error(),
+			Percentage:    0,
+			ContainerName: name,
+			Message:       "创建新容器失败" + err.Error(),
 		}
 		return err
 	}
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 80,
-		Message:    "创建新容器成功",
+		Percentage:    80,
+		ContainerName: name,
+		Message:       "创建新容器成功",
 	}
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 80,
-		Message:    "正在启动新容器以及删除旧容器(如果不保留旧容器)",
+		Percentage:    80,
+		ContainerName: name,
+		Message:       "正在启动新容器以及删除旧容器(如果不保留旧容器)",
 	}
 	err = cli.ContainerStart(context.Background(), containerName, dockerTypes.ContainerStartOptions{})
 	if err != nil {
 		ctx.ProgressStore[taskID] = svc.TaskProgress{
-			Percentage: 0,
-			Message:    "启动新容器失败" + err.Error(),
-			IsDone:     true,
+			Percentage:    0,
+			ContainerName: name,
+			Message:       "启动新容器失败" + err.Error(),
+			IsDone:        true,
 		}
 		return err
 	}
@@ -129,41 +143,44 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 		err = cli.ContainerRemove(context.Background(), id, dockerTypes.ContainerRemoveOptions{})
 		if err != nil {
 			ctx.ProgressStore[taskID] = svc.TaskProgress{
-				Percentage: 0,
-				Message:    "删除旧容器失败" + err.Error(),
-				IsDone:     true,
+				Percentage:    0,
+				ContainerName: name,
+				Message:       "删除旧容器失败" + err.Error(),
+				IsDone:        true,
 			}
 			return err
 		}
 	}
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage: 100,
-		Message:    "更新成功",
-		IsDone:     true,
+		Percentage:    100,
+		ContainerName: name,
+		Message:       "更新成功",
+		IsDone:        true,
 	}
 	return nil
 }
 
 func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) {
 	decoder := json.NewDecoder(reader)
+	var oldTaskProgress svc.TaskProgress
 	for {
 		var msg dockerMsgType.JSONMessage
 		if err := decoder.Decode(&msg); err != nil {
 			if err == io.EOF {
 				break
 			}
-			ctx.ProgressStore[taskID] = svc.TaskProgress{
-				Percentage: 25,
-				Message:    "拉取镜像失败" + err.Error(),
-			}
+			oldTaskProgress = ctx.ProgressStore[taskID]
+			oldTaskProgress.Message = "拉取镜像失败" + err.Error()
+			oldTaskProgress.Percentage = 25
+			ctx.ProgressStore[taskID] = oldTaskProgress
 			logx.Errorf("Failed to decode pull image response: %s", err)
 		}
 		// Print the progress or error information from the response
 		if msg.Error != nil {
-			ctx.ProgressStore[taskID] = svc.TaskProgress{
-				Percentage: 25,
-				Message:    "拉取镜像失败" + msg.Error.Error(),
-			}
+			oldTaskProgress = ctx.ProgressStore[taskID]
+			oldTaskProgress.Message = "拉取镜像失败" + msg.Error.Error()
+			oldTaskProgress.Percentage = 25
+			ctx.ProgressStore[taskID] = oldTaskProgress
 			logx.Error("Error: %s", msg.Error)
 		} else {
 			var formattedMsg string
@@ -172,10 +189,10 @@ func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) {
 			} else {
 				formattedMsg = fmt.Sprintf("进度%s", msg.Status)
 			}
-			ctx.ProgressStore[taskID] = svc.TaskProgress{
-				Percentage: 25,
-				Message:    formattedMsg,
-			}
+			oldTaskProgress = ctx.ProgressStore[taskID]
+			oldTaskProgress.Message = formattedMsg
+			oldTaskProgress.Percentage = 25
+			ctx.ProgressStore[taskID] = oldTaskProgress
 			logx.Info("%s: %s\n", msg.Status, msg.Progress)
 		}
 	}
