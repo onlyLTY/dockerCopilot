@@ -8,7 +8,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -30,8 +29,8 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 		cli.NegotiateAPIVersion(context.TODO())
 		inspectedContainer, err := cli.ContainerInspect(context.TODO(), containerID)
 		if err != nil {
-			log.Println("获取容器信息失败")
-			log.Fatal(err)
+			logx.Error("获取容器信息失败" + err.Error())
+			return nil, err
 		}
 		var containerName, imageNameAndTag string
 		if len(v.Names) > 0 {
