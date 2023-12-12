@@ -24,7 +24,6 @@ func NewUpdateLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateLogi
 }
 
 func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, err error) {
-	// todo: add your logic here and delete this line
 	resp = &types.Resp{}
 	taskID := uuid.New().String()
 	go func() {
