@@ -38,7 +38,9 @@ func (l *CheckForUpdatesLogic) CheckForUpdates() (resp *types.Resp, err error) {
 	remoteVersion, err := fetchVersionFromURL(versionURL)
 	if err != nil {
 		logx.Info("获取版本错误", err)
-		return
+		resp.Code = 500
+		resp.Msg = "获取版本错误" + err.Error()
+		return resp, err
 	}
 
 	localVersion := config.Version
