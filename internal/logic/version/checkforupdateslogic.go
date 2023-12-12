@@ -49,11 +49,17 @@ func (l *CheckForUpdatesLogic) CheckForUpdates() (resp *types.Resp, err error) {
 		logx.Info("版本一致:", localVersion)
 		resp.Code = 200
 		resp.Msg = "not need"
+		resp.Data = map[string]string{
+			"remoteVersion": remoteVersion,
+		}
 		return resp, nil
 	} else {
 		logx.Infof("版本不一致! 本地: %s, 远程: %s\n", localVersion, remoteVersion)
 		resp.Code = 200
 		resp.Msg = "need"
+		resp.Data = map[string]string{
+			"remoteVersion": remoteVersion,
+		}
 		return resp, nil
 	}
 
