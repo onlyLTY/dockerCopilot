@@ -13,9 +13,9 @@ func UpdateProgramHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := version.NewUpdateProgramLogic(r.Context(), svcCtx)
 		resp, err := l.UpdateProgram()
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.WriteJson(w, resp.Code, resp)
 		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			httpx.WriteJson(w, resp.Code, resp)
 		}
 	}
 }
