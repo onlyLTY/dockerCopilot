@@ -2,12 +2,12 @@ package version
 
 import (
 	"context"
-	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/utiles"
-
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
-
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/utiles"
 	"github.com/zeromicro/go-zero/core/logx"
+	"os"
+	"time"
 )
 
 type UpdateProgramLogic struct {
@@ -34,5 +34,9 @@ func (l *UpdateProgramLogic) UpdateProgram() (resp *types.Resp, err error) {
 	}
 	resp.Code = 200
 	resp.Msg = "success"
+	go func() {
+		time.Sleep(10 * time.Second)
+		os.Exit(1)
+	}()
 	return resp, nil
 }
