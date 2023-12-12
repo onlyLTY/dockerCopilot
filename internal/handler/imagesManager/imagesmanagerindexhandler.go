@@ -5,8 +5,8 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
 
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/logic/imagesManager"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/logic/imagesManager"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 

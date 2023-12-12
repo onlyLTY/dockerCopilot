@@ -2,8 +2,8 @@ package containersManager
 
 import (
 	"github.com/flosch/pongo2"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/logic/containersManager"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/logic/containersManager"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"net/http"

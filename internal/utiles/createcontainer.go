@@ -5,8 +5,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
-	myTypes "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
+	myTypes "github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"log"
 )
 

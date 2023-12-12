@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	docker "github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"os"
 	"path/filepath"

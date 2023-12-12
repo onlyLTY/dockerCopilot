@@ -4,7 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"fmt"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"io/ioutil"
@@ -19,8 +19,8 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 	if githubProxy != "" {
 		githubProxy = strings.TrimRight(githubProxy, "/") + "/"
 	}
-	versionURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://raw.githubusercontent.com/onlyLTY/dokcerCopilot/zspace/version"
-	releaseBaseURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://github.com/onlyLTY/dokcerCopilot/releases/download"
+	versionURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://raw.githubusercontent.com/onlyLTY/dockerCopilot/zspace/version"
+	releaseBaseURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://github.com/onlyLTY/dockerCopilot/releases/download"
 	resp, err := http.Get(versionURL)
 	if err != nil {
 		logx.Info("没有获取到最新版本信息:", err)
@@ -37,9 +37,9 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 	version := strings.TrimSpace(string(versionData))
 	logx.Info("获取到最新版本：", version)
 	// 2. 构造下载链接
-	downloadURL := fmt.Sprintf("%s/%s/dokcerCopilot-%s.tar.gz", releaseBaseURL, version, runtime.GOARCH)
+	downloadURL := fmt.Sprintf("%s/%s/dockerCopilot-%s.tar.gz", releaseBaseURL, version, runtime.GOARCH)
 
-	dest := "dokcerCopilot.tar.gz"
+	dest := "dockerCopilot.tar.gz"
 
 	if err := downloadFile(downloadURL, dest); err != nil {
 		logx.Error("下载失败:", err)

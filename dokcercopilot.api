@@ -74,7 +74,7 @@ type VersionMsgResp {
 	BuildDate string `json:"build_date"`
 }
 
-service dokcerCopilot {
+service dockerCopilot {
 	@handler webindex
 	get / () returns ()
 }
@@ -84,7 +84,7 @@ service dokcerCopilot {
 	group: Login
 	middleware: IndexCheckMiddleware
 )
-service dokcerCopilot {
+service dockerCopilot {
 	@handler DoLogin
 	post /login (DoLoginReq) returns ()
 
@@ -97,7 +97,7 @@ service dokcerCopilot {
 	group: containersManager
 	middleware: CookieCheckMiddleware
 )
-service dokcerCopilot {
+service dockerCopilot {
 	@handler ContainersManagerIndex
 	get / () returns ()
 
@@ -122,7 +122,7 @@ service dokcerCopilot {
 	group: imagesManager
 	middleware: CookieCheckMiddleware
 )
-service dokcerCopilot {
+service dockerCopilot {
 	@handler imagesManagerIndex
 	get / () returns ()
 
@@ -137,7 +137,7 @@ service dokcerCopilot {
 	prefix: /api
 	group: auth
 )
-service dokcerCopilot {
+service dockerCopilot {
 	@handler Login
 	post /auth (LoginReq) returns (Resp);
 }
@@ -146,7 +146,7 @@ service dokcerCopilot {
 	prefix: /api
 	group: progress
 )
-service dokcerCopilot {
+service dockerCopilot {
 	@handler GetProgress
 	get /progress/:taskid (GetProgressReq) returns (Resp);
 }
@@ -156,7 +156,7 @@ service dokcerCopilot {
 	group: container
 	middleware: BearerTokenCheckMiddleware
 )
-service dokcerCopilot {
+service dockerCopilot {
 	@handler list
 	get /containers returns (Resp)
 
@@ -190,7 +190,7 @@ service dokcerCopilot {
 	group: image
 	middleware: BearerTokenCheckMiddleware
 )
-service dokcerCopilot {
+service dockerCopilot {
 	@handler list
 	get /images returns (Resp)
 
@@ -203,7 +203,7 @@ service dokcerCopilot {
 	group: version
 	middleware: BearerTokenCheckMiddleware
 )
-service dokcerCopilot {
+service dockerCopilot {
 	@handler version
 	get /version () returns (Resp);
 

@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/golang-jwt/jwt"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"net/http"
 	"strings"

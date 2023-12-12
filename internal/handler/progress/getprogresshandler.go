@@ -3,9 +3,9 @@ package progress
 import (
 	"net/http"
 
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/logic/progress"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/logic/progress"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
-	MyType "github.com/onlyLTY/dokcerCopilot/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
+	MyType "github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"log"
 	"strings"
 )

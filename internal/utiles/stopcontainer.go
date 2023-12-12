@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 )
 
 func StopContainer(ctx *svc.ServiceContext, id string) error {

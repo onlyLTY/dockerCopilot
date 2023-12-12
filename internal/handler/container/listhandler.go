@@ -3,8 +3,8 @@ package container
 import (
 	"net/http"
 
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/logic/container"
-	"github.com/onlyLTY/dokcerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/logic/container"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
