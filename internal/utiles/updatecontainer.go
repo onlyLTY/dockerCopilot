@@ -12,13 +12,17 @@ import (
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
-	"log"
 )
 
 func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameAndTag string, delOldContainer bool, taskID string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		panic(err)
+		ctx.ProgressStore[taskID] = svc.TaskProgress{
+			Percentage:    0,
+			ContainerName: name,
+			Message:       "连接Docker失败" + err.Error(),
+			IsDone:        true,
+		}
 	}
 	timeout := 10
 	signal := "SIGINT"
@@ -53,6 +57,12 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	}
 	cli.NegotiateAPIVersion(context.TODO())
 	if err != nil {
+		ctx.ProgressStore[taskID] = svc.TaskProgress{
+			Percentage:    0,
+			ContainerName: name,
+			Message:       "获取Docker API版本失败" + err.Error(),
+			IsDone:        true,
+		}
 		return err
 	}
 	reader, err := cli.ImagePull(context.TODO(), imageNameAndTag, dockerTypes.ImagePullOptions{})
@@ -98,8 +108,14 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	}
 	inspectedContainer, err := cli.ContainerInspect(context.TODO(), id)
 	if err != nil {
-		log.Println("获取容器信息失败")
-		log.Fatal(err)
+		ctx.ProgressStore[taskID] = svc.TaskProgress{
+			Percentage:    0,
+			ContainerName: name,
+			Message:       "获取容器配置失败" + err.Error(),
+			IsDone:        true,
+		}
+		logx.Error("获取容器信息失败" + err.Error())
+		return err
 	}
 	inspectedContainer.Config.Hostname = ""
 	inspectedContainer.Config.Image = imageNameAndTag
@@ -115,6 +131,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 		ctx.ProgressStore[taskID] = svc.TaskProgress{
 			Percentage:    0,
 			ContainerName: name,
+			IsDone:        true,
 			Message:       "创建新容器失败" + err.Error(),
 		}
 		return err
@@ -172,6 +189,7 @@ func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) {
 			oldTaskProgress = ctx.ProgressStore[taskID]
 			oldTaskProgress.Message = "拉取镜像失败" + err.Error()
 			oldTaskProgress.Percentage = 25
+			oldTaskProgress.IsDone = true
 			ctx.ProgressStore[taskID] = oldTaskProgress
 			logx.Errorf("Failed to decode pull image response: %s", err)
 		}
@@ -180,6 +198,7 @@ func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) {
 			oldTaskProgress = ctx.ProgressStore[taskID]
 			oldTaskProgress.Message = "拉取镜像失败" + msg.Error.Error()
 			oldTaskProgress.Percentage = 25
+			oldTaskProgress.IsDone = true
 			ctx.ProgressStore[taskID] = oldTaskProgress
 			logx.Error("Error: %s", msg.Error)
 		} else {
