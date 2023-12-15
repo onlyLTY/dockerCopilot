@@ -42,6 +42,8 @@ func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp
 	}()
 	resp.Code = 200
 	resp.Msg = "success"
-	resp.Data = taskID
+	resp.Data = map[string]interface{}{
+		"taskID": taskID,
+	}
 	return resp, nil
 }

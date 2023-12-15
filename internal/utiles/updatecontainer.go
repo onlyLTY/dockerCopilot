@@ -16,10 +16,10 @@ import (
 
 func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameAndTag string, delOldContainer bool, taskID string) error {
 	ctx.ProgressStore[taskID] = svc.TaskProgress{
-		Percentage:    0,
-		ContainerName: name,
-		Message:       "正在连接Docker",
-		IsDone:        false,
+		Percentage: 0,
+		Name:       name,
+		Message:    "正在连接Docker",
+		IsDone:     false,
 	}
 	var oldTaskProgress = ctx.ProgressStore[taskID]
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -145,7 +145,7 @@ func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) {
 			}
 			oldTaskProgress = ctx.ProgressStore[taskID]
 			oldTaskProgress.Message = "拉取镜像失败"
-			oldTaskProgress.PullImageMsg = err.Error()
+			oldTaskProgress.DetailMsg = []string{err.Error()}
 			oldTaskProgress.Percentage = 25
 			oldTaskProgress.IsDone = true
 			ctx.ProgressStore[taskID] = oldTaskProgress
@@ -155,7 +155,7 @@ func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) {
 		if msg.Error != nil {
 			oldTaskProgress = ctx.ProgressStore[taskID]
 			oldTaskProgress.Message = "拉取镜像失败"
-			oldTaskProgress.PullImageMsg = msg.Error.Error()
+			oldTaskProgress.DetailMsg = []string{msg.Error.Error()}
 			oldTaskProgress.Percentage = 25
 			oldTaskProgress.IsDone = true
 			ctx.ProgressStore[taskID] = oldTaskProgress
@@ -168,7 +168,7 @@ func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) {
 				formattedMsg = fmt.Sprintf("进度%s", msg.Status)
 			}
 			oldTaskProgress = ctx.ProgressStore[taskID]
-			oldTaskProgress.PullImageMsg = formattedMsg
+			oldTaskProgress.DetailMsg = []string{formattedMsg}
 			logx.Error("Error: %s", formattedMsg)
 			oldTaskProgress.Percentage = 25
 			ctx.ProgressStore[taskID] = oldTaskProgress

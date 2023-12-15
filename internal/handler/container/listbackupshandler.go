@@ -13,9 +13,9 @@ func ListBackupsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := container.NewListBackupsLogic(r.Context(), svcCtx)
 		resp, err := l.ListBackups()
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.WriteJson(w, resp.Code, resp)
 		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			httpx.WriteJson(w, resp.Code, resp)
 		}
 	}
 }
