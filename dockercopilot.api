@@ -157,7 +157,7 @@ service dockerCopilot {
 	middleware: BearerTokenCheckMiddleware
 )
 service dockerCopilot {
-	@handler list
+	@handler containersList
 	get /containers returns (Resp)
 
 	@handler start
@@ -191,7 +191,7 @@ service dockerCopilot {
 	middleware: BearerTokenCheckMiddleware
 )
 service dockerCopilot {
-	@handler list
+	@handler imagesList
 	get /images returns (Resp)
 
 	@handler remove
