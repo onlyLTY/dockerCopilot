@@ -139,7 +139,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				{
 					Method:  http.MethodGet,
 					Path:    "/containers",
-					Handler: container.ListHandler(serverCtx),
+					Handler: container.ContainersListHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPost,
@@ -193,7 +193,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				{
 					Method:  http.MethodGet,
 					Path:    "/images",
-					Handler: image.ListHandler(serverCtx),
+					Handler: image.ImagesListHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodDelete,

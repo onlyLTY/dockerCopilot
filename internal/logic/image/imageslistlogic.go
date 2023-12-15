@@ -11,7 +11,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type ListLogic struct {
+type ImagesListLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
@@ -26,15 +26,15 @@ type Info struct {
 	CreateTime string `json:"createTime"`
 }
 
-func NewListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ListLogic {
-	return &ListLogic{
+func NewImagesListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ImagesListLogic {
+	return &ImagesListLogic{
 		Logger: logx.WithContext(ctx),
 		ctx:    ctx,
 		svcCtx: svcCtx,
 	}
 }
 
-func (l *ListLogic) List() (resp *types.Resp, err error) {
+func (l *ImagesListLogic) ImagesList() (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	list, err := utiles.GetImagesList(l.svcCtx)
 	if err != nil {

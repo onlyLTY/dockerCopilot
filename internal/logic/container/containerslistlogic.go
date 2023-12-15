@@ -11,7 +11,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type ListLogic struct {
+type ContainersListLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
@@ -27,15 +27,15 @@ type Info struct {
 	HaveUpdate  bool   `json:"haveUpdate"`
 }
 
-func NewListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ListLogic {
-	return &ListLogic{
+func NewContainersListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ContainersListLogic {
+	return &ContainersListLogic{
 		Logger: logx.WithContext(ctx),
 		ctx:    ctx,
 		svcCtx: svcCtx,
 	}
 }
 
-func (l *ListLogic) List() (resp *types.Resp, err error) {
+func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 	// 获取所有容器（包括停止的容器）
 	resp = &types.Resp{}
 	list, err := utiles.GetContainerList(l.svcCtx)
