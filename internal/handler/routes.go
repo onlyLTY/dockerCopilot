@@ -181,6 +181,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 					Path:    "/container/backups/:filename/restore",
 					Handler: container.RestoreHandler(serverCtx),
 				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/container/backups/:filename",
+					Handler: container.DelRestoreHandler(serverCtx),
+				},
 			}...,
 		),
 		rest.WithPrefix("/api"),

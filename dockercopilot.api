@@ -183,6 +183,9 @@ service dockerCopilot {
 
 	@handler restore
 	post /container/backups/:filename/restore (ContainerRestoreReq) returns (Resp)
+
+	@handler delRestore
+	delete /container/backups/:filename (ContainerRestoreReq) returns (Resp)
 }
 
 @server(
