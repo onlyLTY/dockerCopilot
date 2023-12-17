@@ -96,4 +96,29 @@ func RegisterHandlers(engine *rest.Server) {
 
 		//logx.Infof("register dir  %s  %s", path, dirpath)
 	}
+
+	engine.AddRoute(
+		rest.Route{
+			Method: http.MethodGet,
+			Path:   "/manager/",
+			Handler: func(w http.ResponseWriter, r *http.Request) {
+				http.ServeFile(w, r, "./web/index.html")
+			},
+		},
+	)
+
+	managerPatern := "/manager/"
+	managerDirpath := "./web/"
+	for i := 1; i < len(dirlevel); i++ {
+		path := managerPatern + strings.Join(dirlevel[:i], "/")
+		//最后生成 /asset
+		engine.AddRoute(
+			rest.Route{
+				Method:  http.MethodGet,
+				Path:    path,
+				Handler: http.StripPrefix(managerPatern, http.FileServer(http.Dir(managerDirpath))).ServeHTTP,
+			})
+
+		//logx.Infof("register dir  %s  %s", path, dirpath)
+	}
 }
