@@ -8,6 +8,7 @@ import (
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/middleware"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/module"
 	"github.com/zeromicro/go-zero/rest"
+	"sync"
 )
 
 type ServiceContext struct {
@@ -21,6 +22,7 @@ type ServiceContext struct {
 	HubImageInfo               *module.ImageUpdateData
 	IndexCheckMiddleware       rest.Middleware
 	ProgressStore              ProgressStoreType
+	mu                         sync.Mutex
 }
 
 type TaskProgress struct {
@@ -47,4 +49,17 @@ func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext 
 		IndexCheckMiddleware:       middleware.NewIndexCheckMiddleware(uuidtmp).Handle,
 		ProgressStore:              make(ProgressStoreType),
 	}
+}
+
+func (ctx *ServiceContext) UpdateProgress(taskID string, progress TaskProgress) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	ctx.ProgressStore[taskID] = progress
+}
+
+func (ctx *ServiceContext) GetProgress(taskID string) (TaskProgress, bool) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	progress, ok := ctx.ProgressStore[taskID]
+	return progress, ok
 }

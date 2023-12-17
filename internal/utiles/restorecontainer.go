@@ -19,7 +19,13 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		basePath = "/data/backup" // 如果环境变量未设置，使用默认值
 	}
 	fullPath := filepath.Join(basePath, filename+".json")
-	oldProgress := ctx.ProgressStore[taskID]
+	oldProgress := svc.TaskProgress{
+		Percentage: 0,
+		Message:    "",
+		Name:       "",
+		DetailMsg:  nil,
+		IsDone:     false,
+	}
 	oldProgress.Name = "恢复容器"
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
@@ -27,7 +33,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		oldProgress.Percentage = 0
 		oldProgress.Message = "读取文件失败或者未找到文件"
 		oldProgress.IsDone = true
-		ctx.ProgressStore[taskID] = oldProgress
+		ctx.UpdateProgress(taskID, oldProgress)
 	}
 	var configList []docker.ContainerCreateConfig
 	err = json.Unmarshal(content, &configList)
@@ -36,7 +42,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		oldProgress.Percentage = 0
 		oldProgress.Message = "解析文件失败"
 		oldProgress.IsDone = true
-		ctx.ProgressStore[taskID] = oldProgress
+		ctx.UpdateProgress(taskID, oldProgress)
 	}
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -46,7 +52,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		info := "正在恢复第" + strconv.Itoa(i+1) + "个容器"
 		oldProgress.Percentage = int(float64(i) / float64(len(configList)) * 100)
 		oldProgress.Message = info
-		ctx.ProgressStore[taskID] = oldProgress
+		ctx.UpdateProgress(taskID, oldProgress)
 		cli.NegotiateAPIVersion(context.TODO())
 		if err != nil {
 			backupList = append(backupList, "出现错误"+err.Error())
@@ -74,6 +80,6 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 	oldProgress.DetailMsg = backupList
 	oldProgress.Message = "恢复完成"
 	oldProgress.IsDone = true
-	ctx.ProgressStore[taskID] = oldProgress
+	ctx.UpdateProgress(taskID, oldProgress)
 	return nil
 }
