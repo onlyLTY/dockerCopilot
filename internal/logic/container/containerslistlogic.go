@@ -22,6 +22,7 @@ type Info struct {
 	Status      string `json:"status"`
 	Name        string `json:"name"`
 	UsingImage  string `json:"usingImage"`
+	CreateImage string `json:"createImage"`
 	CreateTime  string `json:"createTime"`
 	RunningTime string `json:"runningTime"`
 	HaveUpdate  bool   `json:"haveUpdate"`
@@ -64,6 +65,12 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 			containerInfo.UsingImage = v.ImageID
 			logx.Error("image dont have name" + v.ID)
 		}
+		containerInspect, err := utiles.GetContainerInspect(l.svcCtx, v.ID)
+		if err != nil {
+			containerInfo.CreateImage = ""
+			logx.Error("get image name error" + v.ID)
+		}
+		containerInfo.CreateImage = containerInspect.Config.Image
 		t := time.Unix(v.Created, 0)
 		containerInfo.CreateTime = t.Format("2006-01-02 15:04:05")
 		containerInfo.RunningTime = v.Status
