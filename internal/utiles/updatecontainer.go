@@ -159,7 +159,7 @@ func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) {
 			oldTaskProgress.Percentage = 25
 			oldTaskProgress.IsDone = true
 			ctx.ProgressStore[taskID] = oldTaskProgress
-			logx.Error("Error: %s", msg.Error)
+			logx.Errorf("Error: %s", msg.Error)
 		} else {
 			var formattedMsg string
 			if msg.Progress != nil {
@@ -169,10 +169,10 @@ func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) {
 			}
 			oldTaskProgress = ctx.ProgressStore[taskID]
 			oldTaskProgress.DetailMsg = []string{formattedMsg}
-			logx.Error("Error: %s", formattedMsg)
+			logx.Errorf("Error: %s", formattedMsg)
 			oldTaskProgress.Percentage = 25
 			ctx.ProgressStore[taskID] = oldTaskProgress
-			logx.Info("%s: %s\n", msg.Status, msg.Progress)
+			logx.Infof("%s: %s\n", msg.Status, msg.Progress)
 		}
 	}
 }
