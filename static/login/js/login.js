@@ -50,7 +50,7 @@ document.getElementById('loginForm').addEventListener('submit', function (event)
             if (loginResponse.code === 201) {
                 // 存储 JWT 到 localStorage
                 localStorage.setItem('jwt', loginResponse.data.jwt);
-                window.location.href = '/containersManager';
+                window.location.href = '/manager';
             } else {
                 alert('登录失败，请重试' + loginResponse.msg)
             }
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const expired = isJwtExpired(jwt);
     if (!expired) {
         // JWT 未过期，跳转到管理页面
-        window.location.href = '/containersManager';
+        window.location.href = '/manager';
     }
 });
 

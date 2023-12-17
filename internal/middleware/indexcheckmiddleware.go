@@ -28,7 +28,7 @@ func (m *IndexCheckMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 			next(w, r)
 			return
 		}
-		w.Header().Set("Location", "/containersManager")
+		w.Header().Set("Location", "/manager")
 		w.WriteHeader(301)
 	}
 }

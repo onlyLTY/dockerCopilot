@@ -93,47 +93,6 @@ service dockerCopilot {
 }
 
 @server(
-	prefix: /containersManager
-	group: containersManager
-	middleware: CookieCheckMiddleware
-)
-service dockerCopilot {
-	@handler ContainersManagerIndex
-	get / () returns ()
-
-	@handler StartContainer
-	post /start_container (StartContainerReq) returns (MsgResp)
-
-	@handler StopContainer
-	post /stop_container (StopContainerReq) returns (MsgResp)
-
-	@handler RenameContainer
-	post /rename_container (RenameContainerReq) returns (MsgResp)
-
-	@handler CreateContainer
-	post /create_container (CreateContainerReq) returns (MsgResp)
-
-	@handler RemoveContainer
-	post /remove_container (RemoveContainerReq) returns (MsgResp)
-}
-
-@server(
-	prefix: /imagesManager
-	group: imagesManager
-	middleware: CookieCheckMiddleware
-)
-service dockerCopilot {
-	@handler imagesManagerIndex
-	get / () returns ()
-
-	@handler getNewImage
-	post /get_new_image (getNewImageReq) returns (MsgResp)
-
-	@handler RemoveImage
-		post /remove_image (RemoveImageReq) returns (MsgResp)
-}
-
-@server(
 	prefix: /api
 	group: auth
 )

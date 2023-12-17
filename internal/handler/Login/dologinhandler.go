@@ -52,7 +52,7 @@ func DoLoginHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				Expires: nowtime.Add(time.Duration(svcCtx.Config.AccessExpire) * time.Second),
 			}
 			w.Header().Set("Set-Cookie", cookies.String())
-			w.Header().Set("Location", "/containersManager")
+			w.Header().Set("Location", "/manager")
 			w.WriteHeader(301)
 		}
 	}

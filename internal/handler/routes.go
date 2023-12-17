@@ -7,9 +7,7 @@ import (
 	Login "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/Login"
 	auth "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/auth"
 	container "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/container"
-	containersManager "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/containersManager"
 	image "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/image"
-	imagesManager "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/imagesManager"
 	progress "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/progress"
 	version "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/version"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
@@ -45,69 +43,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			}...,
 		),
 		rest.WithPrefix("/"),
-	)
-
-	server.AddRoutes(
-		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.CookieCheckMiddleware},
-			[]rest.Route{
-				{
-					Method:  http.MethodGet,
-					Path:    "/",
-					Handler: containersManager.ContainersManagerIndexHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/start_container",
-					Handler: containersManager.StartContainerHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/stop_container",
-					Handler: containersManager.StopContainerHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/rename_container",
-					Handler: containersManager.RenameContainerHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/create_container",
-					Handler: containersManager.CreateContainerHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/remove_container",
-					Handler: containersManager.RemoveContainerHandler(serverCtx),
-				},
-			}...,
-		),
-		rest.WithPrefix("/containersManager"),
-	)
-
-	server.AddRoutes(
-		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.CookieCheckMiddleware},
-			[]rest.Route{
-				{
-					Method:  http.MethodGet,
-					Path:    "/",
-					Handler: imagesManager.ImagesManagerIndexHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/get_new_image",
-					Handler: imagesManager.GetNewImageHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/remove_image",
-					Handler: imagesManager.RemoveImageHandler(serverCtx),
-				},
-			}...,
-		),
-		rest.WithPrefix("/imagesManager"),
 	)
 
 	server.AddRoutes(
