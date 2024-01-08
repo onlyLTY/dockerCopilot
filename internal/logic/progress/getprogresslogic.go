@@ -34,6 +34,7 @@ func (l *GetProgressLogic) GetProgress(req *types.GetProgressReq) (resp *types.R
 	resp.Code = 200
 	resp.Msg = progress.Message
 	resp.Data = map[string]interface{}{
+		"taskID":     progress.TaskID,
 		"percentage": progress.Percentage,
 		"message":    progress.Message,
 		"name":       progress.Name,

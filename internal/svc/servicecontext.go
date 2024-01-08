@@ -26,10 +26,11 @@ type ServiceContext struct {
 }
 
 type TaskProgress struct {
+	TaskID     string
 	Percentage int
 	Message    string
 	Name       string
-	DetailMsg  []string
+	DetailMsg  string
 	IsDone     bool
 }
 

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) error {
@@ -20,10 +21,11 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 	}
 	fullPath := filepath.Join(basePath, filename+".json")
 	oldProgress := svc.TaskProgress{
+		TaskID:     taskID,
 		Percentage: 0,
 		Message:    "",
 		Name:       "",
-		DetailMsg:  nil,
+		DetailMsg:  "",
 		IsDone:     false,
 	}
 	oldProgress.Name = "恢复容器"
@@ -32,6 +34,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		logx.Error("Failed to read file: %s", err)
 		oldProgress.Percentage = 0
 		oldProgress.Message = "读取文件失败或者未找到文件"
+		oldProgress.DetailMsg = err.Error()
 		oldProgress.IsDone = true
 		ctx.UpdateProgress(taskID, oldProgress)
 	}
@@ -41,6 +44,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		logx.Error("Failed to parse json: %s", err)
 		oldProgress.Percentage = 0
 		oldProgress.Message = "解析文件失败"
+		oldProgress.DetailMsg = err.Error()
 		oldProgress.IsDone = true
 		ctx.UpdateProgress(taskID, oldProgress)
 	}
@@ -52,6 +56,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		info := "正在恢复第" + strconv.Itoa(i+1) + "个容器"
 		oldProgress.Percentage = int(float64(i) / float64(len(configList)) * 100)
 		oldProgress.Message = info
+		oldProgress.DetailMsg = info
 		ctx.UpdateProgress(taskID, oldProgress)
 		cli.NegotiateAPIVersion(context.TODO())
 		if err != nil {
@@ -77,7 +82,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		}
 	}
 	oldProgress.Percentage = 100
-	oldProgress.DetailMsg = backupList
+	oldProgress.DetailMsg = strings.Join(backupList, ",\n")
 	oldProgress.Message = "恢复完成"
 	oldProgress.IsDone = true
 	ctx.UpdateProgress(taskID, oldProgress)
