@@ -70,7 +70,7 @@ func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 		return
 	}
 	imageDigestReq.Header.Set("Authorization", "Bearer "+auth.AccessToken)
-	imageDigestReq.Header.Set("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
+	imageDigestReq.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 	imageDigestResp, err := http.DefaultClient.Do(imageDigestReq)
 	if err != nil {
 		logx.Error("获取repoDigest失败" + err.Error())
