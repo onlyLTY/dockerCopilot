@@ -16,9 +16,8 @@ import (
 
 const ChallengeHeader = "WWW-Authenticate"
 const (
-	DefaultRegistryDomain       = "docker.io"
-	DefaultRegistryHost         = "index.docker.io"
-	LegacyDefaultRegistryDomain = "index.docker.io"
+	DefaultRegistryDomain = "docker.io"
+	DefaultRegistryHost   = "index.docker.io"
 )
 
 func GetToken(image types.Image, registryAuth string) (string, error) {
@@ -42,7 +41,12 @@ func GetToken(image types.Image, registryAuth string) (string, error) {
 	if res, err = client.Do(req); err != nil {
 		return "", err
 	}
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logx.Error("GetToken关闭Body失败" + err.Error())
+		}
+	}(res.Body)
 	v := res.Header.Get(ChallengeHeader)
 
 	challenge := strings.ToLower(v)
