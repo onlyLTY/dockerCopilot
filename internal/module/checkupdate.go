@@ -1,12 +1,18 @@
 package module
 
 import (
-	"encoding/json"
+	"crypto/tls"
+	"errors"
+	"fmt"
+	ref "github.com/distribution/reference"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
+	"net"
 	"net/http"
+	url2 "net/url"
 	"strings"
+	"time"
 )
 
 // ImageCheckList 检查更新处理后的镜像列表
@@ -16,12 +22,8 @@ type ImageCheckList struct {
 type ImageUpdateData struct {
 	Data map[string]ImageCheckList
 }
-type AuthResp struct {
-	Token       string `json:"token"`
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int    `json:"expires_in"`
-	IssuedAt    string `json:"issued_at"`
-}
+
+const ContentDigestHeader = "Docker-Content-Digest"
 
 func NewImageCheck() *ImageUpdateData {
 	return &ImageUpdateData{
@@ -35,93 +37,109 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 }
 
 func (i *ImageUpdateData) checkSingleImage(image types.Image) {
-	imageName := formatImageName(image.ImageName)
-	authURL := "https://auth.docker.io/token"
-	authResp, err := http.Get(authURL + "?service=registry.docker.io&scope=repository:" + imageName + ":pull")
+	token, err := GetToken(image, "")
 	if err != nil {
-		logx.Error("获取token失败" + err.Error())
-		return
+		logx.Error("获取token失败或者无需获取token，继续尝试检查" + err.Error())
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logx.Error("关闭Body失败" + err.Error())
-		}
-	}(authResp.Body)
-	if authResp.StatusCode != http.StatusOK {
-		logx.Error("GET请求返回状态码: %d %s\n", authResp.StatusCode, authResp.Status)
-		return
-	}
-	body, err := io.ReadAll(authResp.Body)
+	digestURL, err := BuildManifestURL(image)
 	if err != nil {
-		logx.Error("获取token失败" + err.Error())
+		logx.Error("获取digestURL失败" + err.Error())
 		return
 	}
-	var auth AuthResp
-	err = json.Unmarshal(body, &auth)
+	remoteDigest, err := GetDigest(digestURL, token)
 	if err != nil {
-		logx.Error("获取token失败" + err.Error())
-		return
-	}
-	baseURL := "https://registry-1.docker.io/v2/"
-	imageDigestReq, err := http.NewRequest("HEAD", baseURL+imageName+"/manifests/"+image.ImageTag, nil)
-	if err != nil {
-		logx.Error("创建repoDigestReq失败" + err.Error())
-		return
-	}
-	imageDigestReq.Header.Set("Authorization", "Bearer "+auth.AccessToken)
-	imageDigestReq.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-	imageDigestReq.Header.Add("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
-	imageDigestReq.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v1+json")
-	imageDigestReq.Header.Add("Accept", "application/vnd.oci.image.index.v1+json")
-	imageDigestResp, err := http.DefaultClient.Do(imageDigestReq)
-	if err != nil {
-		logx.Error("获取repoDigest失败" + err.Error())
-		return
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logx.Error("关闭Body失败" + err.Error())
-		}
-	}(imageDigestResp.Body)
-	if imageDigestResp.StatusCode != http.StatusOK {
-		logx.Errorf("HEAD请求返回状态码: %d %s\n", imageDigestResp.StatusCode, imageDigestResp.Status)
-		return
-	}
-	repoDigest := imageDigestResp.Header.Get("Docker-Content-Digest")
-	if repoDigest == "" {
-		logx.Error("未从远程获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
+		logx.Error("获取digest失败" + err.Error())
 		return
 	}
 	if len(image.RepoDigests) == 0 {
 		logx.Error("未在本地获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
 		return
 	}
-	localSHA256 := strings.Split(image.RepoDigests[0], "@")[1]
-	if repoDigest != localSHA256 {
-		if repoDigest == "" || localSHA256 == "" {
-			logx.Error("Digest为空" + image.ImageName + ":" + image.ImageTag)
+	for _, localRepoDigests := range image.RepoDigests {
+		localDigest := strings.Split(localRepoDigests, "@")[1]
+		if remoteDigest != localDigest {
+			if remoteDigest == "" || localDigest == "" {
+				logx.Error("Digest为空" + image.ImageName + ":" + image.ImageTag)
+				continue
+			}
+			logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
+			logx.Infof("localDigest: %s, remoteDigest: %s", localDigest, remoteDigest)
+			i.Data[image.ID] = ImageCheckList{NeedUpdate: true}
 			return
+		} else {
+			logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
 		}
-		logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
-		logx.Infof("localDigest: %s, remoteDigest: %s", localSHA256, repoDigest)
-		i.Data[image.ID] = ImageCheckList{NeedUpdate: true}
-	} else {
-		logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
 	}
 }
 
-func formatImageName(imageName string) string {
-	imageNames := strings.Split(imageName, "/")
-	if len(imageNames) == 3 {
-		//fmt.Println("image_name: " + imageNames[1] + "/" + imageNames[2])
-		return imageNames[1] + "/" + imageNames[2]
-	} else if len(imageNames) == 2 {
-		//fmt.Println("image_name: " + imageNames[0] + "/" + imageNames[1])
-		return imageNames[0] + "/" + imageNames[1]
-	} else {
-		//fmt.Println("image_name: " + imageNames[0])
-		return "library/" + imageNames[0]
+func BuildManifestURL(image types.Image) (string, error) {
+	normalizedRef, err := ref.ParseDockerRef(image.ImageName)
+	if err != nil {
+		return "", err
 	}
+	normalizedTaggedRef, isTagged := normalizedRef.(ref.NamedTagged)
+	if !isTagged {
+		return "", errors.New("镜像无tag" + normalizedRef.String())
+	}
+
+	host, _ := GetRegistryAddress(normalizedTaggedRef.Name())
+	img, tag := ref.Path(normalizedTaggedRef), normalizedTaggedRef.Tag()
+
+	if err != nil {
+		return "", err
+	}
+
+	url := url2.URL{
+		Scheme: "https",
+		Host:   host,
+		Path:   fmt.Sprintf("/v2/%s/manifests/%s", img, tag),
+	}
+	return url.String(), nil
+}
+
+func GetDigest(url string, token string) (string, error) {
+	tr := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	req, _ := http.NewRequest("HEAD", url, nil)
+
+	if token != "" {
+		req.Header.Add("Authorization", token)
+	}
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v1+json")
+	req.Header.Add("Accept", "application/vnd.oci.image.index.v1+json")
+
+	res, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logx.Error("GetDigest关闭body失败" + err.Error())
+		}
+	}(res.Body)
+
+	if res.StatusCode != 200 {
+		wwwAuthHeader := res.Header.Get("www-authenticate")
+		if wwwAuthHeader == "" {
+			wwwAuthHeader = "not present"
+		}
+		return "", fmt.Errorf("registry responded to head request with %q, auth: %q", res.Status, wwwAuthHeader)
+	}
+	return res.Header.Get(ContentDigestHeader), nil
 }
