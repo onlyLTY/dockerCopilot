@@ -34,9 +34,6 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 			}
 		}()
 		imageNameAndTag := req.ImageNameAndTag
-		if req.Proxy != "" {
-			imageNameAndTag = req.Proxy + req.ImageNameAndTag
-		}
 		err := utiles.UpdateContainer(l.svcCtx, req.Id, req.ContainerName, imageNameAndTag, req.DelOldContainer, taskID)
 		if err != nil {
 			logx.Errorf("Error in UpdateContainer: %v", err)
