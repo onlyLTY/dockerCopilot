@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	docker "github.com/docker/docker/api/types"
+	dockerBackend "github.com/docker/docker/api/types/backend"
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -38,7 +39,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		oldProgress.IsDone = true
 		ctx.UpdateProgress(taskID, oldProgress)
 	}
-	var configList []docker.ContainerCreateConfig
+	var configList []dockerBackend.ContainerCreateConfig
 	err = json.Unmarshal(content, &configList)
 	if err != nil {
 		logx.Error("Failed to parse json: %s", err)

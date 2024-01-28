@@ -3,7 +3,7 @@ package utiles
 import (
 	"context"
 	"encoding/json"
-	docker "github.com/docker/docker/api/types"
+	dockerBackend "github.com/docker/docker/api/types/backend"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
@@ -23,7 +23,7 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var backerupList []docker.ContainerCreateConfig
+	var backerupList []dockerBackend.ContainerCreateConfig
 	for i, v := range containerList {
 		containerID := containerList[i].ID
 		cli.NegotiateAPIVersion(context.TODO())
@@ -54,7 +54,7 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 		networkingConfig := &network.NetworkingConfig{
 			EndpointsConfig: inspectedContainer.NetworkSettings.Networks,
 		}
-		createConfig := docker.ContainerCreateConfig{Config: config, HostConfig: hostConfig, NetworkingConfig: networkingConfig, Name: containerName}
+		createConfig := dockerBackend.ContainerCreateConfig{Config: config, HostConfig: hostConfig, NetworkingConfig: networkingConfig, Name: containerName}
 		backerupList = append(backerupList, createConfig)
 	}
 	jsonData, err := json.MarshalIndent(backerupList, "", "  ")
