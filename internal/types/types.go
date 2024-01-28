@@ -76,7 +76,6 @@ type RemoveImageReq struct {
 type ContainerUpdateReq struct {
 	IdReq
 	DelOldContainer bool   `form:"delOldContainer,default=true"`
-	Proxy           string `form:"proxy,optional"`
 	ImageNameAndTag string `form:"imageNameAndTag"`
 	ContainerName   string `form:"containerName"`
 }

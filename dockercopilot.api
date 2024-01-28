@@ -38,8 +38,8 @@ type MsgResp {
 	Msg    string `json:"msg"`
 }
 type Resp {
-	Code int `json:"code"`
-	Msg string `json:"msg"`
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
 	Data interface{} `json:"data"`
 }
 
@@ -63,9 +63,9 @@ type RemoveImageReq {
 
 type ContainerUpdateReq {
 	IdReq
-	DelOldContainer bool `form:"delOldContainer,default=true"`
+	DelOldContainer bool   `form:"delOldContainer,default=true"`
 	ImageNameAndTag string `form:"imageNameAndTag"`
-	ContainerName string `form:"containerName"`
+	ContainerName   string `form:"containerName"`
 }
 
 type VersionMsgResp {
@@ -119,13 +119,13 @@ service dockerCopilot {
 	get /containers returns (Resp)
 
 	@handler start
-		post /container/:id/start (IdReq) returns (Resp)
+	post /container/:id/start (IdReq) returns (Resp)
 
 	@handler stop
-		post /container/:id/stop (IdReq) returns (Resp)
+	post /container/:id/stop (IdReq) returns (Resp)
 
 	@handler restart
-		post /container/:id/restart (IdReq) returns (Resp)
+	post /container/:id/restart (IdReq) returns (Resp)
 
 	@handler rename
 	post /container/:id/rename (ContainerRenameReq) returns (Resp)
@@ -156,7 +156,7 @@ service dockerCopilot {
 	get /images returns (Resp)
 
 	@handler remove
-		delete /image/:id (RemoveImageReq) returns (Resp)
+	delete /image/:id (RemoveImageReq) returns (Resp)
 }
 
 @server(
