@@ -73,7 +73,7 @@ func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 }
 
 func BuildManifestURL(image types.Image) (string, error) {
-	normalizedRef, err := ref.ParseDockerRef(image.ImageName)
+	normalizedRef, err := ref.ParseDockerRef(image.ImageName + ":" + image.ImageTag)
 	if err != nil {
 		return "", err
 	}
