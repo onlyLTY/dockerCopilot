@@ -1,6 +1,12 @@
 name: docker-build-push
 
-on: push
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - UGREEN-DEV
+    paths:
+      - version
 
 jobs:
   build:
