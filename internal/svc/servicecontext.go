@@ -41,13 +41,11 @@ func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext 
 	jwtSecret := c.SecretKey
 	return &ServiceContext{
 		Config:                     c,
-		CookieCheckMiddleware:      middleware.NewCookieCheckMiddleware(uuidtmp).Handle,
 		Jwtuuid:                    uuidtmp,
 		BearerTokenCheckMiddleware: middleware.NewBearerTokenCheckMiddleware(jwtSecret).Handle,
 		JwtSecret:                  jwtSecret,
 		Template:                   pongo2.NewSet("", loaders),
 		HubImageInfo:               module.NewImageCheck(),
-		IndexCheckMiddleware:       middleware.NewIndexCheckMiddleware(uuidtmp).Handle,
 		ProgressStore:              make(ProgressStoreType),
 	}
 }
