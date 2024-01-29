@@ -7,28 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          path: 'go-backend'
-
-      - name: Checkout Frontend Repository
-        uses: actions/checkout@v3
-        with:
-          repository: onlyLTY/dockerCopilotWeb
-          path: 'react-frontend'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.10.0'
-
-      - name: Build Frontend
-        run: |
-          cd react-frontend
-          npm install --legacy-peer-deps
-          npm run build
-
-      - name: Copy Frontend Build to Go Project
-        run: cp -R react-frontend/dist/* go-backend/templates/
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -36,17 +14,16 @@ jobs:
           go-version: '1.21.2'
 
       - name: Get version from file
+        id: get_version
         run: |
-          echo "version=$(cat go-backend/version)" >> $GITHUB_ENV
+          echo "version=$(cat version)" >> $GITHUB_ENV
 
       - name: Build for amd64
         run: |
-          cd go-backend
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/dockerCopilot/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/dockerCopilot/UGREEN-DEV/internal/config.BuildDate=$(date)'" -o dist/linux/amd64/dockerCopilot .
 
       - name: Build for arm64
         run: |
-          cd go-backend
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -ldflags="-w -s -X 'github.com/onlyLTY/dockerCopilot/UGREEN/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/dockerCopilot/UGREEN-DEV/internal/config.BuildDate=$(date)'" -o dist/linux/arm64/dockerCopilot .
 
       - name: Docker Setup Buildx
@@ -62,7 +39,7 @@ jobs:
         uses: docker/build-push-action@v5.0.0
         with:
           context: .
-          file: go-backend/docker/Dockerfile
+          file: ./docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dockercopilot:UGREEN-DEV
