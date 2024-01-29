@@ -7,6 +7,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          path: 'go-backend'
+
+      - name: Checkout Frontend Repository
+        uses: actions/checkout@v3
+        with:
+          repository: onlyLTY/dockerCopilotWeb
+          path: 'react-frontend'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.10.0'
+
+      - name: Build Frontend
+        run: |
+          cd react-frontend
+          npm install
+          npm run build
+
+      - name: Copy Frontend Build to Go Project
+        run: cp -R react-frontend/build/* go-backend/templates/
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -14,9 +36,8 @@ jobs:
           go-version: '1.21.2'
 
       - name: Get version from file
-        id: get_version
         run: |
-          echo "version=$(cat version)" >> $GITHUB_ENV
+          echo "version=$(cat go-backend/version)" >> $GITHUB_ENV
 
       - name: Build for amd64
         run: |
