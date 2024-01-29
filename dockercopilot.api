@@ -83,19 +83,6 @@ service dockerCopilot {
 }
 
 @server(
-	prefix: /
-	group: Login
-	middleware: IndexCheckMiddleware
-)
-service dockerCopilot {
-	@handler DoLogin
-	post /login (DoLoginReq) returns ()
-
-	@handler LoginIndex
-	get /login () returns ()
-}
-
-@server(
 	prefix: /api
 	group: auth
 )
@@ -116,7 +103,7 @@ service dockerCopilot {
 @server(
 	prefix: /api
 	group: container
-	middleware: BearerTokenCheckMiddleware
+	jwt: Auth
 )
 service dockerCopilot {
 	@handler containersList
@@ -153,7 +140,7 @@ service dockerCopilot {
 @server(
 	prefix: /api
 	group: image
-	middleware: BearerTokenCheckMiddleware
+	jwt: Auth
 )
 service dockerCopilot {
 	@handler imagesList
@@ -166,7 +153,7 @@ service dockerCopilot {
 @server(
 	prefix: /api
 	group: version
-	middleware: BearerTokenCheckMiddleware
+	jwt: Auth
 )
 service dockerCopilot {
 	@handler version
