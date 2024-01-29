@@ -10,7 +10,7 @@ func BackupList(ctx *svc.ServiceContext) ([]string, error) {
 	var backupList []string
 	dir := os.Getenv("BACKUP_DIR") // 从环境变量中获取备份目录
 	if dir == "" {
-		dir = "/data/backup" // 如果环境变量未设置，使用默认值
+		dir = "/data/backups" // 如果环境变量未设置，使用默认值
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
