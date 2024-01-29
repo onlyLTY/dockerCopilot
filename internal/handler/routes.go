@@ -4,7 +4,6 @@ package handler
 import (
 	"net/http"
 
-	Login "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/Login"
 	auth "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/auth"
 	container "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/container"
 	image "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/image"
@@ -24,25 +23,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: webindexHandler(serverCtx),
 			},
 		},
-	)
-
-	server.AddRoutes(
-		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.IndexCheckMiddleware},
-			[]rest.Route{
-				{
-					Method:  http.MethodPost,
-					Path:    "/login",
-					Handler: Login.DoLoginHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/login",
-					Handler: Login.LoginIndexHandler(serverCtx),
-				},
-			}...,
-		),
-		rest.WithPrefix("/"),
 	)
 
 	server.AddRoutes(

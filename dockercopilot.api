@@ -83,19 +83,6 @@ service dockerCopilot {
 }
 
 @server(
-	prefix: /
-	group: Login
-	middleware: IndexCheckMiddleware
-)
-service dockerCopilot {
-	@handler DoLogin
-	post /login (DoLoginReq) returns ()
-
-	@handler LoginIndex
-	get /login () returns ()
-}
-
-@server(
 	prefix: /api
 	group: auth
 )
