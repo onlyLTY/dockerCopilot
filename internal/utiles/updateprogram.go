@@ -19,8 +19,9 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 	if githubProxy != "" {
 		githubProxy = strings.TrimRight(githubProxy, "/") + "/"
 	}
-	versionURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://raw.githubusercontent.com/onlyLTY/dockerCopilot/zspace/version"
-	releaseBaseURL := githubProxy + strings.TrimRight(githubProxy, "/") + "https://github.com/onlyLTY/dockerCopilot/releases/download"
+	versionURL := githubProxy + "https://raw.githubusercontent.com/onlyLTY/dockerCopilot/UGREEN/version"
+	releaseBaseURL := githubProxy + "https://github.com/onlyLTY/dockerCopilot/releases/download"
+	logx.Infof("versionURL: %s", versionURL)
 	resp, err := http.Get(versionURL)
 	if err != nil {
 		logx.Info("没有获取到最新版本信息:", err)
@@ -29,6 +30,7 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 	defer resp.Body.Close()
 
 	versionData, err := ioutil.ReadAll(resp.Body)
+	logx.Infof("versionData: %s", versionData)
 	if err != nil {
 		logx.Info("没有获取到最新版本信息:", err)
 		return nil
@@ -38,7 +40,7 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 	logx.Info("获取到最新版本：", version)
 	// 2. 构造下载链接
 	downloadURL := fmt.Sprintf("%s/%s/dockerCopilot-%s.tar.gz", releaseBaseURL, version, runtime.GOARCH)
-
+	logx.Info("下载链接：", downloadURL)
 	dest := "dockerCopilot.tar.gz"
 
 	if err := downloadFile(downloadURL, dest); err != nil {
