@@ -3,7 +3,7 @@ package middleware
 import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"net/http"
 )
@@ -18,6 +18,7 @@ func NewCookieCheckMiddleware(uuid string) *CookieCheckMiddleware {
 
 func (m *CookieCheckMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		next(w, r)
 		cookies, err := r.Cookie("device_verified")
 		if err != nil {
 			if r.Method == http.MethodPost {

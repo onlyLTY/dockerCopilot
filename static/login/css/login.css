@@ -1,0 +1,107 @@
+body {
+    /* 设置背景图片背景 图片相对于视口固定 */
+    background: url('/static/asset/background.jpeg') no-repeat fixed center;
+    background-size: cover; /* 背景图片覆盖整个元素，可能被裁剪以适应 */
+    width: 100%; /* 使用 100% 而不是 100vw 避免横向滚动条 */
+    min-height: 100vh; /* 设置最小高度为视口高度 */
+    margin: 0;
+}
+
+.login {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* 从顶部开始排列子元素 */
+    text-align: center;
+    margin: auto;
+}
+
+h1 {
+    width: 90%;
+    margin-top: 7%;
+    text-align: center;
+    font-size: 40px;
+    color: #fff;
+    transform: translateX(6%);
+}
+
+.form-group {
+    position: relative;
+    margin-top: 20px;
+    width: 35%; /* 或者您希望的宽度 */
+    margin-left: auto;
+    margin-right: auto;
+    transform: translateX(2%);
+}
+
+.form-control {
+    width: calc(100% - 40px); /* 减去按钮宽度 */
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 20px; /* 增加内边距 */
+    font-size: 16px; /* 增加字体大小 */
+    outline: none;
+    margin-bottom: 5%;
+}
+
+.submit-arrow {
+    position: absolute;
+    right: 0;
+    top: -40%;
+    height: 100%;
+    width: 40px; /* 按钮宽度 */
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: none; /* 默认不显示 */
+}
+
+.bi-arrow-right-circle {
+    font-size: 24px; /* 或您想要的任何大小 */
+}
+
+/* 当 input 有内容时显示按钮 */
+.form-control.has-content + .submit-arrow {
+    display: block;
+}
+
+.form-label {
+    position: absolute;
+    left: 2%;
+    top: 26%;
+    font-size: 20px;
+    color: #999;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.form-control:focus + .form-label {
+    top: -1%;
+    left: 10px;
+    font-size: 12px;
+    color: #666;
+}
+
+.form-control.has-content + .form-label {
+    top: -1%;
+    left: 10px;
+    font-size: 12px;
+    color: #666;
+}
+
+.form-group input {
+    text-align: left;
+    margin-top: 5%; /* Bootstrap默认列内边距是15px */
+    display: block; /* 使 label 占据整个行 */
+}
+
+.form-group button {
+    margin-top: 5%; /* Bootstrap默认列内边距是15px */
+    display: block; /* 使 label 占据整个行 */
+}
+
+@media (max-width: 425px) {
+    .form-group {
+        width: 80%;
+        margin-left: 5%;
+    }
+}

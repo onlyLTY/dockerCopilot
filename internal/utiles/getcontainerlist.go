@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	MyType "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
+	MyType "github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 )
 
 func GetContainerList(ctx *svc.ServiceContext) ([]MyType.Container, error) {

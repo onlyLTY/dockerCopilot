@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	MyType "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
+	MyType "github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"log"
 	"strings"
 )
@@ -24,20 +24,11 @@ func GetImagesList(ctx *svc.ServiceContext) ([]MyType.Image, error) {
 
 	for _, img := range dockerImages {
 		image := MyType.Image{
-			Containers:  img.Containers,
-			Created:     img.Created,
-			ID:          img.ID,
-			Labels:      img.Labels,
-			ParentID:    img.ParentID,
-			RepoDigests: img.RepoDigests,
-			RepoTags:    img.RepoTags,
-			SharedSize:  img.SharedSize,
-			Size:        img.Size,
-			VirtualSize: img.VirtualSize,
-			ImageName:   "",
-			ImageTag:    "",
-			States:      0,
-			SizeFormat:  "",
+			ImageSummary: img,
+			ImageName:    "",
+			ImageTag:     "",
+			InUsed:       false,
+			SizeFormat:   "",
 		}
 		imagesList = append(imagesList, image)
 	}
@@ -73,7 +64,7 @@ func checkImageInUsed(svc *svc.ServiceContext, imagelist []MyType.Image) ([]MyTy
 	for _, v := range list {
 		for i, imagev := range imagelist {
 			if v.ImageID == imagev.ID {
-				imagelist[i].States = 1
+				imagelist[i].InUsed = true
 				break
 			}
 		}

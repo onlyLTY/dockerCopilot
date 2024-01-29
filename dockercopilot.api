@@ -1,0 +1,177 @@
+syntax = "v1"
+
+type DoLoginReq {
+	SecretKey string `form:"secret_key,optional"`
+}
+type LoginReq {
+	SecretKey string `form:"secretKey,optional"`
+}
+type VerifyJwtReq {
+	Jwt string `form:"jwt,optional"`
+}
+type GetProgressReq {
+	TaskId string `path:"taskid"`
+}
+type StartContainerReq {
+	Name string `json:"name"`
+}
+type StopContainerReq {
+	Name string `json:"name"`
+}
+type RenameContainerReq {
+	OldName string `json:"oldName"`
+	NewName string `json:"newName"`
+}
+type CreateContainerReq {
+	OldName         string `json:"old_name"`
+	NewName         string `json:"new_name"`
+	ImageNameAndTag string `json:"image_name_and_tag"`
+}
+type RemoveContainerReq {
+	Name string `json:"name"`
+}
+type getNewImageReq {
+	ImageNameAndTag string `json:"image_name_and_tag"`
+}
+type MsgResp {
+	Status string `json:"status"`
+	Msg    string `json:"msg"`
+}
+type Resp {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
+type IdReq {
+	Id string `path:"id"`
+}
+
+type ContainerRestoreReq {
+	Filename string `path:"filename"`
+}
+
+type ContainerRenameReq {
+	IdReq
+	NewName string `form:"newName"`
+}
+
+type RemoveImageReq {
+	IdReq
+	Force bool `form:"force,default=false"`
+}
+
+type ContainerUpdateReq {
+	IdReq
+	DelOldContainer bool   `form:"delOldContainer,default=true"`
+	ImageNameAndTag string `form:"imageNameAndTag"`
+	ContainerName   string `form:"containerName"`
+}
+
+type VersionMsgResp {
+	Version   string `json:"version"`
+	BuildDate string `json:"build_date"`
+}
+
+type VersionReq {
+	Type string `form:"type"`
+}
+
+service dockerCopilot {
+	@handler webindex
+	get / () returns ()
+}
+
+@server(
+	prefix: /
+	group: Login
+	middleware: IndexCheckMiddleware
+)
+service dockerCopilot {
+	@handler DoLogin
+	post /login (DoLoginReq) returns ()
+
+	@handler LoginIndex
+	get /login () returns ()
+}
+
+@server(
+	prefix: /api
+	group: auth
+)
+service dockerCopilot {
+	@handler Login
+	post /auth (LoginReq) returns (Resp);
+}
+
+@server(
+	prefix: /api
+	group: progress
+)
+service dockerCopilot {
+	@handler GetProgress
+	get /progress/:taskid (GetProgressReq) returns (Resp);
+}
+
+@server(
+	prefix: /api
+	group: container
+	middleware: BearerTokenCheckMiddleware
+)
+service dockerCopilot {
+	@handler containersList
+	get /containers returns (Resp)
+
+	@handler start
+	post /container/:id/start (IdReq) returns (Resp)
+
+	@handler stop
+	post /container/:id/stop (IdReq) returns (Resp)
+
+	@handler restart
+	post /container/:id/restart (IdReq) returns (Resp)
+
+	@handler rename
+	post /container/:id/rename (ContainerRenameReq) returns (Resp)
+
+	@handler update
+	post /container/:id/update (ContainerUpdateReq) returns (Resp)
+
+	@handler backup
+	get /container/backup returns (Resp)
+
+	@handler listBackups
+	get /container/listBackups returns (Resp)
+
+	@handler restore
+	post /container/backups/:filename/restore (ContainerRestoreReq) returns (Resp)
+
+	@handler delRestore
+	delete /container/backups/:filename (ContainerRestoreReq) returns (Resp)
+}
+
+@server(
+	prefix: /api
+	group: image
+	middleware: BearerTokenCheckMiddleware
+)
+service dockerCopilot {
+	@handler imagesList
+	get /images returns (Resp)
+
+	@handler remove
+	delete /image/:id (RemoveImageReq) returns (Resp)
+}
+
+@server(
+	prefix: /api
+	group: version
+	middleware: BearerTokenCheckMiddleware
+)
+service dockerCopilot {
+	@handler version
+	get /version (VersionReq) returns (Resp);
+
+	@handler updateProgram
+	put /program () returns (Resp);
+}

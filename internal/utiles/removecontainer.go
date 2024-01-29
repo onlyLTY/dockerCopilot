@@ -4,8 +4,8 @@ import (
 	"context"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	myTypes "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
+	myTypes "github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 )
 
 func RemoveContainer(ctx *svc.ServiceContext, name string) (myTypes.MsgResp, error) {

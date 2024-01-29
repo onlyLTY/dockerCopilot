@@ -5,7 +5,7 @@ WORKDIR /app
 
 ARG TARGETPLATFORM
 # 复制适当的平台二进制文件
-COPY dist/$TARGETPLATFORM/onekeyupdate /app/onekeyupdate
+COPY dist/$TARGETPLATFORM/dockerCopilot /app/dockerCopilot
 
 # 复制其他需要的文件或目录，例如 start.sh
 COPY . ${WORKDIR}
@@ -13,7 +13,8 @@ RUN chmod +x start.sh
 
 # 设置环境变量
 ENV secretKey="" \
-    hubURL="https://docker.nju.edu.cn"
+    hubURL="https://docker.nju.edu.cn" \
+    DOCKER_HOST="tcp://127.0.0.1:9375"
 
 # 设置启动命令
 CMD ["./start.sh"]

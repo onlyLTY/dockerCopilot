@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

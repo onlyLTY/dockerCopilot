@@ -3,23 +3,17 @@ package utiles
 import (
 	"context"
 	"github.com/docker/docker/client"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 )
 
-func RenameContainer(ctx *svc.ServiceContext, oldName string, newName string) (types.MsgResp, error) {
-	containers, err := GetContainerList(ctx)
-	if err != nil {
-		return types.MsgResp{}, err
-	}
-	containerID, err := findContainerIDByName(containers, oldName)
+func RenameContainer(ctx *svc.ServiceContext, id string, newName string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		panic(err)
 	}
-	err = cli.ContainerRename(context.TODO(), containerID, newName)
+	err = cli.ContainerRename(context.TODO(), id, newName)
 	if err != nil {
-		return types.MsgResp{Msg: err.Error()}, err
+		return err
 	}
-	return types.MsgResp{}, nil
+	return nil
 }

@@ -3,9 +3,9 @@ package Login
 import (
 	"github.com/flosch/pongo2"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/logic/Login"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/types"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/logic/Login"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"net/http"
@@ -52,7 +52,7 @@ func DoLoginHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				Expires: nowtime.Add(time.Duration(svcCtx.Config.AccessExpire) * time.Second),
 			}
 			w.Header().Set("Set-Cookie", cookies.String())
-			w.Header().Set("Location", "/containersManager")
+			w.Header().Set("Location", "/manager")
 			w.WriteHeader(301)
 		}
 	}

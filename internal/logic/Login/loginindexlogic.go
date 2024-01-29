@@ -3,7 +3,7 @@ package Login
 import (
 	"context"
 
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 

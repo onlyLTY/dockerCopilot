@@ -4,11 +4,13 @@ package handler
 import (
 	"net/http"
 
-	Login "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/Login"
-	containersManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/containersManager"
-	imagesManager "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/imagesManager"
-	version "github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/handler/version"
-	"github.com/onlyLTY/oneKeyUpdate/UGREEN/internal/svc"
+	Login "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/Login"
+	auth "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/auth"
+	container "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/container"
+	image "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/image"
+	progress "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/progress"
+	version "github.com/onlyLTY/dockerCopilot/UGREEN/internal/handler/version"
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 )
@@ -44,94 +46,121 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	)
 
 	server.AddRoutes(
-		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.CookieCheckMiddleware},
-			[]rest.Route{
-				{
-					Method:  http.MethodGet,
-					Path:    "/",
-					Handler: containersManager.ContainersManagerIndexHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/start_container",
-					Handler: containersManager.StartContainerHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/stop_container",
-					Handler: containersManager.StopContainerHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/rename_container",
-					Handler: containersManager.RenameContainerHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/create_container",
-					Handler: containersManager.CreateContainerHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodPost,
-					Path:    "/remove_container",
-					Handler: containersManager.RemoveContainerHandler(serverCtx),
-				},
-			}...,
-		),
-		rest.WithPrefix("/containersManager"),
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/auth",
+				Handler: auth.LoginHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/progress/:taskid",
+				Handler: progress.GetProgressHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api"),
 	)
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.CookieCheckMiddleware},
+			[]rest.Middleware{serverCtx.BearerTokenCheckMiddleware},
 			[]rest.Route{
 				{
 					Method:  http.MethodGet,
-					Path:    "/",
-					Handler: imagesManager.ImagesManagerIndexHandler(serverCtx),
+					Path:    "/containers",
+					Handler: container.ContainersListHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPost,
-					Path:    "/get_new_image",
-					Handler: imagesManager.GetNewImageHandler(serverCtx),
+					Path:    "/container/:id/start",
+					Handler: container.StartHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPost,
-					Path:    "/remove_image",
-					Handler: imagesManager.RemoveImageHandler(serverCtx),
+					Path:    "/container/:id/stop",
+					Handler: container.StopHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/container/:id/restart",
+					Handler: container.RestartHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/container/:id/rename",
+					Handler: container.RenameHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/container/:id/update",
+					Handler: container.UpdateHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/container/backup",
+					Handler: container.BackupHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/container/listBackups",
+					Handler: container.ListBackupsHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/container/backups/:filename/restore",
+					Handler: container.RestoreHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/container/backups/:filename",
+					Handler: container.DelRestoreHandler(serverCtx),
 				},
 			}...,
 		),
-		rest.WithPrefix("/imagesManager"),
+		rest.WithPrefix("/api"),
 	)
 
 	server.AddRoutes(
 		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.CookieCheckMiddleware},
+			[]rest.Middleware{serverCtx.BearerTokenCheckMiddleware},
 			[]rest.Route{
 				{
 					Method:  http.MethodGet,
-					Path:    "/",
-					Handler: version.VersionIndexHandler(serverCtx),
+					Path:    "/images",
+					Handler: image.ImagesListHandler(serverCtx),
 				},
 				{
-					Method:  http.MethodGet,
-					Path:    "/get_version",
-					Handler: version.GetVersionsHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/updateprogram",
-					Handler: version.UpdateprogramHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/checkprogramupdate",
-					Handler: version.CheckprogramupdateHandler(serverCtx),
+					Method:  http.MethodDelete,
+					Path:    "/image/:id",
+					Handler: image.RemoveHandler(serverCtx),
 				},
 			}...,
 		),
-		rest.WithPrefix("/version"),
+		rest.WithPrefix("/api"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.BearerTokenCheckMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/version",
+					Handler: version.VersionHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPut,
+					Path:    "/program",
+					Handler: version.UpdateProgramHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api"),
 	)
 }
