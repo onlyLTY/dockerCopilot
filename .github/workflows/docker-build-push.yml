@@ -28,7 +28,7 @@ jobs:
           npm run build
 
       - name: Copy Frontend Build to Go Project
-        run: cp -R react-frontend/build/* go-backend/templates/
+        run: cp -R react-frontend/dist/* go-backend/templates/
 
       - name: Set up Go
         uses: actions/setup-go@v4
