@@ -24,7 +24,7 @@ jobs:
       - name: Build Frontend
         run: |
           cd react-frontend
-          npm install
+          npm install --legacy-peer-deps
           npm run build
 
       - name: Copy Frontend Build to Go Project
