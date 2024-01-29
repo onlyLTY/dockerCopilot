@@ -25,6 +25,12 @@ import (
 
 var configFile = flag.String("f", "etc/dockerCopilot.yaml", "the config file")
 
+type UnauthorizedResponse struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
 //go:embed templates/*
 var content embed.FS
 
@@ -38,8 +44,30 @@ func main() {
 		logx.Error("请重新拉取镜像")
 		os.Exit(1)
 	}
-	server := rest.MustNewServer(c.RestConf, rest.WithCors("*"))
+	server := rest.MustNewServer(c.RestConf, rest.WithCors("*"), rest.WithUnauthorizedCallback(
+		func(w http.ResponseWriter, r *http.Request, err error) {
+			response := UnauthorizedResponse{
+				Code: http.StatusUnauthorized, // 401
+				Msg:  "未授权",
+				Data: nil,
+			}
+			httpx.WriteJson(w, http.StatusUnauthorized, response)
+		}))
 	defer server.Stop()
+	httpx.SetErrorHandler(func(err error) (int, any) {
+		switch e := err.(type) {
+		case *errors.CodeMsg:
+			return e.Code, xhttp.BaseResponse[types.Nil]{
+				Code: e.Code,
+				Msg:  e.Msg,
+			}
+		default:
+			return 500, xhttp.BaseResponse[types.Nil]{
+				Code: 500,
+				Msg:  e.Error(),
+			}
+		}
+	})
 	ctx := svc.NewServiceContext(c, &loader.Loader{Content: content})
 	list, err := utiles.GetImagesList(ctx)
 	if err != nil {
@@ -102,13 +130,13 @@ func RegisterHandlers(engine *rest.Server) {
 			Method: http.MethodGet,
 			Path:   "/manager/",
 			Handler: func(w http.ResponseWriter, r *http.Request) {
-				http.ServeFile(w, r, "./web/index.html")
+				http.ServeFile(w, r, "./templates/index.html")
 			},
 		},
 	)
 
 	managerPatern := "/manager/"
-	managerDirpath := "./web/"
+	managerDirpath := "./templates/"
 	for i := 1; i < len(dirlevel); i++ {
 		path := managerPatern + strings.Join(dirlevel[:i], "/")
 		//最后生成 /asset

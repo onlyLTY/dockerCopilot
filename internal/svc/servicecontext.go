@@ -5,7 +5,6 @@ import (
 	"github.com/google/uuid"
 	loader "github.com/nathan-osman/pongo2-embed-loader"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/config"
-	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/middleware"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/module"
 	"github.com/zeromicro/go-zero/rest"
 	"sync"
@@ -38,15 +37,12 @@ type ProgressStoreType map[string]TaskProgress
 
 func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext {
 	uuidtmp := uuid.New().String()
-	jwtSecret := c.SecretKey
 	return &ServiceContext{
-		Config:                     c,
-		Jwtuuid:                    uuidtmp,
-		BearerTokenCheckMiddleware: middleware.NewBearerTokenCheckMiddleware(jwtSecret).Handle,
-		JwtSecret:                  jwtSecret,
-		Template:                   pongo2.NewSet("", loaders),
-		HubImageInfo:               module.NewImageCheck(),
-		ProgressStore:              make(ProgressStoreType),
+		Config:        c,
+		Jwtuuid:       uuidtmp,
+		Template:      pongo2.NewSet("", loaders),
+		HubImageInfo:  module.NewImageCheck(),
+		ProgressStore: make(ProgressStoreType),
 	}
 }
 
