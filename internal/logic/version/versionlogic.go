@@ -6,7 +6,7 @@ import (
 
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
-
+	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/utiles"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -24,13 +24,41 @@ func NewVersionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *VersionLo
 	}
 }
 
-func (l *VersionLogic) Version() (resp *types.Resp, err error) {
+func (l *VersionLogic) Version(req *types.VersionReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	resp.Code = 200
-	resp.Msg = "success"
-	resp.Data = map[string]string{
-		"version":   config.Version,
-		"buildDate": config.BuildDate,
+	if req.Type == "local" {
+		resp.Code = 200
+		resp.Msg = "success"
+		resp.Data = map[string]string{
+			"version":   config.Version,
+			"buildDate": config.BuildDate,
+		}
+	} else if req.Type == "remote" {
+		remoteVersion, err := utiles.GetRemoteVersion()
+		if err != nil {
+			resp.Code = 500
+			resp.Msg = "获取版本错误" + err.Error()
+			resp.Data = map[string]string{
+				"remoteVersion": remoteVersion,
+			}
+			return resp, err
+		} else if remoteVersion != config.Version {
+			resp.Code = 200
+			resp.Msg = "程序有更新"
+			resp.Data = map[string]string{
+				"remoteVersion": remoteVersion,
+			}
+			return resp, nil
+		} else {
+			resp.Code = 200
+			resp.Msg = "程序无更新"
+			resp.Data = map[string]string{
+				"remoteVersion": remoteVersion,
+			}
+			return resp, nil
+		}
+
 	}
-	return resp, nil
+
+	return
 }

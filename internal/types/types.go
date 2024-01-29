@@ -84,3 +84,7 @@ type VersionMsgResp struct {
 	Version   string `json:"version"`
 	BuildDate string `json:"build_date"`
 }
+
+type VersionReq struct {
+	Type string `form:"type"`
+}
