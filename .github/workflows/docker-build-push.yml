@@ -62,7 +62,7 @@ jobs:
         uses: docker/build-push-action@v5.0.0
         with:
           context: .
-          file: ./docker/Dockerfile
+          file: go-backend/docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/dockercopilot:UGREEN-DEV
