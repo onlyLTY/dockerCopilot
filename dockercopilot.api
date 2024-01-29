@@ -73,6 +73,10 @@ type VersionMsgResp {
 	BuildDate string `json:"build_date"`
 }
 
+type VersionReq {
+	Type string `form:"type"`
+}
+
 service dockerCopilot {
 	@handler webindex
 	get / () returns ()
@@ -166,10 +170,7 @@ service dockerCopilot {
 )
 service dockerCopilot {
 	@handler version
-	get /version () returns (Resp);
-
-	@handler checkForUpdates
-	get /check () returns (Resp);
+	get /version (VersionReq) returns (Resp);
 
 	@handler updateProgram
 	put /program () returns (Resp);
