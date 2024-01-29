@@ -29,7 +29,7 @@ func (l *DelRestoreLogic) DelRestore(req *types.ContainerRestoreReq) (resp *type
 	fileName := req.Filename
 	basePath := os.Getenv("BACKUP_DIR") // 从环境变量中获取备份目录
 	if basePath == "" {
-		basePath = "/data/backup" // 如果环境变量未设置，使用默认值
+		basePath = "/data/backups" // 如果环境变量未设置，使用默认值
 	}
 	fullPath := basePath + "/" + fileName + ".json"
 	err = os.Remove(fullPath)
