@@ -40,8 +40,8 @@ func main() {
 	var c config.Config
 	err := conf.Load(*configFile, &c, conf.UseEnv())
 	if err != nil {
-		logx.Errorf("无法加载配置文件: %v", err)
-		logx.Error("请重新拉取镜像")
+		logx.Errorf("无法加载配置文件出错: %v", err)
+		logx.Errorf("请确认secretKey设置正确，要求非纯数字且大于八位")
 		os.Exit(1)
 	}
 	server := rest.MustNewServer(c.RestConf, rest.WithCors("*"), rest.WithUnauthorizedCallback(
