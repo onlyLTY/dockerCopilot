@@ -17,5 +17,6 @@ ENV secretKey="" \
     DOCKER_HOST="tcp://127.0.0.1:9375" \
     TZ="Asia/Shanghai"
 
+VOLUME ["/data"]
 # 设置启动命令
 CMD ["./start.sh"]
