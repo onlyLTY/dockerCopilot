@@ -42,27 +42,10 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	}
 	timeout := 10
 	signal := "SIGINT"
-	oldTaskProgress.Message = "正在停止容器"
-	oldTaskProgress.Percentage = 10
-	oldTaskProgress.DetailMsg = "正在停止容器"
-	ctx.UpdateProgress(taskID, oldTaskProgress)
-	stopOptions := container.StopOptions{
-		Signal:  signal,
-		Timeout: &timeout,
-	}
-	err = cli.ContainerStop(context.Background(), id, stopOptions)
-	if err != nil {
-		oldTaskProgress.Message = "停止容器失败"
-		oldTaskProgress.DetailMsg = err.Error()
-		oldTaskProgress.IsDone = true
-		ctx.UpdateProgress(taskID, oldTaskProgress)
-		return err
-	}
-	oldTaskProgress.Message = "容器停止成功"
-	oldTaskProgress.DetailMsg = "容器停止成功"
-	oldTaskProgress.Percentage = 20
+
 	ctx.UpdateProgress(taskID, oldTaskProgress)
 	oldTaskProgress.Message = "正在拉取新镜像"
+	oldTaskProgress.Percentage = 10
 	oldTaskProgress.DetailMsg = "正在拉取新镜像"
 	ctx.UpdateProgress(taskID, oldTaskProgress)
 	cli.NegotiateAPIVersion(context.TODO())
@@ -94,6 +77,26 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	}
 	oldTaskProgress.Message = "拉取镜像成功"
 	oldTaskProgress.DetailMsg = "拉取镜像成功"
+
+	oldTaskProgress.Percentage = 30
+	oldTaskProgress.Message = "正在停止容器"
+	oldTaskProgress.DetailMsg = "正在停止容器"
+	ctx.UpdateProgress(taskID, oldTaskProgress)
+	stopOptions := container.StopOptions{
+		Signal:  signal,
+		Timeout: &timeout,
+	}
+	err = cli.ContainerStop(context.Background(), id, stopOptions)
+	if err != nil {
+		oldTaskProgress.Message = "停止容器失败"
+		oldTaskProgress.DetailMsg = err.Error()
+		oldTaskProgress.IsDone = true
+		ctx.UpdateProgress(taskID, oldTaskProgress)
+		return err
+	}
+	oldTaskProgress.Message = "容器停止成功"
+	oldTaskProgress.DetailMsg = "容器停止成功"
+
 	oldTaskProgress.Percentage = 40
 	ctx.UpdateProgress(taskID, oldTaskProgress)
 	oldTaskProgress.Message = "正在重命名旧容器"
