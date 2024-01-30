@@ -48,5 +48,5 @@ jobs:
           file: ./docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/dockercopilot:UGREEN-DEV
+            ${{ secrets.DOCKERHUB_USERNAME }}/dockercopilot:UGREEN
           push: true
