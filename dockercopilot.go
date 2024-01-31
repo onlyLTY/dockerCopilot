@@ -75,8 +75,6 @@ func main() {
 	}
 	corndanmu.Start()
 	defer corndanmu.Stop()
-	handler.RegisterHandlers(server, ctx)
-	RegisterHandlers(server)
 	httpx.SetErrorHandler(func(err error) (int, any) {
 		switch e := err.(type) {
 		case *errors.CodeMsg:
@@ -91,6 +89,8 @@ func main() {
 			}
 		}
 	})
+	handler.RegisterHandlers(server, ctx)
+	RegisterHandlers(server)
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	logx.Info("程序版本" + config.Version)
 	server.Start()
