@@ -99,7 +99,10 @@ func main() {
 				Msg:  e.Msg,
 			}
 		default:
-			return http.StatusInternalServerError, err
+			return http.StatusOK, xhttp.BaseResponse[types.Nil]{
+				Code: 50000,
+				Msg:  err.Error(),
+			}
 		}
 	})
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
