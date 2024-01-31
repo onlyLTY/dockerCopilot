@@ -30,13 +30,13 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 		// Catch any panic and log the error
 		defer func() {
 			if r := recover(); r != nil {
-				logx.Errorf("Recovered from panic in UpdateContainer: %v", r)
+				l.Errorf("Recovered from panic in UpdateContainer: %v", r)
 			}
 		}()
 		imageNameAndTag := req.ImageNameAndTag
 		err := utiles.UpdateContainer(l.svcCtx, req.Id, req.ContainerName, imageNameAndTag, req.DelOldContainer, taskID)
 		if err != nil {
-			logx.Errorf("Error in UpdateContainer: %v", err)
+			l.Errorf("Error in UpdateContainer: %v", err)
 		}
 	}()
 	resp.Code = 200

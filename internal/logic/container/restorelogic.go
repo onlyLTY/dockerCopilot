@@ -32,12 +32,12 @@ func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp
 		// Catch any panic and log the error
 		defer func() {
 			if r := recover(); r != nil {
-				logx.Errorf("Recovered from panic in restoreContainer: %v", r)
+				l.Errorf("Recovered from panic in restoreContainer: %v", r)
 			}
 		}()
 		err := utiles.RestoreContainer(l.svcCtx, req.Filename, taskID)
 		if err != nil {
-			logx.Errorf("Error in restoreContainer: %v", err)
+			l.Errorf("Error in restoreContainer: %v", err)
 		}
 	}()
 	resp.Code = 200
