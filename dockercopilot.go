@@ -26,9 +26,9 @@ import (
 var configFile = flag.String("f", "etc/dockerCopilot.yaml", "the config file")
 
 type UnauthorizedResponse struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
+	Code int                    `json:"code"`
+	Msg  string                 `json:"msg"`
+	Data map[string]interface{} `json:"data"`
 }
 
 //go:embed templates/*
@@ -49,7 +49,7 @@ func main() {
 			response := UnauthorizedResponse{
 				Code: http.StatusUnauthorized, // 401
 				Msg:  "未授权",
-				Data: nil,
+				Data: map[string]interface{}{},
 			}
 			httpx.WriteJson(w, http.StatusUnauthorized, response)
 		}))
