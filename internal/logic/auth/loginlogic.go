@@ -33,6 +33,7 @@ func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.Resp, err error) {
 	if l.svcCtx.Config.Auth.AccessSecret != req.SecretKey {
 		resp.Code = 401
 		resp.Msg = "无效的secretKey"
+		resp.Data = JwtResponse{Jwt: ""}
 		return resp, errors.New("无效的secretKey")
 	}
 	jwtToken, err := l.getJwtToken(l.svcCtx.Config.Auth.AccessSecret,
@@ -42,6 +43,7 @@ func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.Resp, err error) {
 	if err != nil {
 		resp.Code = 500
 		resp.Msg = "无法生成 token，请重试"
+		resp.Data = JwtResponse{Jwt: ""}
 		return resp, errors.New("生成 token出现错误，请重试")
 	}
 	resp.Code = 201

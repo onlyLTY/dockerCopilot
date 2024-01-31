@@ -36,9 +36,11 @@ func (l *DelRestoreLogic) DelRestore(req *types.ContainerRestoreReq) (resp *type
 	if err != nil {
 		resp.Code = 400
 		resp.Msg = "删除失败"
+		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
 	resp.Code = 200
 	resp.Msg = "success"
+	resp.Data = map[string]interface{}{}
 	return resp, nil
 }
