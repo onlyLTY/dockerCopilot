@@ -30,6 +30,7 @@ func (l *UpdateProgramLogic) UpdateProgram() (resp *types.Resp, err error) {
 	if err != nil {
 		resp.Code = 500
 		resp.Msg = err.Error()
+		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
 	resp.Code = 200
@@ -38,5 +39,6 @@ func (l *UpdateProgramLogic) UpdateProgram() (resp *types.Resp, err error) {
 		time.Sleep(10 * time.Second)
 		os.Exit(1)
 	}()
+	resp.Data = map[string]interface{}{}
 	return resp, nil
 }

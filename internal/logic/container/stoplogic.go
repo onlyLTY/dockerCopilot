@@ -30,9 +30,11 @@ func (l *StopLogic) Stop(req *types.IdReq) (resp *types.Resp, err error) {
 	if err != nil {
 		resp.Code = 400
 		resp.Msg = err.Error()
+		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
 	resp.Code = 200
 	resp.Msg = "success"
+	resp.Data = map[string]interface{}{}
 	return resp, nil
 }

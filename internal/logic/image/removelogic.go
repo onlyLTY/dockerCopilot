@@ -35,9 +35,11 @@ func (l *RemoveLogic) Remove(req *types.RemoveImageReq) (resp *types.Resp, err e
 	if err != nil {
 		resp.Code = 409
 		resp.Msg = err.Error()
+		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
 	resp.Code = 200
 	resp.Msg = "success"
+	resp.Data = map[string]interface{}{}
 	return resp, nil
 }

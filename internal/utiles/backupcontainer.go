@@ -13,54 +13,45 @@ import (
 	"time"
 )
 
-func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
-	var errList []string
+func BackupContainer(ctx *svc.ServiceContext) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	containerList, err := GetContainerList(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var backerupList []dockerBackend.ContainerCreateConfig
+	var backupList []dockerBackend.ContainerCreateConfig
 	for i, v := range containerList {
 		containerID := containerList[i].ID
 		cli.NegotiateAPIVersion(context.TODO())
 		inspectedContainer, err := cli.ContainerInspect(context.TODO(), containerID)
 		if err != nil {
 			logx.Error("获取容器信息失败" + err.Error())
-			return nil, err
+			return err
 		}
-		var containerName, imageNameAndTag string
+		var containerName string
 		if len(v.Names) > 0 {
 			containerName = v.Names[0][1:]
 		} else {
 			containerName = "get container name error"
 			logx.Error("get container name error" + v.ID)
 		}
-		if v.Image != "" {
-			imageNameAndTag = v.Image
-		} else {
-			imageNameAndTag = v.ImageID
-			errList = append(errList, containerName+"镜像格式错误，请手动修正")
-			logx.Error("image dont have name" + v.ID)
-		}
 		inspectedContainer.Config.Hostname = ""
-		inspectedContainer.Config.Image = imageNameAndTag
-		inspectedContainer.Image = imageNameAndTag
+		inspectedContainer.Image = inspectedContainer.Config.Image
 		config := inspectedContainer.Config
 		hostConfig := inspectedContainer.HostConfig
 		networkingConfig := &network.NetworkingConfig{
 			EndpointsConfig: inspectedContainer.NetworkSettings.Networks,
 		}
 		createConfig := dockerBackend.ContainerCreateConfig{Config: config, HostConfig: hostConfig, NetworkingConfig: networkingConfig, Name: containerName}
-		backerupList = append(backerupList, createConfig)
+		backupList = append(backupList, createConfig)
 	}
-	jsonData, err := json.MarshalIndent(backerupList, "", "  ")
+	jsonData, err := json.MarshalIndent(backupList, "", "  ")
 	if err != nil {
 		logx.Error("Error marshalling data:", err)
-		return nil, err
+		return err
 	}
 	backupDir := os.Getenv("BACKUP_DIR") // 从环境变量中获取备份目录
 	if backupDir == "" {
@@ -71,7 +62,7 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 		err = os.MkdirAll(backupDir, 0755)
 		if err != nil {
 			logx.Error("Error creating backup directory:", err)
-			return nil, err
+			return err
 		}
 	}
 	currentDate := time.Now().Format("2006-01-02")
@@ -80,7 +71,7 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 	err = os.WriteFile(fullPath, jsonData, 0644)
 	if err != nil {
 		logx.Error("Error writing to file:", err)
-		return nil, err
+		return err
 	}
-	return errList, nil
+	return nil
 }

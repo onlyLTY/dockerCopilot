@@ -43,6 +43,7 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 	if err != nil {
 		resp.Code = 500
 		resp.Msg = err.Error()
+		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
 	resp.Msg = "success"
@@ -57,18 +58,18 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 			containerInfo.Name = ContainerName
 		} else {
 			containerInfo.Name = "get container name error"
-			logx.Error("get container name error" + v.ID)
+			l.Error("get container name error" + v.ID)
 		}
 		if v.Image != "" {
 			containerInfo.UsingImage = v.Image
 		} else {
 			containerInfo.UsingImage = v.ImageID
-			logx.Error("image dont have name" + v.ID)
+			l.Error("image dont have name" + v.ID)
 		}
 		containerInspect, err := utiles.GetContainerInspect(l.svcCtx, v.ID)
 		if err != nil {
 			containerInfo.CreateImage = ""
-			logx.Error("get image name error" + v.ID)
+			l.Error("get image name error" + v.ID)
 		}
 		containerInfo.CreateImage = containerInspect.Config.Image
 		t := time.Unix(v.Created, 0)

@@ -28,16 +28,17 @@ func NewRestoreLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RestoreLo
 func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	taskID := uuid.New().String()
+	fileName := CleanFilename(req.Filename)
 	go func() {
 		// Catch any panic and log the error
 		defer func() {
 			if r := recover(); r != nil {
-				logx.Errorf("Recovered from panic in restoreContainer: %v", r)
+				l.Errorf("Recovered from panic in restoreContainer: %v", r)
 			}
 		}()
-		err := utiles.RestoreContainer(l.svcCtx, req.Filename, taskID)
+		err := utiles.RestoreContainer(l.svcCtx, fileName, taskID)
 		if err != nil {
-			logx.Errorf("Error in restoreContainer: %v", err)
+			l.Errorf("Error in restoreContainer: %v", err)
 		}
 	}()
 	resp.Code = 200

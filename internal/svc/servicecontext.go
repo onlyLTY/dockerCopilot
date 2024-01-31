@@ -2,7 +2,6 @@ package svc
 
 import (
 	"github.com/flosch/pongo2"
-	"github.com/google/uuid"
 	loader "github.com/nathan-osman/pongo2-embed-loader"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/config"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/module"
@@ -36,10 +35,8 @@ type TaskProgress struct {
 type ProgressStoreType map[string]TaskProgress
 
 func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext {
-	uuidtmp := uuid.New().String()
 	return &ServiceContext{
 		Config:        c,
-		Jwtuuid:       uuidtmp,
 		Template:      pongo2.NewSet("", loaders),
 		HubImageInfo:  module.NewImageCheck(),
 		ProgressStore: make(ProgressStoreType),

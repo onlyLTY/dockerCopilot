@@ -30,6 +30,7 @@ func (l *ListBackupsLogic) ListBackups() (resp *types.Resp, err error) {
 	if err != nil {
 		resp.Code = 500
 		resp.Msg = err.Error()
+		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
 	resp.Msg = "success"
