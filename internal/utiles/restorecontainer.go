@@ -34,7 +34,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 	if err != nil {
 		logx.Error("Failed to read file: %s", err)
 		oldProgress.Percentage = 0
-		oldProgress.Message = "读取文件失败或者未找到文件"
+		oldProgress.Message = "读取文件失败或者未找到文件。请确认文件名仅由大小写字母、数字和短横线组成"
 		oldProgress.DetailMsg = err.Error()
 		oldProgress.IsDone = true
 		ctx.UpdateProgress(taskID, oldProgress)

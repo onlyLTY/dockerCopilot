@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"os"
+	"regexp"
 
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
@@ -26,7 +27,7 @@ func NewDelRestoreLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DelRes
 
 func (l *DelRestoreLogic) DelRestore(req *types.ContainerRestoreReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	fileName := req.Filename
+	fileName := CleanFilename(req.Filename)
 	basePath := os.Getenv("BACKUP_DIR") // 从环境变量中获取备份目录
 	if basePath == "" {
 		basePath = "/data/backups" // 如果环境变量未设置，使用默认值
@@ -43,4 +44,9 @@ func (l *DelRestoreLogic) DelRestore(req *types.ContainerRestoreReq) (resp *type
 	resp.Msg = "success"
 	resp.Data = map[string]interface{}{}
 	return resp, nil
+}
+
+func CleanFilename(filename string) string {
+	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
+	return reg.ReplaceAllString(filename, "")
 }
