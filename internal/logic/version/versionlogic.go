@@ -33,6 +33,7 @@ func (l *VersionLogic) Version(req *types.VersionReq) (resp *types.Resp, err err
 			"version":   config.Version,
 			"buildDate": config.BuildDate,
 		}
+		return resp, nil
 	} else if req.Type == "remote" {
 		remoteVersion, err := utiles.GetRemoteVersion()
 		if err != nil {
@@ -58,9 +59,10 @@ func (l *VersionLogic) Version(req *types.VersionReq) (resp *types.Resp, err err
 			return resp, nil
 		}
 
+	} else {
+		resp.Code = 400
+		resp.Msg = "type 参数错误"
+		resp.Data = map[string]string{}
+		return resp, nil
 	}
-	resp.Code = 400
-	resp.Msg = "参数错误"
-	resp.Data = map[string]string{}
-	return resp, nil
 }
