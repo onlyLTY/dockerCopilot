@@ -23,7 +23,7 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var backerupList []dockerBackend.ContainerCreateConfig
+	var backupList []dockerBackend.ContainerCreateConfig
 	for i, v := range containerList {
 		containerID := containerList[i].ID
 		cli.NegotiateAPIVersion(context.TODO())
@@ -55,9 +55,9 @@ func BackupContainer(ctx *svc.ServiceContext) ([]string, error) {
 			EndpointsConfig: inspectedContainer.NetworkSettings.Networks,
 		}
 		createConfig := dockerBackend.ContainerCreateConfig{Config: config, HostConfig: hostConfig, NetworkingConfig: networkingConfig, Name: containerName}
-		backerupList = append(backerupList, createConfig)
+		backupList = append(backupList, createConfig)
 	}
-	jsonData, err := json.MarshalIndent(backerupList, "", "  ")
+	jsonData, err := json.MarshalIndent(backupList, "", "  ")
 	if err != nil {
 		logx.Error("Error marshalling data:", err)
 		return nil, err
