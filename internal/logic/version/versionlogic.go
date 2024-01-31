@@ -39,7 +39,7 @@ func (l *VersionLogic) Version(req *types.VersionReq) (resp *types.Resp, err err
 			resp.Code = 500
 			resp.Msg = "获取版本错误" + err.Error()
 			resp.Data = map[string]string{
-				"remoteVersion": remoteVersion,
+				"remoteVersion": config.Version,
 			}
 			return resp, err
 		} else if remoteVersion != config.Version {
@@ -59,6 +59,8 @@ func (l *VersionLogic) Version(req *types.VersionReq) (resp *types.Resp, err err
 		}
 
 	}
-
-	return
+	resp.Code = 400
+	resp.Msg = "参数错误"
+	resp.Data = map[string]string{}
+	return resp, nil
 }

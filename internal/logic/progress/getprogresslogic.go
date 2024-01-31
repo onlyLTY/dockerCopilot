@@ -29,6 +29,7 @@ func (l *GetProgressLogic) GetProgress(req *types.GetProgressReq) (resp *types.R
 	if !exists {
 		resp.Code = 400
 		resp.Msg = "taskID 未找到"
+		resp.Data = map[string]interface{}{}
 		return
 	}
 	resp.Code = 200
