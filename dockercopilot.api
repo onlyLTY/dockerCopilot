@@ -40,7 +40,7 @@ type MsgResp {
 type Resp {
 	Code int         `json:"code"`
 	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
+	Data map[string]interface{} `json:"data"`
 }
 
 type IdReq {
