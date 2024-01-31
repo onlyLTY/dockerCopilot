@@ -26,7 +26,7 @@ func NewBackupLogic(ctx context.Context, svcCtx *svc.ServiceContext) *BackupLogi
 
 func (l *BackupLogic) Backup() (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	backupList, err := utiles.BackupContainer(l.svcCtx)
+	err = utiles.BackupContainer(l.svcCtx)
 	if err != nil {
 		resp.Code = 500
 		resp.Msg = err.Error()
@@ -35,6 +35,6 @@ func (l *BackupLogic) Backup() (resp *types.Resp, err error) {
 	}
 	resp.Msg = "success"
 	resp.Code = 200
-	resp.Data = backupList
+	resp.Data = map[string]interface{}{}
 	return resp, nil
 }
