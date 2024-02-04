@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	ref "github.com/distribution/reference"
-	"github.com/docker/distribution/reference"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
@@ -154,12 +153,12 @@ func GetChallengeURL(imageRef ref.Named) url.URL {
 }
 
 func GetRegistryAddress(imageRef string) (string, error) {
-	normalizedRef, err := reference.ParseNormalizedNamed(imageRef)
+	normalizedRef, err := ref.ParseNormalizedNamed(imageRef)
 	if err != nil {
 		return "", err
 	}
 
-	address := reference.Domain(normalizedRef)
+	address := ref.Domain(normalizedRef)
 
 	if address == DefaultRegistryDomain {
 		address = DefaultRegistryHost
