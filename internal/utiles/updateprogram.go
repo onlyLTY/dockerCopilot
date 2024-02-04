@@ -7,7 +7,6 @@ import (
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"runtime"
@@ -27,9 +26,14 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 		logx.Info("没有获取到最新版本信息:", err)
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logx.Error("关闭resp.Body失败:", err)
+		}
+	}(resp.Body)
 
-	versionData, err := ioutil.ReadAll(resp.Body)
+	versionData, err := io.ReadAll(resp.Body)
 	logx.Infof("versionData: %s", versionData)
 	if err != nil {
 		logx.Info("没有获取到最新版本信息:", err)
@@ -63,13 +67,23 @@ func downloadFile(url string, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logx.Error("关闭resp.Body失败:", err)
+		}
+	}(resp.Body)
 
 	out, err := os.Create(dest)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func(out *os.File) {
+		err := out.Close()
+		if err != nil {
+			logx.Error("关闭out失败:", err)
+		}
+	}(out)
 
 	_, err = io.Copy(out, resp.Body)
 	return err
@@ -80,13 +94,23 @@ func decompressTarGz(gzFilePath string, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			logx.Error("关闭file失败:", err)
+		}
+	}(file)
 
 	gzr, err := gzip.NewReader(file)
 	if err != nil {
 		return err
 	}
-	defer gzr.Close()
+	defer func(gzr *gzip.Reader) {
+		err := gzr.Close()
+		if err != nil {
+			logx.Error("关闭gzr失败:", err)
+		}
+	}(gzr)
 
 	tarReader := tar.NewReader(gzr)
 
@@ -112,10 +136,16 @@ func decompressTarGz(gzFilePath string, dest string) error {
 				return err
 			}
 			if _, err := io.Copy(outFile, tarReader); err != nil {
-				outFile.Close()
+				err := outFile.Close()
+				if err != nil {
+					return err
+				}
 				return err
 			}
-			outFile.Close()
+			err = outFile.Close()
+			if err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("未知类型: %v in %s", header.Typeflag, header.Name)
 		}

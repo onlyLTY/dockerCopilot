@@ -2,7 +2,7 @@ package utiles
 
 import (
 	"context"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	MyType "github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
@@ -14,7 +14,7 @@ func GetContainerList(ctx *svc.ServiceContext) ([]MyType.Container, error) {
 		panic(err)
 	}
 	// 获取所有容器（包括停止的容器）
-	dockerContainerList, err := cli.ContainerList(context.Background(), types.ContainerListOptions{
+	dockerContainerList, err := cli.ContainerList(context.Background(), container.ListOptions{
 		All: true, // 设置为true来获取所有容器
 	})
 	if err != nil {
