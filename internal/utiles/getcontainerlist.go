@@ -30,13 +30,13 @@ func GetContainerList(ctx *svc.ServiceContext) ([]MyType.Container, error) {
 	return containerList, nil
 }
 
-func CheckImageUpdate(ctx *svc.ServiceContext, containerlistdata []MyType.Container) []MyType.Container {
-	for i, v := range containerlistdata {
+func CheckImageUpdate(ctx *svc.ServiceContext, containerListData []MyType.Container) []MyType.Container {
+	for i, v := range containerListData {
 		if _, ok := ctx.HubImageInfo.Data[v.ImageID]; ok {
 			if ctx.HubImageInfo.Data[v.ImageID].NeedUpdate {
-				containerlistdata[i].Update = true
+				containerListData[i].Update = true
 			}
 		}
 	}
-	return containerlistdata
+	return containerListData
 }
