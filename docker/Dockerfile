@@ -14,7 +14,6 @@ RUN apk add --no-cache tzdata \
 
 # 设置环境变量
 ENV secretKey="" \
-    hubURL="https://docker.nju.edu.cn" \
     DOCKER_HOST="tcp://127.0.0.1:9375" \
     TZ="Asia/Shanghai"
 
