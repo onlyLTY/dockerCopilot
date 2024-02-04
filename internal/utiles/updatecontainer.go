@@ -151,7 +151,10 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	oldTaskProgress.Message = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
 	oldTaskProgress.DetailMsg = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
 	ctx.UpdateProgress(taskID, oldTaskProgress)
-	err = cli.ContainerStart(context.Background(), containerName, dockerTypes.ContainerStartOptions{})
+	err = cli.ContainerStart(context.Background(), containerName, container.StartOptions{
+		CheckpointID:  "",
+		CheckpointDir: "",
+	})
 	if err != nil {
 		oldTaskProgress.Message = "启动新容器失败"
 		oldTaskProgress.DetailMsg = err.Error()
@@ -160,7 +163,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 		return err
 	}
 	if delOldContainer {
-		err = cli.ContainerRemove(context.Background(), id, dockerTypes.ContainerRemoveOptions{})
+		err = cli.ContainerRemove(context.Background(), id, container.RemoveOptions{})
 		if err != nil {
 			oldTaskProgress.Message = "删除旧容器失败"
 			oldTaskProgress.DetailMsg = err.Error()
