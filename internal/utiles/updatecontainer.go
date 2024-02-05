@@ -39,6 +39,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 		oldTaskProgress.DetailMsg = err.Error()
 		oldTaskProgress.IsDone = true
 		ctx.UpdateProgress(taskID, oldTaskProgress)
+		return err
 	}
 	timeout := 10
 	signal := "SIGINT"
