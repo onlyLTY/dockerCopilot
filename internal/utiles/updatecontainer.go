@@ -105,7 +105,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	oldTaskProgress.DetailMsg = "正在重命名旧容器"
 	ctx.UpdateProgress(taskID, oldTaskProgress)
 	currentDate := time.Now().Format("2006-01-02-15-04-05")
-	err = cli.ContainerRename(context.Background(), id, name+currentDate)
+	err = cli.ContainerRename(context.Background(), id, name+"-"+currentDate)
 	if err != nil {
 		oldTaskProgress.Message = "重命名旧容器失败"
 		oldTaskProgress.DetailMsg = err.Error()
