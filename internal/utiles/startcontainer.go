@@ -10,7 +10,7 @@ import (
 func StartContainer(ctx *svc.ServiceContext, id string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		panic(err)
+		return err
 	}
 	startOptions := container.StartOptions{}
 	err = cli.ContainerStart(context.Background(), id, startOptions)
