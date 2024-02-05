@@ -12,6 +12,7 @@ import (
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
+	"time"
 )
 
 func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameAndTag string, delOldContainer bool, taskID string) error {
@@ -39,6 +40,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 		oldTaskProgress.DetailMsg = err.Error()
 		oldTaskProgress.IsDone = true
 		ctx.UpdateProgress(taskID, oldTaskProgress)
+		return err
 	}
 	timeout := 10
 	signal := "SIGINT"
@@ -102,8 +104,8 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	oldTaskProgress.Message = "正在重命名旧容器"
 	oldTaskProgress.DetailMsg = "正在重命名旧容器"
 	ctx.UpdateProgress(taskID, oldTaskProgress)
-
-	err = cli.ContainerRename(context.Background(), id, name+"-old")
+	currentDate := time.Now().Format("2006-01-02-15-04-05")
+	err = cli.ContainerRename(context.Background(), id, name+"-"+currentDate)
 	if err != nil {
 		oldTaskProgress.Message = "重命名旧容器失败"
 		oldTaskProgress.DetailMsg = err.Error()
@@ -151,7 +153,10 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	oldTaskProgress.Message = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
 	oldTaskProgress.DetailMsg = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
 	ctx.UpdateProgress(taskID, oldTaskProgress)
-	err = cli.ContainerStart(context.Background(), containerName, dockerTypes.ContainerStartOptions{})
+	err = cli.ContainerStart(context.Background(), containerName, container.StartOptions{
+		CheckpointID:  "",
+		CheckpointDir: "",
+	})
 	if err != nil {
 		oldTaskProgress.Message = "启动新容器失败"
 		oldTaskProgress.DetailMsg = err.Error()
@@ -160,7 +165,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 		return err
 	}
 	if delOldContainer {
-		err = cli.ContainerRemove(context.Background(), id, dockerTypes.ContainerRemoveOptions{})
+		err = cli.ContainerRemove(context.Background(), id, container.RemoveOptions{})
 		if err != nil {
 			oldTaskProgress.Message = "删除旧容器失败"
 			oldTaskProgress.DetailMsg = err.Error()

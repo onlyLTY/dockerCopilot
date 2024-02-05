@@ -57,6 +57,7 @@ func main() {
 	ctx := svc.NewServiceContext(c, &loader.Loader{Content: content})
 	list, err := utiles.GetImagesList(ctx)
 	if err != nil {
+		logx.Errorf("panic获取镜像列表出错: %v", err)
 		panic(err)
 	}
 	go ctx.HubImageInfo.CheckUpdate(list)
@@ -66,11 +67,13 @@ func main() {
 	_, err = corndanmu.AddFunc("30 * * * *", func() {
 		list, err := utiles.GetImagesList(ctx)
 		if err != nil {
+			logx.Errorf("panic获取镜像列表出错: %v", err)
 			panic(err)
 		}
 		ctx.HubImageInfo.CheckUpdate(list)
 	})
 	if err != nil {
+		logx.Errorf("panic添加定时任务出错: %v", err)
 		panic(err)
 	}
 	corndanmu.Start()

@@ -55,21 +55,21 @@ func splitImageNameAndTag(imagesList []MyType.Image) []MyType.Image {
 	}
 	return imagesList
 }
-func checkImageInUsed(svc *svc.ServiceContext, imagelist []MyType.Image) ([]MyType.Image, error) {
+func checkImageInUsed(svc *svc.ServiceContext, imageList []MyType.Image) ([]MyType.Image, error) {
 	list, err := GetContainerList(svc)
 	if err != nil {
-		return imagelist, err
+		return imageList, err
 	}
 	// 这里可以用mapreduce 我懒等pr
 	for _, v := range list {
-		for i, imagev := range imagelist {
-			if v.ImageID == imagev.ID {
-				imagelist[i].InUsed = true
+		for i, image := range imageList {
+			if v.ImageID == image.ID {
+				imageList[i].InUsed = true
 				break
 			}
 		}
 	}
-	return imagelist, nil
+	return imageList, nil
 }
 func calculateImageSize(imagesList []MyType.Image) []MyType.Image {
 	for i := range imagesList {

@@ -3,7 +3,7 @@ package utiles
 import (
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/config"
 	"github.com/zeromicro/go-zero/core/logx"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -37,9 +37,14 @@ func fetchVersionFromURL(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logx.Error("关闭Body失败:", err)
+		}
+	}(resp.Body)
 
-	versionData, err := ioutil.ReadAll(resp.Body)
+	versionData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
