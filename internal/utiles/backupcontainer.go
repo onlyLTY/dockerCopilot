@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	dockerBackend "github.com/docker/docker/api/types/backend"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"os"
@@ -14,10 +13,6 @@ import (
 )
 
 func BackupContainer(ctx *svc.ServiceContext) error {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
 	containerList, err := GetContainerList(ctx)
 	if err != nil {
 		return err
@@ -25,8 +20,8 @@ func BackupContainer(ctx *svc.ServiceContext) error {
 	var backupList []dockerBackend.ContainerCreateConfig
 	for i, v := range containerList {
 		containerID := containerList[i].ID
-		cli.NegotiateAPIVersion(context.TODO())
-		inspectedContainer, err := cli.ContainerInspect(context.TODO(), containerID)
+		ctx.DockerClient.NegotiateAPIVersion(context.TODO())
+		inspectedContainer, err := ctx.DockerClient.ContainerInspect(context.TODO(), containerID)
 		if err != nil {
 			logx.Error("获取容器信息失败" + err.Error())
 			return err

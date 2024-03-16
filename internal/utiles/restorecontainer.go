@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	docker "github.com/docker/docker/api/types"
 	dockerBackend "github.com/docker/docker/api/types/backend"
-	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"os"
@@ -49,30 +48,26 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		oldProgress.IsDone = true
 		ctx.UpdateProgress(taskID, oldProgress)
 	}
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
 	for i, containerInfo := range configList {
 		info := "正在恢复第" + strconv.Itoa(i+1) + "个容器"
 		oldProgress.Percentage = int(float64(i) / float64(len(configList)) * 100)
 		oldProgress.Message = info
 		oldProgress.DetailMsg = info
 		ctx.UpdateProgress(taskID, oldProgress)
-		cli.NegotiateAPIVersion(context.TODO())
+		ctx.DockerClient.NegotiateAPIVersion(context.TODO())
 		if err != nil {
 			backupList = append(backupList, "出现错误"+err.Error())
 			logx.Error("Failed to inspect container: %s", err)
 			return err
 		}
-		reader, err := cli.ImagePull(context.TODO(), containerInfo.Config.Image, docker.ImagePullOptions{})
+		reader, err := ctx.DockerClient.ImagePull(context.TODO(), containerInfo.Config.Image, docker.ImagePullOptions{})
 		if err != nil {
 			backupList = append(backupList, containerInfo.Config.Image+"拉取镜像出现错误"+err.Error())
 			logx.Errorf("Failed to pull image: %s", err)
 			continue
 		}
 		decodePullResp(reader, ctx, taskID)
-		_, err = cli.ContainerCreate(context.TODO(), containerInfo.Config, containerInfo.HostConfig, containerInfo.NetworkingConfig, nil, containerInfo.Name)
+		_, err = ctx.DockerClient.ContainerCreate(context.TODO(), containerInfo.Config, containerInfo.HostConfig, containerInfo.NetworkingConfig, nil, containerInfo.Name)
 		if err != nil {
 			logx.Error("Failed to create container: %s", err)
 			info = "正在恢复第" + strconv.Itoa(i+1) + "个容器"

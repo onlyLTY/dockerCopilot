@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	MyType "github.com/onlyLTY/dockerCopilot/UGREEN/internal/types"
 	"log"
@@ -12,12 +11,8 @@ import (
 )
 
 func GetImagesList(ctx *svc.ServiceContext) ([]MyType.Image, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		log.Fatalf("Unable to create docker client: %s", err)
-	}
 	var imagesList []MyType.Image
-	dockerImages, err := cli.ImageList(context.Background(), types.ImageListOptions{})
+	dockerImages, err := ctx.DockerClient.ImageList(context.Background(), types.ImageListOptions{})
 	if err != nil {
 		log.Fatalf("Unable to fetch docker images: %s", err)
 	}
