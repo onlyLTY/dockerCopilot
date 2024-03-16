@@ -1,10 +1,12 @@
 package svc
 
 import (
+	"github.com/docker/docker/client"
 	"github.com/flosch/pongo2"
 	loader "github.com/nathan-osman/pongo2-embed-loader"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/config"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/module"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest"
 	"sync"
 )
@@ -20,6 +22,7 @@ type ServiceContext struct {
 	HubImageInfo               *module.ImageUpdateData
 	IndexCheckMiddleware       rest.Middleware
 	ProgressStore              ProgressStoreType
+	DockerClient               *client.Client
 	mu                         sync.Mutex
 }
 
@@ -35,11 +38,16 @@ type TaskProgress struct {
 type ProgressStoreType map[string]TaskProgress
 
 func NewServiceContext(c config.Config, loaders *loader.Loader) *ServiceContext {
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		logx.Errorf("Unable to create docker client: %s", err)
+	}
 	return &ServiceContext{
 		Config:        c,
 		Template:      pongo2.NewSet("", loaders),
 		HubImageInfo:  module.NewImageCheck(),
 		ProgressStore: make(ProgressStoreType),
+		DockerClient:  cli,
 	}
 }
 

@@ -7,7 +7,6 @@ import (
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
 	dockerMsgType "github.com/docker/docker/pkg/jsonmessage"
 	"github.com/onlyLTY/dockerCopilot/UGREEN/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -34,14 +33,6 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 			IsDone:     false,
 		}
 	}
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		oldTaskProgress.Message = "连接Docker失败"
-		oldTaskProgress.DetailMsg = err.Error()
-		oldTaskProgress.IsDone = true
-		ctx.UpdateProgress(taskID, oldTaskProgress)
-		return err
-	}
 	timeout := 10
 	signal := "SIGINT"
 
@@ -50,15 +41,8 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	oldTaskProgress.Percentage = 10
 	oldTaskProgress.DetailMsg = "正在拉取新镜像"
 	ctx.UpdateProgress(taskID, oldTaskProgress)
-	cli.NegotiateAPIVersion(context.TODO())
-	if err != nil {
-		oldTaskProgress.Message = "获取Docker API版本失败"
-		oldTaskProgress.DetailMsg = err.Error()
-		oldTaskProgress.IsDone = true
-		ctx.UpdateProgress(taskID, oldTaskProgress)
-		return err
-	}
-	reader, err := cli.ImagePull(context.TODO(), imageNameAndTag, dockerTypes.ImagePullOptions{})
+	ctx.DockerClient.NegotiateAPIVersion(context.TODO())
+	reader, err := ctx.DockerClient.ImagePull(context.TODO(), imageNameAndTag, dockerTypes.ImagePullOptions{})
 	if err != nil {
 		oldTaskProgress.Message = "拉取镜像失败"
 		oldTaskProgress.DetailMsg = err.Error()
@@ -88,7 +72,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 		Signal:  signal,
 		Timeout: &timeout,
 	}
-	err = cli.ContainerStop(context.Background(), id, stopOptions)
+	err = ctx.DockerClient.ContainerStop(context.Background(), id, stopOptions)
 	if err != nil {
 		oldTaskProgress.Message = "停止容器失败"
 		oldTaskProgress.DetailMsg = err.Error()
@@ -105,7 +89,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	oldTaskProgress.DetailMsg = "正在重命名旧容器"
 	ctx.UpdateProgress(taskID, oldTaskProgress)
 	currentDate := time.Now().Format("2006-01-02-15-04-05")
-	err = cli.ContainerRename(context.Background(), id, name+"-"+currentDate)
+	err = ctx.DockerClient.ContainerRename(context.Background(), id, name+"-"+currentDate)
 	if err != nil {
 		oldTaskProgress.Message = "重命名旧容器失败"
 		oldTaskProgress.DetailMsg = err.Error()
@@ -120,7 +104,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	oldTaskProgress.Message = "正在创建新容器"
 	oldTaskProgress.DetailMsg = "正在创建新容器"
 	ctx.UpdateProgress(taskID, oldTaskProgress)
-	inspectedContainer, err := cli.ContainerInspect(context.TODO(), id)
+	inspectedContainer, err := ctx.DockerClient.ContainerInspect(context.TODO(), id)
 	if err != nil {
 		oldTaskProgress.Message = "获取容器信息失败"
 		oldTaskProgress.DetailMsg = err.Error()
@@ -138,7 +122,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 		EndpointsConfig: inspectedContainer.NetworkSettings.Networks,
 	}
 	containerName := name
-	_, err = cli.ContainerCreate(context.TODO(), config, hostConfig, networkingConfig, nil, containerName)
+	_, err = ctx.DockerClient.ContainerCreate(context.TODO(), config, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
 		oldTaskProgress.Message = "创建新容器失败"
 		oldTaskProgress.DetailMsg = err.Error()
@@ -153,7 +137,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 	oldTaskProgress.Message = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
 	oldTaskProgress.DetailMsg = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
 	ctx.UpdateProgress(taskID, oldTaskProgress)
-	err = cli.ContainerStart(context.Background(), containerName, container.StartOptions{
+	err = ctx.DockerClient.ContainerStart(context.Background(), containerName, container.StartOptions{
 		CheckpointID:  "",
 		CheckpointDir: "",
 	})
@@ -165,7 +149,7 @@ func UpdateContainer(ctx *svc.ServiceContext, id string, name string, imageNameA
 		return err
 	}
 	if delOldContainer {
-		err = cli.ContainerRemove(context.Background(), id, container.RemoveOptions{})
+		err = ctx.DockerClient.ContainerRemove(context.Background(), id, container.RemoveOptions{})
 		if err != nil {
 			oldTaskProgress.Message = "删除旧容器失败"
 			oldTaskProgress.DetailMsg = err.Error()
