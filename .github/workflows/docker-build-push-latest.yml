@@ -1,10 +1,7 @@
-name: docker-build-push-latest-dev
+name: docker-build-push-211
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - UGREEN-DEV
 
 jobs:
   build-frontend:
@@ -124,5 +121,5 @@ jobs:
           file: ./docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/dockercopilot:latest-dev
+            ${{ secrets.DOCKERHUB_USERNAME }}/dockercopilot:2.1.1
           push: true
