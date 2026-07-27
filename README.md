@@ -57,3 +57,13 @@ Compose 文件管理会限制在配置的扫描根目录内。部署功能依赖
 
 go版本：1.21+
 
+前端源码位于 `frontend/`。构建前端：
+
+```bash
+cd frontend
+npm ci
+npm run build
+```
+
+构建产物直接写入仓库根目录 `dist/browser/`，Go 后端会从该目录嵌入管理界面。后端本地编译前需要先生成该目录；`dist/` 和 `build/` 均为构建产物目录，不应提交。
+

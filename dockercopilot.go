@@ -23,7 +23,7 @@ import (
 	xhttp "github.com/zeromicro/x/http"
 )
 
-//go:embed front/*
+//go:embed dist/browser/*
 var embeddedFront embed.FS
 
 var configFile = flag.String("f", "etc/dockerCopilot.yaml", "the config file")
@@ -129,7 +129,7 @@ export const customImageLogos = {
 	server.Start()
 }
 func RegisterHandlers(engine *rest.Server) {
-	frontFS, err := fs.Sub(embeddedFront, "front")
+	frontFS, err := fs.Sub(embeddedFront, "dist/browser")
 	if err != nil {
 		log.Fatal(err)
 	}

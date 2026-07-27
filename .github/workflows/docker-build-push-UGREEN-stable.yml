@@ -34,8 +34,8 @@ jobs:
       - name: Upload Frontend Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: my-artifact-front-dist
-          path: frontend/dist/browser
+          name: my-artifact-frontend-dist
+          path: dist/browser
 
   build-backend:
     needs: [ build-frontend ]
@@ -50,12 +50,12 @@ jobs:
       - name: Download Frontend Artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: my-artifact-front-*
+          pattern: my-artifact-frontend-*
           merge-multiple: true
-          path: front
+          path: dist/browser
 
-      - run: ls -R front
-      - run: test -f front/index.html
+      - run: ls -R dist/browser
+      - run: test -f dist/browser/index.html
 
       - name: Get version from file
         id: get_version
@@ -70,12 +70,12 @@ jobs:
 
       - name: Build for ${{ matrix.arch }}
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -a --trimpath -ldflags="-w -s -X 'github.com/onlyLTY/dockerCopilot/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/dockerCopilot/internal/config.BuildDate=$(date)'" -o dist/linux/${{ matrix.arch }}/dockerCopilot .
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -a --trimpath -ldflags="-w -s -X 'github.com/onlyLTY/dockerCopilot/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/dockerCopilot/internal/config.BuildDate=$(date)'" -o build/linux/${{ matrix.arch }}/dockerCopilot .
 
       - name: Prepare Files
         run: |
           mkdir -p dc-back-${{ matrix.arch }}
-          cp -r dist dc-back-${{ matrix.arch }}/dist
+          cp -r build dc-back-${{ matrix.arch }}/dist
           cp -r etc dc-back-${{ matrix.arch }}/etc
 
       - name: Upload Backend Artifacts

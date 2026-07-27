@@ -7,4 +7,4 @@ npm install
 npm start
 ```
 
-The production build writes browser assets to `dist/browser`. The backend CI copies that directory to `front/` for Go embedding.
+The production build writes browser assets to the repository root at `dist/browser`. CI and local Go builds use that directory directly for Go embedding; no temporary staging directory is required.
