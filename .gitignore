@@ -34,3 +34,6 @@ __pycache__/
 /dist/
 /build/
 /logs/
+
+
+.zcode
