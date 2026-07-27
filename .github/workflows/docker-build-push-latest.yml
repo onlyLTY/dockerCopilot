@@ -10,12 +10,8 @@ jobs:
   build-frontend:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout frontend code
-        uses: actions/checkout@v3
-        with:
-          repository: dongshull/Docker-Copilot-React
-          path: './frontend'
-          ref: 'master'
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -36,7 +32,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: my-artifact-front-dist
-          path: frontend/dist
+          path: frontend/dist/browser
 
   build-backend:
     needs: [ build-frontend ]
@@ -56,19 +52,12 @@ jobs:
           path: front
 
       - run: ls -R front
+      - run: test -f front/index.html
 
       - name: Get version from file
         id: get_version
         run: |
           echo "version=$(cat version)" >> $GITHUB_ENV
-
-      - name: Cache Go Modules
-        uses: actions/cache@v3
-        with:
-          path: ${{ github.workspace }}/msaber-back/pkg/mod
-          key: go-mod-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            go-mod-
 
       - name: Set up Go
         uses: actions/setup-go@v4

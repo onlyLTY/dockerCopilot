@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	auth "github.com/onlyLTY/dockerCopilot/internal/handler/auth"
+	compose "github.com/onlyLTY/dockerCopilot/internal/handler/compose"
 	container "github.com/onlyLTY/dockerCopilot/internal/handler/container"
 	icons "github.com/onlyLTY/dockerCopilot/internal/handler/icons"
 	image "github.com/onlyLTY/dockerCopilot/internal/handler/image"
@@ -21,11 +22,64 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				Method:  http.MethodPost,
+				Path:    "/compose/projects",
+				Handler: compose.CreateProjectHandler(serverCtx),
+			},
+			{
 				Method:  http.MethodGet,
-				Path:    "/",
-				Handler: webindexHandler(serverCtx),
+				Path:    "/compose/projects",
+				Handler: compose.ProjectsListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/compose/projects/:id/files",
+				Handler: compose.ListFilesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/compose/projects/:id/files/:filename",
+				Handler: compose.ReadFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/compose/projects/:id/files/:filename",
+				Handler: compose.UpdateFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/compose/validate",
+				Handler: compose.ValidateHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/compose/projects/:id/deploy/preview",
+				Handler: compose.DeployPreviewHandler(serverCtx),
+			},
+
+			{
+				Method:  http.MethodPost,
+				Path:    "/compose/projects/:id/deploy",
+				Handler: compose.DeployHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/compose/projects/cleanup/preview",
+				Handler: compose.CleanupPreviewHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/compose/projects/cleanup",
+				Handler: compose.CleanupHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/ports",
+				Handler: compose.PortsListHandler(serverCtx),
 			},
 		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/api"),
 	)
 
 	server.AddRoutes(
@@ -143,6 +197,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: progress.GetProgressHandler(serverCtx),
 			},
 		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api"),
 	)
 

@@ -8,6 +8,24 @@ type Config struct {
 		AccessSecret string
 		AccessExpire int64
 	}
+	CorsOrigins []string
+	Compose     ComposeConfig
+}
+
+type ComposeConfig struct {
+	ScanPaths         []string
+	BackupDir         string
+	PathMappings      []ComposePathMapping
+	MaxDepth          int
+	MaxFileSize       int64
+	MaxFiles          int
+	AllowHighRisk     bool
+	CommandTimeoutSec int64
+}
+
+type ComposePathMapping struct {
+	HostPath      string
+	ContainerPath string
 }
 
 var (

@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/url"
 	"os"
-	"regexp"
 
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
+	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -35,11 +35,13 @@ func (l *DelRestoreLogic) DelRestore(req *types.DelContainerBackupReq) (resp *ty
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
-	basePath := os.Getenv("BACKUP_DIR") // 从环境变量中获取备份目录
-	if basePath == "" {
-		basePath = "/data/backups" // 如果环境变量未设置，使用默认值
+	fullPath, err := utiles.ResolveBackupPath(fileName)
+	if err != nil {
+		resp.Code = 400
+		resp.Msg = "备份文件名不合法"
+		resp.Data = map[string]interface{}{}
+		return resp, nil
 	}
-	fullPath := basePath + "/" + fileName
 	err = os.Remove(fullPath)
 	if err != nil {
 		resp.Code = 400
@@ -54,6 +56,5 @@ func (l *DelRestoreLogic) DelRestore(req *types.DelContainerBackupReq) (resp *ty
 }
 
 func CleanFilename(filename string) string {
-	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
-	return reg.ReplaceAllString(filename, "")
+	return filename
 }

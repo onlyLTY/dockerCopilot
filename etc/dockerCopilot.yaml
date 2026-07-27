@@ -7,3 +7,13 @@ Log:
 Auth:
   AccessSecret: ${secretKey}
   AccessExpire: 7257600
+CorsOrigins: []
+Compose:
+  ScanPaths:
+    - /compose
+  BackupDir: /data/backups/compose-projects
+  MaxDepth: 3
+  MaxFileSize: 10485760
+  MaxFiles: 20
+  AllowHighRisk: false
+  CommandTimeoutSec: 300

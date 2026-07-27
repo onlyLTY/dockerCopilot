@@ -81,18 +81,24 @@ func formatEnvServiceConfig(containerJSON dockerTypes.ContainerJSON, s *composeT
 
 func formatNetworkServiceConfig(containerJSON dockerTypes.ContainerJSON, s *composeType.ServiceConfig) {
 	s.NetworkMode = string(containerJSON.HostConfig.NetworkMode)
-	for containerPort, v := range containerJSON.HostConfig.PortBindings {
-		var p composeType.ServicePortConfig
+	for containerPort, bindings := range containerJSON.HostConfig.PortBindings {
 		proto, port := composeNat.SplitProtoPort(string(containerPort))
 		portNum, convertErr := strconv.Atoi(port)
 		if convertErr != nil {
 			logx.Errorf("Error converting port err is: %v", convertErr)
 			continue
 		}
-		p.Target = uint32(portNum)
-		p.Published = v[0].HostPort
-		p.Protocol = proto
-		s.Ports = append(s.Ports, p)
+		if len(bindings) == 0 {
+			s.Ports = append(s.Ports, composeType.ServicePortConfig{Target: uint32(portNum), Protocol: proto})
+			continue
+		}
+		for _, binding := range bindings {
+			p := composeType.ServicePortConfig{Target: uint32(portNum), Published: binding.HostPort, Protocol: proto}
+			if binding.HostIP != "" && binding.HostIP != "0.0.0.0" {
+				p.HostIP = binding.HostIP
+			}
+			s.Ports = append(s.Ports, p)
+		}
 	}
 }
 
@@ -102,7 +108,8 @@ func formatVolumeServiceConfig(containerJSON dockerTypes.ContainerJSON, s *compo
 		v.Type = string(containerVolume.Type)
 		v.Source = containerVolume.Source
 		v.Target = containerVolume.Destination
-		v.ReadOnly = containerVolume.RW
+		v.ReadOnly = !containerVolume.RW
+
 		s.Volumes = append(s.Volumes, v)
 	}
 }

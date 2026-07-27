@@ -37,8 +37,21 @@ services:
       - TZ=Asia/Shanghai
       - DOCKER_HOST=unix:///var/run/docker.sock
       - secretKey=密码，不少于八位且非纯数字
-    image: 0nlylty/dockercopilot:latest
 ```
+
+## Compose 项目管理
+
+Compose 项目扫描、编辑和部署需要将宿主机的 Compose 根目录挂载到容器内 `/compose`，并在配置中设置 `Compose.ScanPaths`。例如：
+
+```yaml
+volumes:
+  - /宿主机/docker目录:/compose
+  - ./data:/data
+```
+
+Compose 文件管理会限制在配置的扫描根目录内。部署功能依赖宿主机可用的 `docker compose` 插件；上传或编辑的文件会先经过 YAML/Compose 校验和高风险配置检查。
+
+当前服务通过 Docker socket 管理宿主机容器，等同于较高的 Docker 管理权限。生产环境建议限制管理端口访问来源，优先使用 Docker socket 代理，并评估移除 `privileged: true`、启用 `no-new-privileges` 和最小 capabilities。
 
 ## 开发环境
 

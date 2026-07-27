@@ -5,115 +5,120 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
-	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
+	"time"
 )
 
+const maxUpdateDownload = 256 << 20
+
+var releaseVersionPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+
 func UpdateProgram(ctx *svc.ServiceContext) error {
-	githubProxy := os.Getenv("githubProxy")
+	githubProxy := strings.TrimRight(os.Getenv("githubProxy"), "/")
+	prefix := ""
 	if githubProxy != "" {
-		githubProxy = strings.TrimRight(githubProxy, "/") + "/"
+		prefix = githubProxy + "/"
 	}
-	versionURL := githubProxy + "https://raw.githubusercontent.com/onlyLTY/dockerCopilot/UGREEN/version"
-	releaseBaseURL := githubProxy + "https://github.com/onlyLTY/dockerCopilot/releases/download"
-	logx.Infof("versionURL: %s", versionURL)
-	resp, err := http.Get(versionURL)
+	versionURL := prefix + "https://raw.githubusercontent.com/onlyLTY/dockerCopilot/UGREEN/version"
+	releaseBaseURL := prefix + "https://github.com/onlyLTY/dockerCopilot/releases/download"
+	client := &http.Client{Timeout: 30 * time.Second}
+	versionResp, err := client.Get(versionURL)
 	if err != nil {
-		logx.Info("没有获取到最新版本信息:", err)
-		return nil
+		return fmt.Errorf("获取版本信息失败: %w", err)
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logx.Error("关闭resp.Body失败:", err)
-		}
-	}(resp.Body)
-
-	versionData, err := io.ReadAll(resp.Body)
-	logx.Infof("versionData: %s", versionData)
+	defer versionResp.Body.Close()
+	if versionResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("版本服务返回状态 %s", versionResp.Status)
+	}
+	versionData, err := io.ReadAll(io.LimitReader(versionResp.Body, 1024))
 	if err != nil {
-		logx.Info("没有获取到最新版本信息:", err)
-		return nil
+		return err
 	}
-
 	version := strings.TrimSpace(string(versionData))
-	logx.Info("获取到最新版本：", version)
-	// 2. 构造下载链接
+	if !releaseVersionPattern.MatchString(version) {
+		return fmt.Errorf("版本号格式不合法")
+	}
+
 	downloadURL := fmt.Sprintf("%s/%s/dockerCopilot-%s.tar.gz", releaseBaseURL, version, runtime.GOARCH)
-	logx.Info("下载链接：", downloadURL)
-	dest := "dockerCopilot.tar.gz"
-
-	if err := downloadFile(downloadURL, dest); err != nil {
-		logx.Error("下载失败:", err)
+	tmp, err := os.CreateTemp("", "dockercopilot-update-*.tar.gz")
+	if err != nil {
 		return err
 	}
-	logx.Info("下载成功")
-
-	if err := decompressTarGz(dest, "."); err != nil {
-		logx.Info("解压缩失败:", err)
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+	if err := downloadFile(client, downloadURL, tmp); err != nil {
 		return err
 	}
-	logx.Info("解压缩成功")
+	if err := tmp.Close(); err != nil {
+		return err
+	}
 
+	extractDir, err := os.MkdirTemp("", "dockercopilot-extract-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(extractDir)
+	if err := decompressTarGz(tmpPath, extractDir); err != nil {
+		return err
+	}
+	binary, err := findUpdateBinary(extractDir)
+	if err != nil {
+		return err
+	}
+	content, err := os.ReadFile(binary)
+	if err != nil {
+		return err
+	}
+	if len(content) == 0 {
+		return fmt.Errorf("更新程序为空")
+	}
+	return os.WriteFile("dockerCopilot-new", content, 0755)
+}
+
+func downloadFile(client *http.Client, url string, out *os.File) error {
+	resp, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("下载服务返回状态 %s", resp.Status)
+	}
+	if resp.ContentLength > maxUpdateDownload {
+		return fmt.Errorf("更新包超过大小限制")
+	}
+	_, err = io.Copy(out, io.LimitReader(resp.Body, maxUpdateDownload+1))
+	if err != nil {
+		return err
+	}
+	info, err := out.Stat()
+	if err != nil {
+		return err
+	}
+	if info.Size() > maxUpdateDownload {
+		return fmt.Errorf("更新包超过大小限制")
+	}
 	return nil
 }
 
-func downloadFile(url string, dest string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logx.Error("关闭resp.Body失败:", err)
-		}
-	}(resp.Body)
-
-	out, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer func(out *os.File) {
-		err := out.Close()
-		if err != nil {
-			logx.Error("关闭out失败:", err)
-		}
-	}(out)
-
-	_, err = io.Copy(out, resp.Body)
-	return err
-}
-
-func decompressTarGz(gzFilePath string, dest string) error {
+func decompressTarGz(gzFilePath, dest string) error {
 	file, err := os.Open(gzFilePath)
 	if err != nil {
 		return err
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			logx.Error("关闭file失败:", err)
-		}
-	}(file)
-
+	defer file.Close()
 	gzr, err := gzip.NewReader(file)
 	if err != nil {
 		return err
 	}
-	defer func(gzr *gzip.Reader) {
-		err := gzr.Close()
-		if err != nil {
-			logx.Error("关闭gzr失败:", err)
-		}
-	}(gzr)
-
+	defer gzr.Close()
 	tarReader := tar.NewReader(gzr)
-
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -122,34 +127,74 @@ func decompressTarGz(gzFilePath string, dest string) error {
 		if err != nil {
 			return err
 		}
-
-		target := dest + "/" + header.Name
-
+		if header.Name == "" || filepath.IsAbs(header.Name) || strings.Contains(header.Name, ".."+string(filepath.Separator)) || strings.Contains(header.Name, "../") || strings.Contains(header.Name, `..\`) {
+			return fmt.Errorf("归档条目路径不合法")
+		}
+		clean := filepath.Clean(header.Name)
+		target := filepath.Join(dest, clean)
+		if err := ensureUpdatePath(dest, target); err != nil {
+			return err
+		}
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(target, os.FileMode(header.Mode)); err != nil {
+			if err := os.MkdirAll(target, 0750); err != nil {
 				return err
 			}
 		case tar.TypeReg:
-			outFile, err := os.Create(target)
+			if err := os.MkdirAll(filepath.Dir(target), 0750); err != nil {
+				return err
+			}
+			outFile, err := os.OpenFile(target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0700)
 			if err != nil {
 				return err
 			}
-			if _, err := io.Copy(outFile, tarReader); err != nil {
-				err := outFile.Close()
-				if err != nil {
-					return err
-				}
-				return err
+			_, copyErr := io.Copy(outFile, io.LimitReader(tarReader, maxUpdateDownload+1))
+			closeErr := outFile.Close()
+			if copyErr != nil {
+				return copyErr
 			}
-			err = outFile.Close()
-			if err != nil {
-				return err
+			if closeErr != nil {
+				return closeErr
 			}
 		default:
-			return fmt.Errorf("未知类型: %v in %s", header.Typeflag, header.Name)
+			return fmt.Errorf("不支持的归档条目类型: %s", header.Name)
 		}
 	}
-
 	return nil
+}
+
+func ensureUpdatePath(root, target string) error {
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+	targetAbs, err := filepath.Abs(target)
+	if err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(rootAbs, targetAbs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("归档路径越界")
+	}
+	return nil
+}
+
+func findUpdateBinary(root string) (string, error) {
+	var found string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && info.Name() == "dockerCopilot-new" {
+			found = path
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if found == "" {
+		return "", fmt.Errorf("更新包中缺少 dockerCopilot-new")
+	}
+	return found, nil
 }

@@ -82,10 +82,47 @@ type ContainerUpdateReq {
 	ContainerName   string `form:"containerName"`
 }
 
-type VersionMsgResp {
-	Version   string `json:"version"`
-	BuildDate string `json:"build_date"`
+type ComposeProjectCreateReq {
+	ProjectName string `json:"projectName"`
+	Filename string `json:"filename"`
+	Content string `json:"content"`
 }
+
+type ComposeProjectFileReq {
+	ProjectID string `path:"id"`
+	Filename string `path:"filename"`
+}
+
+type ComposeProjectFileUpdateReq {
+	ProjectID string `path:"id"`
+	Filename string `path:"filename"`
+	Content string `json:"content"`
+	Version string `json:"version"`
+}
+
+type ComposeDeployReq {
+	ProjectID string `json:"projectId"`
+	Filename string `json:"filename"`
+	ConfirmToken string `json:"confirmToken"`
+	ConfirmWarnings bool `json:"confirmWarnings"`
+}
+
+type ComposeDeployPreviewReq {
+	ProjectID string `json:"projectId"`
+	Filename string `json:"filename"`
+}
+
+type ComposeCleanupPreviewReq {
+	ProjectID string `json:"projectId"`
+}
+
+type ComposeCleanupReq {
+	ProjectID string `json:"projectId"`
+	PreviewToken string `json:"previewToken"`
+	DeleteDir bool `json:"deleteDir"`
+	Confirm bool `json:"confirm"`
+}
+
 
 type VersionReq {
 	Type string `form:"type"`
@@ -156,9 +193,45 @@ service dockerCopilot {
 
 @server(
 	prefix: /api
-	group: image
+	group: compose
 	jwt: Auth
 )
+service dockerCopilot {
+	@handler composeProjects
+	get /compose/projects returns (Resp)
+
+	@handler composeProjectCreate
+	post /compose/projects (ComposeProjectCreateReq) returns (Resp)
+
+	@handler composeProjectFiles
+	get /compose/projects/:id/files (ComposeProjectFileReq) returns (Resp)
+
+	@handler composeProjectFile
+	get /compose/projects/:id/files/:filename (ComposeProjectFileReq) returns (Resp)
+
+	@handler composeProjectFileUpdate
+	put /compose/projects/:id/files/:filename (ComposeProjectFileUpdateReq) returns (Resp)
+
+	@handler composeValidate
+	post /compose/validate (ComposeProjectValidateReq) returns (Resp)
+
+	@handler composeDeployPreview
+	post /compose/projects/:id/deploy/preview (ComposeDeployPreviewReq) returns (Resp)
+
+	@handler composeDeploy
+	post /compose/projects/:id/deploy (ComposeDeployReq) returns (Resp)
+
+	@handler composeCleanupPreview
+	post /compose/projects/cleanup/preview (ComposeCleanupPreviewReq) returns (Resp)
+
+	@handler composeCleanup
+	post /compose/projects/cleanup (ComposeCleanupReq) returns (Resp)
+
+	@handler ports
+	get /ports returns (Resp)
+}
+
+
 service dockerCopilot {
 	@handler imagesList
 	get /images returns (Resp)

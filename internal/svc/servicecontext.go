@@ -7,6 +7,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest"
 	"sync"
+	"time"
 )
 
 type ServiceContext struct {
@@ -21,6 +22,8 @@ type ServiceContext struct {
 	ProgressStore              ProgressStoreType
 	DockerClient               *client.Client
 	mu                         sync.Mutex
+	ComposeMu                  sync.Mutex
+	ComposeTokens              map[string]ComposeToken
 }
 
 type TaskProgress struct {
@@ -34,6 +37,13 @@ type TaskProgress struct {
 
 type ProgressStoreType map[string]TaskProgress
 
+type ComposeToken struct {
+	ProjectID string
+	Filename  string
+	Version   string
+	ExpiresAt time.Time
+}
+
 func NewServiceContext(c config.Config) *ServiceContext {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -43,6 +53,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config:        c,
 		HubImageInfo:  module.NewImageCheck(),
 		ProgressStore: make(ProgressStoreType),
+		ComposeTokens: make(map[string]ComposeToken),
 		DockerClient:  cli,
 	}
 }
