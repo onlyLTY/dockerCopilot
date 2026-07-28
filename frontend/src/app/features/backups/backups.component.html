@@ -1,0 +1,65 @@
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">DOCKER OPERATIONS</p>
+    <h1>备份管理</h1>
+    <p class="subtitle">创建、恢复和删除容器备份</p>
+  </div>
+  <div class="heading-actions">
+    <button class="secondary" (click)="openSettings()" title="备份保留设置"><dc-icon name="settings"></dc-icon>保留设置</button>
+    <button class="secondary" (click)="create('yaml')" title="创建 YAML 备份"><dc-icon name="yaml"></dc-icon>YAML</button>
+    <button class="secondary" (click)="create('json')" title="创建 JSON 备份"><dc-icon name="json"></dc-icon>JSON</button>
+    <button class="primary" (click)="load()" title="刷新备份"><dc-icon name="refresh"></dc-icon>刷新</button>
+  </div>
+</section>
+
+<div class="alert error-alert" *ngIf="error && files.length">ⓘ {{ error }}</div>
+
+<section class="stats stats-three">
+  <div><strong>{{ files.length }}</strong><span>总备份数</span></div>
+  <div class="blue"><strong>{{ jsonCount }}</strong><span>JSON 备份</span></div>
+  <div class="violet"><strong>{{ yamlCount }}</strong><span>YAML 备份</span></div>
+</section>
+
+<dc-section-toolbar title="备份列表" [subtitle]="'每种格式保留 ' + retention + ' 份'"></dc-section-toolbar>
+
+<section class="backup-list" *ngIf="files.length">
+  <ng-container *ngFor="let group of groups">
+    <section class="backup-group">
+      <h2>{{ group.date }} <small>{{ group.files.length }} 个</small></h2>
+      <div class="backup-card-grid">
+        <article class="backup-card" *ngFor="let file of group.files">
+          <span class="backup-icon">▱</span>
+          <div class="backup-card-body">
+            <div><b>{{ base(file) }}</b><span class="file-badge">{{ type(file) }}</span></div>
+            <small>{{ file }}</small>
+          </div>
+          <div class="backup-actions">
+            <button class="secondary" *ngIf="file.endsWith('.json')" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
+            <button class="danger-link" (click)="remove(file)"><dc-icon name="delete"></dc-icon>删除</button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </ng-container>
+</section>
+
+<dc-page-state *ngIf="!files.length" [loading]="loading" [error]="error" emptyText="暂无备份"></dc-page-state>
+
+<div class="modal-backdrop" *ngIf="showSettings" (click)="closeSettings($event)">
+  <section class="modal settings-modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">BACKUP SETTINGS</p>
+        <h2>备份保留数量</h2>
+        <p>JSON 和 YAML 分别保留最近的备份</p>
+      </div>
+      <button class="modal-close" (click)="closeSettings()" aria-label="关闭">×</button>
+    </div>
+    <label class="form-field">保留数量<input type="number" min="1" max="100" [(ngModel)]="retentionDraft"><span class="path-hint">请输入 1-100 之间的整数</span></label>
+    <p class="message error" *ngIf="settingsError">{{ settingsError }}</p>
+    <div class="modal-actions">
+      <button class="secondary" (click)="closeSettings()">取消</button>
+      <button class="primary" (click)="saveSettings()" [disabled]="saving">{{ saving ? '保存中…' : '保存设置' }}</button>
+    </div>
+  </section>
+</div>

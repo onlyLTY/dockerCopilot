@@ -1,0 +1,94 @@
+// 应用外壳、侧边栏、导航、顶栏、内容区
+
+.app-shell { height: 100vh; overflow: hidden; display: flex; background: var(--page-bg); }
+
+/* ===== 侧边栏 ===== */
+.sidebar {
+  position: fixed; inset: 0 auto 0 0; width: 260px; height: 100vh;
+  background: var(--surface); border-right: 1px solid var(--line);
+  padding: 24px 18px; display: flex; flex-direction: column; z-index: 10; overflow-y: auto;
+}
+
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 8px 24px; border-bottom: 1px solid var(--line);
+}
+.brand.centered { justify-content: center; border: 0; padding: 0; }
+.brand-logo { width: 48px; height: 48px; border-radius: 14px; object-fit: contain; flex: none; }
+.brand strong { display: block; font-size: 16px; color: var(--text); white-space: nowrap; }
+.brand span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+
+/* ===== 导航菜单 ===== */
+nav { display: grid; gap: 6px; margin-top: 24px; }
+nav a {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--muted); text-decoration: none;
+  padding: 12px 14px; border-radius: 10px; font-size: 14px;
+}
+nav a dc-icon { --icon-size: 22px; color: var(--muted); }
+nav a:hover,
+nav a.active { background: rgba(8, 125, 183, .1); color: var(--accent); }
+nav a:hover dc-icon,
+nav a.active dc-icon { color: var(--accent); }
+
+/* ===== 侧边栏底部 ===== */
+.sidebar-bottom { margin-top: auto; padding-top: 16px; }
+.sidebar-actions {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px; margin-bottom: 14px;
+}
+.sidebar-actions button {
+  display: grid; place-items: center; width: 36px; height: 36px;
+  border: 0; border-radius: 9px; background: transparent; color: var(--muted);
+}
+.sidebar-actions button dc-icon { --icon-size: 18px; }
+.sidebar-actions button:hover,
+.sidebar-actions button:focus-visible { background: var(--page-bg); color: var(--accent); outline: 0; }
+.sidebar-actions .theme-button.selected,
+.sidebar-actions .display-button.selected { background: var(--page-bg); color: var(--accent); }
+/* 退出：展开态靠右，去掉红色背景，仅图标为红色 */
+.sidebar-actions .sidebar-logout { margin-left: auto; color: var(--danger); }
+.sidebar-actions .sidebar-logout:hover,
+.sidebar-actions .sidebar-logout:focus-visible { background: var(--page-bg); color: var(--danger); }
+
+/* ===== 版本卡片 ===== */
+.version-card {
+  padding: 0; border: 1px solid var(--line); border-radius: 12px;
+  overflow: hidden; background: var(--surface);
+}
+.version-card-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px;
+}
+.version-card-head span { color: var(--muted); font-size: 11px; }
+.version-card-head strong { color: var(--text); font-size: 15px; }
+
+/* ===== 内容区 / 顶栏 ===== */
+.content-wrap { margin-left: 260px; flex: 1; min-width: 0; height: 100vh; overflow-y: auto; }
+.content-wrap main { max-width: 1550px; margin: 0 auto; padding: 0 46px 60px; }
+.topbar {
+  display: none; height: 56px; background: var(--surface); border-bottom: 1px solid var(--line);
+  align-items: center; gap: 16px; padding: 0 22px;
+}
+.icon-button { border: 0; background: transparent; color: var(--text); display: grid; place-items: center; }
+.icon-button dc-icon { --icon-size: 20px; }
+.mobile-logout { margin-left: auto; border: 0; background: transparent; color: var(--danger); display: grid; place-items: center; }
+.mobile-logout dc-icon { --icon-size: 20px; }
+.sidebar-overlay { display: none; }
+
+/* ===== 折叠态 ===== */
+.compact-shell .sidebar { width: 82px; padding: 24px 14px; }
+.compact-shell .content-wrap { margin-left: 82px; }
+.compact-shell .brand { justify-content: center; padding-left: 0; padding-right: 0; }
+.compact-shell .brand > div:last-child { display: none; }
+.compact-shell nav a { justify-content: center; gap: 0; padding: 12px; }
+.compact-shell nav a span { display: none; }
+.compact-shell .sidebar-actions { flex-direction: column; align-items: center; gap: 8px; padding: 0; }
+.compact-shell .sidebar-actions .sidebar-logout { margin-left: 0; }
+.compact-shell .version-card { display: none; }
+
+/* ===== 公共（未登录）外壳 ===== */
+.public-shell { overflow: auto; }
+.public-shell .content-wrap { margin-left: 0; }
+.public-shell .content-wrap main { max-width: none; min-height: 100vh; padding: 0; }
+.public-shell .page-heading { position: static; padding: 0; background: transparent; }

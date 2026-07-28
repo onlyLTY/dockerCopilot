@@ -1,0 +1,92 @@
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">DOCKER OPERATIONS</p>
+    <h1>项目</h1>
+    <p class="subtitle">管理 Compose 项目和配置文件</p>
+  </div>
+  <div class="heading-actions">
+    <button class="secondary" (click)="load()" title="刷新项目"><dc-icon name="refresh"></dc-icon>刷新</button>
+    <button class="primary" (click)="newProject()" title="新建项目"><dc-icon name="add"></dc-icon>新建</button>
+  </div>
+</section>
+
+<div class="alert error-alert" *ngIf="messageType === 'error' && data?.projects?.length">ⓘ {{ message }}</div>
+
+<section class="stats stats-four">
+  <div><strong>{{ data?.summary?.total || 0 }}</strong><span>项目总数</span></div>
+  <div class="green"><strong>{{ data?.summary?.using || 0 }}</strong><span>使用中</span></div>
+  <div class="amber"><strong>{{ data?.summary?.stopped || 0 }}</strong><span>已停止</span></div>
+  <div class="violet"><strong>{{ data?.summary?.unused || 0 }}</strong><span>未使用</span></div>
+</section>
+
+<dc-section-toolbar title="项目列表" [subtitle]="(data?.summary?.total || 0) + ' 个项目'"></dc-section-toolbar>
+
+<section class="resource-grid project-grid" *ngIf="data?.projects?.length">
+  <article class="resource-card project-card" *ngFor="let project of data?.projects">
+    <div class="resource-head">
+      <span class="project-dot" [class]="project.status"></span>
+      <div>
+        <b>{{ project.name || '未解析项目' }}</b>
+        <span>{{ project.root }}</span>
+        <small>{{ project.containers.length }} 个容器 · {{ project.files.length }} 个文件</small>
+      </div>
+    </div>
+    <div class="resource-meta">
+      <span>{{ statusLabel(project.status) }}</span>
+      <span>{{ project.ports.length }} 个端口</span>
+    </div>
+    <div class="resource-actions">
+      <button class="primary" (click)="openEditor(project)">查看 / 编辑</button>
+    </div>
+  </article>
+</section>
+
+<dc-page-state *ngIf="!data?.projects?.length" [loading]="loading" [error]="messageType === 'error' ? message : ''" emptyText="暂无项目"></dc-page-state>
+
+<div class="modal-backdrop" *ngIf="editorProject" (click)="closeEditor($event)">
+  <section class="modal editor-modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">COMPOSE PROJECT</p>
+        <h2>{{ editorProject.name || '项目' }}</h2>
+        <p>{{ editorProject.root }}</p>
+      </div>
+      <button class="modal-close" (click)="closeEditor()" aria-label="关闭">×</button>
+    </div>
+    <div class="file-tabs">
+      <button *ngFor="let file of editorProject.files" [class.active]="filename === file.name" (click)="openFile(file.name)">{{ file.name }}</button>
+    </div>
+    <textarea class="code-editor" [(ngModel)]="content" spellcheck="false"></textarea>
+    <div class="editor-foot">
+      <span class="message" [class.error]="messageType === 'error'">{{ message }}</span>
+      <button class="secondary" (click)="validate()">格式校验</button>
+      <button class="secondary" (click)="previewDeploy()">部署预览</button>
+      <button class="primary" (click)="save()">保存文件</button>
+    </div>
+    <div class="risk-box" *ngIf="preview as p">
+      <b>部署预览</b>
+      <p>服务：{{ p['services']?.join(', ') }}</p>
+      <p *ngIf="risks.length">风险：{{ risks.length }} 项，请确认后部署</p>
+      <button class="primary" (click)="deploy()">确认部署</button>
+    </div>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="showCreate" (click)="closeCreate($event)">
+  <section class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">NEW PROJECT</p>
+        <h2>新建项目</h2>
+      </div>
+      <button class="modal-close" (click)="closeCreate()" aria-label="关闭">×</button>
+    </div>
+    <label class="form-field">项目名称<input [(ngModel)]="projectName" placeholder="例如：my-app"></label>
+    <label class="form-field">Compose 配置<textarea class="compose-input" [(ngModel)]="projectContent" spellcheck="false"></textarea></label>
+    <p class="message error" *ngIf="createError">{{ createError }}</p>
+    <div class="modal-actions">
+      <button class="secondary" (click)="closeCreate()">取消</button>
+      <button class="primary" [disabled]="creating" (click)="createProject()">{{ creating ? '创建中…' : '创建项目' }}</button>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,64 @@
+// 登录页特例样式：仅登录组件使用，作为组件级样式单独维护
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--page-bg);
+}
+
+.login-card {
+  width: min(410px, calc(100% - 34px));
+  padding: 38px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 18px 45px #27466d12;
+}
+
+.login-card h1 {
+  margin: 35px 0 7px;
+  color: var(--text);
+  font-size: 24px;
+}
+
+.login-card > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.login-card label {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 24px;
+}
+
+.login-card input {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  outline: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.login-card input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px #138bc21a;
+}
+
+.login-card .brand.centered {
+  justify-content: center;
+  border: 0;
+  padding: 0;
+}
+
+.message.error {
+  margin-top: 12px;
+  color: #c44c55;
+  font-size: 12px;
+}

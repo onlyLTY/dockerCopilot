@@ -1,0 +1,14 @@
+<div class="page-state">
+  <ng-container *ngIf="loading">
+    <span class="page-state-spinner" aria-hidden="true"></span>
+    <span class="page-state-text">读取中…</span>
+  </ng-container>
+  <ng-container *ngIf="!loading && error">
+    <span class="page-state-icon" aria-hidden="true">⚠</span>
+    <span class="page-state-text">{{ error }}</span>
+  </ng-container>
+  <ng-container *ngIf="!loading && !error">
+    <span class="page-state-icon" aria-hidden="true">○</span>
+    <span class="page-state-text">{{ emptyText }}</span>
+  </ng-container>
+</div>

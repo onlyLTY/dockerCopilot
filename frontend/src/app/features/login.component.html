@@ -1,0 +1,13 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="brand centered">
+      <img class="brand-logo" src="assets/DockerCopilotlogo.png" alt="Docker Copilot">
+      <div><strong>Docker Copilot</strong><span>容器管理平台</span></div>
+    </div>
+    <h1>登录管理台</h1>
+    <p>输入服务端配置的 secretKey 继续</p>
+    <label>Secret Key<input type="password" [(ngModel)]="secretKey" (keyup.enter)="login()" autocomplete="current-password"></label>
+    <button class="primary full" (click)="login()">进入管理台</button>
+    <div class="message error" *ngIf="error">{{ error }}</div>
+  </div>
+</div>

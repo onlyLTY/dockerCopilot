@@ -13,14 +13,14 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "../dist",
+            "outputPath": "../build/frontend",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
-            "inlineStyleLanguage": "css",
-            "assets": ["src/assets"],
-            "styles": ["src/styles.css"]
+            "inlineStyleLanguage": "scss",
+            "assets": [{ "glob": "**/*", "input": "src/assets", "output": "assets", "ignore": ["scss/**"] }],
+            "styles": ["src/assets/scss/styles.scss"]
           },
           "configurations": {
             "production": { "budgets": [{ "type": "initial", "maximumWarning": "1mb", "maximumError": "2mb" }], "outputHashing": "all" },

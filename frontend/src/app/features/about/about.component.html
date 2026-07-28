@@ -1,0 +1,22 @@
+<section class="about-hero panel">
+  <img class="brand-logo about-mark" src="assets/DockerCopilotlogo.png" alt="Docker Copilot">
+  <h1>Docker Copilot</h1>
+  <p>一个简洁、优雅且强大的 Docker 容器管理工具，帮助你轻松管理容器、镜像和项目。</p>
+  <div class="about-actions">
+    <a class="primary" href="https://github.com/onlyLTY/dockerCopilot" target="_blank" rel="noreferrer">GitHub</a>
+    <a class="secondary" href="https://github.com/onlyLTY/dockerCopilot/issues" target="_blank" rel="noreferrer">反馈问题</a>
+  </div>
+</section>
+
+<section class="about-grid">
+  <article class="panel">
+    <h2>版本信息</h2>
+    <p *ngIf="version.version">当前版本 <strong>{{ version.version }}</strong></p>
+    <p *ngIf="version.buildDate">构建日期 {{ version.buildDate }}</p>
+    <p class="muted" *ngIf="!version.version">版本信息暂不可用</p>
+  </article>
+  <article class="panel">
+    <h2>关于项目</h2>
+    <p>Docker Copilot 提供容器状态查看、镜像管理、Compose 项目编辑、备份恢复和端口检查能力。</p>
+  </article>
+</section>

@@ -1,0 +1,15 @@
+// 基础样式：重置、排版、按钮/输入元素默认外观
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--page-bg);
+  color: var(--text);
+}
+
+button,
+input,
+textarea { font: inherit; }
+
+button { cursor: pointer; }

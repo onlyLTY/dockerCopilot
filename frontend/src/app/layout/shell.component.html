@@ -1,0 +1,33 @@
+<div class="app-shell" [class.public-shell]="!auth.isAuthenticated()" [class.compact-shell]="ui.compact()" [class.dark-shell]="ui.theme() === 'dark'">
+  <aside class="sidebar" *ngIf="auth.isAuthenticated()" [class.open]="open">
+    <div class="brand">
+      <img class="brand-logo" src="assets/DockerCopilotlogo.png" alt="Docker Copilot">
+      <div><strong>Docker Copilot</strong><span>容器管理平台</span></div>
+    </div>
+    <nav>
+      <a href="#/containers" title="容器" [class.active]="isActive('/containers')" (click)="navigate('/containers')"><dc-icon name="containers"></dc-icon><span>容器</span></a>
+      <a href="#/images" title="镜像" [class.active]="isActive('/images')" (click)="navigate('/images')"><dc-icon name="images"></dc-icon><span>镜像</span></a>
+      <a href="#/compose" title="项目" [class.active]="isActive('/compose')" (click)="navigate('/compose')"><dc-icon name="compose"></dc-icon><span>项目</span></a>
+      <a href="#/backups" title="备份" [class.active]="isActive('/backups')" (click)="navigate('/backups')"><dc-icon name="storage"></dc-icon><span>备份</span></a>
+      <a href="#/icons" title="图标" [class.active]="isActive('/icons')" (click)="navigate('/icons')"><dc-icon name="icons"></dc-icon><span>图标</span></a>
+      <a href="#/ports" title="端口" [class.active]="isActive('/ports')" (click)="navigate('/ports')"><dc-icon name="ports"></dc-icon><span>端口</span></a>
+      <a href="#/about" title="关于" [class.active]="isActive('/about')" (click)="navigate('/about')"><dc-icon name="about"></dc-icon><span>关于</span></a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-actions">
+        <button class="theme-button" [class.selected]="ui.theme() === 'dark'" (click)="ui.toggleTheme()" [attr.title]="ui.theme() === 'dark' ? '切换浅色主题' : '切换深色主题'" [attr.aria-label]="ui.theme() === 'dark' ? '切换浅色主题' : '切换深色主题'"><dc-icon name="theme"></dc-icon></button>
+        <button class="display-button" [class.selected]="ui.compact()" (click)="ui.toggleCompact()" title="切换显示" aria-label="切换显示"><dc-icon name="display"></dc-icon></button>
+        <button class="sidebar-logout" (click)="logout()" title="退出" aria-label="退出"><dc-icon name="logout"></dc-icon></button>
+      </div>
+      <div class="version-card"><div class="version-card-head"><span>版本信息</span><strong>{{ version.version || '读取中' }}</strong></div></div>
+    </div>
+  </aside>
+  <button class="sidebar-overlay" *ngIf="open && auth.isAuthenticated()" (click)="closeMenu()" aria-label="关闭菜单"></button>
+  <div class="content-wrap">
+    <header class="topbar" *ngIf="auth.isAuthenticated()">
+      <button class="icon-button" (click)="open = !open" aria-label="打开菜单" title="打开菜单"><dc-icon name="menu"></dc-icon></button>
+      <button class="mobile-logout" (click)="logout()" title="退出" aria-label="退出"><dc-icon name="logout"></dc-icon></button>
+    </header>
+    <main><ng-content /></main>
+  </div>
+</div>

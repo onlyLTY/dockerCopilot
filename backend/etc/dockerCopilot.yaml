@@ -1,0 +1,20 @@
+Name: dockerCopilot          # 服务名，仅用于日志/监控标识
+Host: 0.0.0.0                # 监听地址。0.0.0.0=所有网卡，容器里必须这样
+Port: 12712                  # 服务端口
+Timeout: 3600000     # 请求超时(毫秒)=3600秒=60分钟
+Log:
+  Encoding: plain            # 日志格式。plain=纯文本，可选 json
+Auth:
+  AccessSecret: ${secretKey} # JWT 签名密钥，来自环境变量 secretKey（就是你登录用的那个）
+  AccessExpire: 7257600      # token 有效期(秒)，7257600≈84天
+CorsOrigins: []              # 允许的跨域来源。空=不额外放行；填了才会开 CORS
+Compose:                     # Compose 项目管理相关
+  ScanPaths:
+    - /compose               # 扫描 compose 项目的目录（对应你挂载到容器的 /compose）
+  BackupDir: /data/backups/compose-projects  # compose 项目备份目录
+  PathMappings: []           # 宿主↔容器路径映射，用于修正 compose 里的挂载路径
+  MaxDepth: 3                # 扫描子目录最大深度
+  MaxFileSize: 10485760      # 单个 compose 文件大小上限(字节)=10MB
+  MaxFiles: 20               # 单项目最多识别的文件数
+  AllowHighRisk: false       # 是否允许高危操作（如危险命令）。默认关，建议保持
+  CommandTimeoutSec: 300     # compose 命令执行超时(秒)=5分钟

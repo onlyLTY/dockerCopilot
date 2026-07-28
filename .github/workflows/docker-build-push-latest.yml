@@ -32,7 +32,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: my-artifact-frontend-dist
-          path: dist/browser
+          path: build/frontend/browser
 
   build-backend:
     needs: [ build-frontend ]
@@ -49,10 +49,10 @@ jobs:
         with:
           pattern: my-artifact-frontend-*
           merge-multiple: true
-          path: dist/browser
+          path: backend/web/dist/browser
 
-      - run: ls -R dist/browser
-      - run: test -f dist/browser/index.html
+      - run: ls -R backend/web/dist/browser
+      - run: test -f backend/web/dist/browser/index.html
 
       - name: Get version from file
         id: get_version
@@ -67,19 +67,19 @@ jobs:
 
       - name: Build for ${{ matrix.arch }}
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -a --trimpath -ldflags="-w -s -X 'github.com/onlyLTY/dockerCopilot/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/dockerCopilot/internal/config.BuildDate=$(date)'" -o build/linux/${{ matrix.arch }}/dockerCopilot .
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -C backend -a --trimpath -ldflags="-w -s -X 'github.com/onlyLTY/dockerCopilot/internal/config.Version=${{ env.version }}' -X 'github.com/onlyLTY/dockerCopilot/internal/config.BuildDate=$(date)'" -o ../build/backend/linux/${{ matrix.arch }}/dockerCopilot .
 
       - name: Prepare Files
         run: |
-          mkdir -p dc-back-${{ matrix.arch }}
-          cp -r build dc-back-${{ matrix.arch }}/dist
-          cp -r etc dc-back-${{ matrix.arch }}/etc
+          mkdir -p build/docker-${{ matrix.arch }}
+          cp -r build/backend build/docker-${{ matrix.arch }}/dist
+          cp -r backend/etc build/docker-${{ matrix.arch }}/etc
 
       - name: Upload Backend Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: my-artifact-backend-${{ matrix.arch }}
-          path: dc-back-${{ matrix.arch }}
+          path: build/docker-${{ matrix.arch }}
 
   docker-setup:
     runs-on: ubuntu-latest
@@ -93,9 +93,9 @@ jobs:
         with:
           pattern: my-artifact-backend-*
           merge-multiple: true
-          path: dc-back
+          path: build/docker
 
-      - run: ls -R dc-back
+      - run: ls -R build/docker
 
       - name: Docker Setup Buildx
         uses: docker/setup-buildx-action@v3.0.0

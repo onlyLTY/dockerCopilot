@@ -2,22 +2,32 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ComposeService, ComposeProject, ProjectsData } from '../../core/compose.service';
+import { PageStateComponent } from '../../shared/page-state.component';
+import { SectionToolbarComponent } from '../../shared/section-toolbar.component';
+import { IconComponent } from '../../shared/icon.component';
 
-@Component({ selector: 'dc-compose', standalone: true, imports: [CommonModule, FormsModule], template: `
-<section class="page-heading"><div><p class="eyebrow">PROJECT LIFECYCLE</p><h1>Compose 项目</h1><p class="subtitle">查看、编辑、校验和部署 Compose 文件</p></div><button class="primary" (click)="load()">↻ 刷新项目</button></section>
-<div class="compose-layout"><section class="panel project-list"><div class="panel-head"><div><h2>项目目录</h2><p>{{ data?.summary?.total || 0 }} 个项目</p></div><button class="secondary" (click)="newProject()">＋ 新建</button></div><button class="project-row" *ngFor="let project of data?.projects" [class.active]="selected?.id === project.id" (click)="select(project)"><span class="project-dot" [class]="project.status"></span><span><b>{{ project.name || '未解析项目' }}</b><small>{{ project.containers.length }} 个容器 · {{ project.files.length }} 个文件</small></span><em>{{ statusLabel(project.status) }}</em></button></section>
-<section class="panel editor-panel" *ngIf="selected; else empty"><div class="panel-head"><div><h2>{{ selected.name || 'Compose 项目' }}</h2><p>{{ selected.root }}</p></div><div class="editor-actions"><button class="secondary" (click)="validate()">校验</button><button class="primary" (click)="previewDeploy()">部署预览</button></div></div><div class="file-tabs"><button *ngFor="let file of selected.files" [class.active]="filename === file.name" (click)="openFile(file.name)">{{ file.name }}</button></div><textarea class="code-editor" [(ngModel)]="content" spellcheck="false"></textarea><div class="editor-foot"><span *ngIf="version">版本 {{ version.slice(0, 12) }}</span><span class="message" [class.error]="messageType === 'error'">{{ message }}</span><button class="primary" (click)="save()">保存文件</button></div><div class="risk-box" *ngIf="preview as p"><b>部署预览</b><p>服务：{{ p['services']?.join(', ') }}</p><p *ngIf="risks.length">风险：{{ risks.length }} 项，请确认后部署</p><button class="primary" (click)="deploy()">确认部署</button></div></section><ng-template #empty><section class="panel empty-editor"><div class="empty-icon">◇</div><h2>选择一个 Compose 项目</h2><p>从左侧选择项目查看和编辑配置</p></section></ng-template></div>
-`, })
+const defaultCompose = `services:\n  app:\n    image: nginx:alpine\n    ports:\n      - "8080:80"\n`;
+
+@Component({
+  selector: 'dc-compose',
+  standalone: true,
+  imports: [CommonModule, FormsModule, PageStateComponent, SectionToolbarComponent, IconComponent],
+  templateUrl: './compose.component.html',
+})
 export class ComposeComponent {
-  private readonly service = inject(ComposeService); data?: ProjectsData; selected?: ComposeProject; filename = ''; content = ''; version = ''; message = ''; messageType = ''; preview?: Record<string, any>; risks: any[] = [];
+  private readonly service = inject(ComposeService); data?: ProjectsData; editorProject?: ComposeProject; filename = ''; content = ''; version = ''; message = ''; messageType = ''; preview?: Record<string, any>; risks: any[] = []; showCreate = false; creating = false; loading = false; projectName = ''; projectContent = defaultCompose; createError = '';
   constructor() { this.load(); }
-  load(): void { this.service.projects().subscribe({ next: result => { this.data = result.data; if (!this.selected && this.data.projects.length) this.select(this.data.projects[0]); } }); }
-  select(project: ComposeProject): void { this.selected = project; const file = project.files.find(item => item.name === 'compose.yaml') ?? project.files[0]; if (file) this.openFile(file.name); }
-  openFile(name: string): void { if (!this.selected) return; this.filename = name; this.service.file(this.selected.id, name).subscribe({ next: result => { this.content = result.data.content; this.version = result.data.version; this.message = ''; } }); }
-  save(): void { if (!this.selected) return; this.service.update(this.selected.id, this.filename, this.content, this.version).subscribe({ next: result => { this.version = result.data.version; this.message = '已保存并创建版本备份'; this.messageType = ''; }, error: err => { this.message = err.error?.msg ?? '保存失败'; this.messageType = 'error'; } }); }
-  validate(): void { if (!this.selected) return; this.service.validate(this.selected.id, this.filename, this.content).subscribe({ next: result => { this.message = `校验通过，包含 ${result.data.services.length} 个服务`; this.messageType = ''; }, error: err => { this.message = err.error?.msg ?? '校验失败'; this.messageType = 'error'; } }); }
-  previewDeploy(): void { if (!this.selected) return; this.service.deployPreview(this.selected.id, this.filename).subscribe({ next: result => { this.preview = result.data; this.risks = (result.data['risks'] as any[]) ?? []; this.message = '预览已生成，请确认风险和文件版本'; }, error: err => { this.message = err.error?.msg ?? '预览失败'; this.messageType = 'error'; } }); }
-  deploy(): void { if (!this.selected || !this.preview) return; this.service.deploy(this.selected.id, this.filename, String(this.preview['confirmToken']), true).subscribe({ next: () => this.message = '部署命令已完成', error: err => { this.message = err.error?.msg ?? '部署失败'; this.messageType = 'error'; } }); }
-  newProject(): void { this.message = '请使用后端 API 创建项目后刷新列表'; }
-  statusLabel(status: string): string { return ({ using: '使用中', stopped: '已停止', unused: '未使用', unknown: '未知' } as Record<string, string>)[status] ?? status; }
+  load() { this.loading = true; this.message = ''; this.messageType = ''; this.service.projects().subscribe({ next: r => { this.loading = false; if (r.code === 200) this.data = r.data; else this.showError(r.msg); }, error: e => { this.loading = false; this.showError(e.error?.msg || '读取项目失败'); } }); }
+  openEditor(p: ComposeProject) { this.editorProject = p; this.preview = undefined; this.message = ''; this.messageType = ''; const f = p.files.find(x => x.name === 'compose.yaml') || p.files[0]; if (f) this.openFile(f.name); }
+  openFile(n: string) { if (!this.editorProject) return; this.filename = n; this.service.file(this.editorProject.id, n).subscribe({ next: r => r.code === 200 ? (this.content = r.data.content, this.version = r.data.version, this.message = '') : this.showError(r.msg), error: e => this.showError(e.error?.msg || '读取文件失败') }); }
+  save() { if (!this.editorProject) return; this.service.update(this.editorProject.id, this.filename, this.content, this.version).subscribe({ next: r => r.code === 200 ? (this.version = r.data.version, this.message = '已保存') : this.showError(r.msg), error: e => this.showError(e.error?.msg || '保存失败') }); }
+  validate() { if (!this.editorProject) return; this.service.validate(this.editorProject.id, this.filename, this.content).subscribe({ next: r => r.code === 200 ? (this.message = '校验通过，包含 ' + r.data.services.length + ' 个服务', this.messageType = '') : this.showError(r.msg), error: e => this.showError(e.error?.msg || '校验失败') }); }
+  previewDeploy() { if (!this.editorProject) return; this.service.deployPreview(this.editorProject.id, this.filename).subscribe({ next: r => r.code === 200 ? (this.preview = r.data, this.risks = (r.data['risks'] as any[]) || [], this.message = '预览已生成') : this.showError(r.msg), error: e => this.showError(e.error?.msg || '预览失败') }); }
+  deploy() { if (!this.editorProject || !this.preview) return; this.service.deploy(this.editorProject.id, this.filename, String(this.preview['confirmToken']), true).subscribe({ next: r => { if (r.code === 200) { this.message = '部署命令已完成'; this.load(); } else this.showError(r.msg); }, error: e => this.showError(e.error?.msg || '部署失败') }); }
+  newProject() { this.projectName = ''; this.projectContent = defaultCompose; this.createError = ''; this.showCreate = true; }
+  createProject() { const n = this.projectName.trim(); if (!n) { this.createError = '请输入项目名称'; return; } this.creating = true; this.service.createProject(n, 'compose.yaml', this.projectContent).subscribe({ next: r => { this.creating = false; if (r.code !== 200) { this.createError = r.msg; return; } this.closeCreate(); this.load(); }, error: e => { this.creating = false; this.createError = e.error?.msg || '创建项目失败'; } }); }
+  closeEditor(e?: Event) { if (!e || e.target === e.currentTarget) this.editorProject = undefined; }
+  closeCreate(e?: Event) { if (!e || e.target === e.currentTarget) { this.showCreate = false; this.creating = false; this.createError = ''; this.projectName = ''; this.projectContent = defaultCompose; } }
+  showError(m: string) { this.message = m; this.messageType = 'error'; }
+  statusLabel(s: string) { return ({ using: '使用中', stopped: '已停止', unused: '未使用', unknown: '未知' } as Record<string, string>)[s] || s; }
 }

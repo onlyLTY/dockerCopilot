@@ -1,0 +1,68 @@
+// 通用按钮：主/次/危险按钮，图标按钮，图标与文字间距
+// 所有带图标的按钮统一使用 inline-flex + gap，使图标与文字之间留出间距。
+.primary,
+.secondary,
+.danger-link,
+.icon-button,
+.logout,
+.resource-actions button,
+.icon-actions button,
+.backup-actions button,
+.editor-actions button,
+.file-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.primary,
+.secondary {
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 16px;
+  font-weight: 650;
+  font-size: 13px;
+}
+
+.primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 5px 12px #087db733;
+
+  &:hover { filter: brightness(0.94); }
+  &:disabled { opacity: 0.55; cursor: wait; }
+}
+
+.secondary {
+  background: #edf2f7;
+  color: #42516a;
+
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+
+.full { width: 100%; margin-top: 20px; }
+
+// 危险操作链接式按钮：图标颜色跟随文字颜色（由 dc-icon 的 currentColor 继承）
+.danger-link {
+  border: 0;
+  background: transparent;
+  color: #bd5660;
+  font-size: 12px;
+  padding: 0;
+
+  &.force { color: #92535b; }
+}
+
+// 顶部/移动端图标按钮
+.icon-button {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.logout {
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+}

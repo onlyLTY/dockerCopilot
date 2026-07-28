@@ -5,9 +5,10 @@ WORKDIR /app
 
 ARG TARGETPLATFORM
 
-COPY dc-back/dist/$TARGETPLATFORM/dockerCopilot ./dockerCopilot
-COPY dc-back/etc/. ./etc
-COPY start.sh ./start.sh
+COPY build/docker/dist/$TARGETPLATFORM/dockerCopilot ./dockerCopilot
+COPY build/docker/etc/. ./etc
+COPY build/docker/web/. ./web
+COPY backend/start.sh ./start.sh
 
 RUN apk add --no-cache tzdata \
     && chmod +x start.sh \
@@ -15,10 +16,13 @@ RUN apk add --no-cache tzdata \
 
 # 设置环境变量
 ENV secretKey="" \
+    WORKDIR="/app" \
     DOCKER_HOST="unix:///var/run/docker.sock" \
     BACKUP_DIR="/data/backups" \
     TZ="Asia/Shanghai"
 
 VOLUME ["/data"]
+
+EXPOSE 12712
 # 设置启动命令
 CMD ["./start.sh"]

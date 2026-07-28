@@ -15,7 +15,10 @@ export interface PortUsage { project: string; containerID: string; containerName
 export class ComposeService {
   private readonly http = inject(HttpClient);
   projects(): Observable<ApiResponse<ProjectsData>> { return this.http.get<ApiResponse<ProjectsData>>('/api/compose/projects'); }
-  ports(): Observable<ApiResponse<{ ports: PortUsage[]; conflicts: string[] }>> { return this.http.get<ApiResponse<{ ports: PortUsage[]; conflicts: string[] }>>('/api/ports'); }
+  createProject(projectName: string, filename: string, content: string): Observable<ApiResponse<{ projectId: string; version: string }>> {
+    return this.http.post<ApiResponse<{ projectId: string; version: string }>>('/api/compose/projects', { projectName, filename, content });
+  }
+  ports(): Observable<ApiResponse<{ ports: PortUsage[]; conflicts: string[]; warnings: string[] }>> { return this.http.get<ApiResponse<{ ports: PortUsage[]; conflicts: string[]; warnings: string[] }>>('/api/ports'); }
   files(projectId: string): Observable<ApiResponse<ComposeFile[]>> { return this.http.get<ApiResponse<ComposeFile[]>>(`/api/compose/projects/${projectId}/files`); }
   file(projectId: string, filename: string): Observable<ApiResponse<{ filename: string; content: string; version: string }>> {
     return this.http.get<ApiResponse<{ filename: string; content: string; version: string }>>(`/api/compose/projects/${projectId}/files/${encodeURIComponent(filename)}`);

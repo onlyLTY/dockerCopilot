@@ -1,0 +1,37 @@
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">DOCKER OPERATIONS</p>
+    <h1>端口</h1>
+    <p class="subtitle">查看所有容器使用的端口</p>
+  </div>
+  <button class="primary" (click)="load()" title="刷新端口"><dc-icon name="refresh"></dc-icon>刷新</button>
+</section>
+
+<div class="alert warning-alert" *ngIf="data.warnings.length">⚠ {{ data.warnings.join('；') }}</div>
+<div class="alert warning-alert" *ngIf="data.conflicts.length">⚠ 发现 {{ data.conflicts.length }} 个端口冲突：{{ data.conflicts.join('、') }}</div>
+
+<section class="stats stats-two">
+  <div><strong>{{ data.ports.length }}</strong><span>端口映射</span></div>
+  <div class="red"><strong>{{ data.conflicts.length }}</strong><span>端口冲突</span></div>
+</section>
+
+<dc-section-toolbar title="端口列表" [subtitle]="data.ports.length + ' 条端口记录'"></dc-section-toolbar>
+
+<section class="resource-grid port-grid" *ngIf="data.ports.length">
+  <article class="resource-card port-card" *ngFor="let p of data.ports">
+    <div class="resource-head">
+      <span class="port-icon">↔</span>
+      <div>
+        <b>{{ p.containerName }}</b>
+        <span>{{ p.project || '独立容器' }}</span>
+        <small>{{ p.state }}</small>
+      </div>
+    </div>
+    <div class="port-values">
+      <strong>{{ p.hostIP || '0.0.0.0' }}:{{ p.hostPort || '未发布' }}</strong>
+      <span>→ {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
+    </div>
+  </article>
+</section>
+
+<dc-page-state *ngIf="!data.ports.length" [loading]="loading" [error]="error" emptyText="暂无端口使用"></dc-page-state>
