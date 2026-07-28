@@ -1,21 +1,42 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { PortService } from '../../core/port.service';
 import { PortUsage } from '../../core/compose.service';
+import { IconService } from '../../core/icon.service';
 import { PageStateComponent } from '../../shared/page-state.component';
 import { SectionToolbarComponent } from '../../shared/section-toolbar.component';
 import { IconComponent } from '../../shared/icon.component';
 
+interface PortLine { hostPort: string; containerPort: string; protocol: string; }
+interface PortGroup { containerName: string; project: string; image: string; ports: PortLine[]; }
+
 @Component({
   selector: 'dc-ports',
   standalone: true,
-  imports: [CommonModule, PageStateComponent, SectionToolbarComponent, IconComponent],
+  imports: [PageStateComponent, SectionToolbarComponent, IconComponent],
   templateUrl: './ports.component.html',
 })
 export class PortsComponent {
-  private readonly service = inject(PortService);
-  data = { ports: [] as PortUsage[], conflicts: [] as string[], warnings: [] as string[] };
-  error = ''; loading = false;
-  constructor() { this.load(); }
-  load() { this.loading = true; this.error = ''; this.service.list().subscribe({ next: r => { this.loading = false; if (r.code === 200) this.data = r.data; else this.error = r.msg || '读取端口失败'; }, error: e => { this.loading = false; this.error = e.error?.msg || '读取端口失败'; } }); }
+  private readonly service = inject(PortService); private readonly icons = inject(IconService);
+  // 数据、加载态、错误态来自服务常驻缓存
+  readonly data = computed(() => this.service.cache.data() || { ports: [] as PortUsage[], conflicts: [] as string[], warnings: [] as string[] });
+  readonly loading = this.service.cache.loading;
+  readonly error = this.service.cache.error;
+  readonly iconMap = computed(() => this.icons.cache.data() || {});
+  // 按容器聚合：一个容器一张卡片，仅展示端口
+  readonly groups = computed<PortGroup[]>(() => {
+    const map = new Map<string, PortGroup>();
+    for (const p of this.data().ports) {
+      const key = p.containerID || p.containerName;
+      if (!map.has(key)) map.set(key, { containerName: p.containerName, project: p.project, image: p.containerName, ports: [] });
+      const g = map.get(key)!;
+      const line: PortLine = { hostPort: p.hostPort, containerPort: p.containerPort, protocol: p.protocol };
+      const label = `${line.hostPort}|${line.containerPort}|${line.protocol}`;
+      if (!g.ports.some(x => `${x.hostPort}|${x.containerPort}|${x.protocol}` === label)) g.ports.push(line);
+    }
+    return Array.from(map.values());
+  });
+  constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
+  refresh() { this.service.refresh(); }
+  icon(g: PortGroup) { return this.icons.resolve(g.image, this.iconMap()); }
+  fallback(e: Event) { (e.target as HTMLImageElement).src = this.icons.actionIcon('containers'); }
 }

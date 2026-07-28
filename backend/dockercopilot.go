@@ -12,9 +12,9 @@ import (
 
 	"github.com/onlyLTY/dockerCopilot/internal/config"
 	"github.com/onlyLTY/dockerCopilot/internal/handler"
+	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
-	"github.com/robfig/cron/v3"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest"
@@ -102,23 +102,35 @@ export const customImageLogos = {
 	if list != nil {
 		go ctx.HubImageInfo.CheckUpdate(list)
 	}
-	corndanmu := cron.New(cron.WithParser(cron.NewParser(
-		cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
-	)))
-	_, err = corndanmu.AddFunc("30 * * * *", func() {
+	// 更新检查定时任务：频率由 settingstore 持久化配置，可在设置页动态调整。
+	updateCheckJob := func() {
 		list, err := utiles.GetImagesList(ctx)
 		if err != nil {
 			logx.Errorf("定时获取镜像列表出错: %v", err)
 			return
 		}
 		ctx.HubImageInfo.CheckUpdate(list)
-	})
-	if err != nil {
-		logx.Errorf("panic添加定时任务出错: %v", err)
-		panic(err)
 	}
-	corndanmu.Start()
-	defer corndanmu.Stop()
+	// 无论开启还是关闭都注入 job 并初始化调度器：spec 为空时只初始化不添加任务，
+	// 便于后续在设置页开启时直接重新调度。
+	interval := settingstore.GetUpdateCheckInterval()
+	if err := ctx.StartUpdateCron(settingstore.UpdateCheckCron(interval), updateCheckJob); err != nil {
+		logx.Errorf("启动更新检查定时任务出错: %v", err)
+	}
+
+	// 自动备份定时任务：同时创建 JSON 与 YAML 备份，频率由 settingstore 配置，可在设置页动态调整。
+	backupJob := func() {
+		if err := utiles.BackupContainer(ctx); err != nil {
+			logx.Errorf("定时备份（JSON）出错: %v", err)
+		}
+		if err := utiles.Backup2Compose(ctx); err != nil {
+			logx.Errorf("定时备份（YAML）出错: %v", err)
+		}
+	}
+	backupInterval := settingstore.GetAutoBackupInterval()
+	if err := ctx.StartBackupCron(settingstore.AutoBackupCron(backupInterval), backupJob); err != nil {
+		logx.Errorf("启动自动备份定时任务出错: %v", err)
+	}
 	httpx.SetErrorHandler(func(err error) (int, any) {
 		switch e := err.(type) {
 		case *errors.CodeMsg:

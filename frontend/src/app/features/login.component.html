@@ -8,6 +8,8 @@
     <p>输入服务端配置的 secretKey 继续</p>
     <label>Secret Key<input type="password" [(ngModel)]="secretKey" (keyup.enter)="login()" autocomplete="current-password"></label>
     <button class="primary full" (click)="login()">进入管理台</button>
-    <div class="message error" *ngIf="error">{{ error }}</div>
+    @if (error()) {
+      <div class="message error">{{ error() }}</div>
+    }
   </div>
 </div>

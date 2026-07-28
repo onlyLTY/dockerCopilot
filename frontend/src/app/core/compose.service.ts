@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
+import { CacheStore, CacheView } from './cache-store';
+import { CacheBus } from './cache-bus';
 
 export interface ApiResponse<T> { code: number; msg: string; data: T; }
 export interface ComposePort { hostIP: string; hostPort: string; containerPort: string; protocol: string; published: boolean; }
@@ -14,9 +16,19 @@ export interface PortUsage { project: string; containerID: string; containerName
 @Injectable({ providedIn: 'root' })
 export class ComposeService {
   private readonly http = inject(HttpClient);
+  private readonly bus = inject(CacheBus);
+  private readonly store = new CacheStore<ProjectsData>(() => this.projects(), '读取项目失败');
+  readonly cache: CacheView<ProjectsData> = this.store;
+
+  constructor() { this.bus.register('compose', this.store); }
+
+  ensureLoaded(): void { this.store.ensureLoaded(); }
+  refresh(): void { this.store.refresh(); }
+
   projects(): Observable<ApiResponse<ProjectsData>> { return this.http.get<ApiResponse<ProjectsData>>('/api/compose/projects'); }
   createProject(projectName: string, filename: string, content: string): Observable<ApiResponse<{ projectId: string; version: string }>> {
-    return this.http.post<ApiResponse<{ projectId: string; version: string }>>('/api/compose/projects', { projectName, filename, content });
+    return this.http.post<ApiResponse<{ projectId: string; version: string }>>('/api/compose/projects', { projectName, filename, content })
+      .pipe(tap(r => { if (r.code === 200) { this.store.refresh(); this.bus.invalidate(['containers', 'ports', 'images']); } }));
   }
   ports(): Observable<ApiResponse<{ ports: PortUsage[]; conflicts: string[]; warnings: string[] }>> { return this.http.get<ApiResponse<{ ports: PortUsage[]; conflicts: string[]; warnings: string[] }>>('/api/ports'); }
   files(projectId: string): Observable<ApiResponse<ComposeFile[]>> { return this.http.get<ApiResponse<ComposeFile[]>>(`/api/compose/projects/${projectId}/files`); }
@@ -32,6 +44,7 @@ export class ComposeService {
   deployPreview(projectId: string, filename: string): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/' + projectId + '/deploy/preview', { projectId, filename });
   }
+  // 部署是异步任务：提交仅返回 taskID，真正完成后由 TaskService 轮询到 isDone 时联动刷新缓存
   deploy(projectId: string, filename: string, confirmToken: string, confirmWarnings: boolean): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/' + projectId + '/deploy', { projectId, filename, confirmToken, confirmWarnings });
   }

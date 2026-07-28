@@ -8,6 +8,7 @@
 .resource-actions button,
 .icon-actions button,
 .backup-actions button,
+.section-toolbar-actions button,
 .editor-actions button,
 .file-tabs button {
   display: inline-flex;
@@ -37,7 +38,9 @@
 .secondary {
   background: #edf2f7;
   color: #42516a;
+  transition: filter .15s, background .15s;
 
+  &:hover:not(:disabled) { filter: brightness(0.96); }
   &:disabled { opacity: 0.55; cursor: not-allowed; }
 }
 
@@ -49,9 +52,13 @@
   background: transparent;
   color: #bd5660;
   font-size: 12px;
-  padding: 0;
+  padding: 6px 10px;
+  border-radius: 7px;
+  transition: background .15s, color .15s;
 
+  &:hover { background: rgba(189, 86, 96, .1); color: #a5424c; }
   &.force { color: #92535b; }
+  &.force:hover { background: rgba(146, 83, 91, .12); }
 }
 
 // 顶部/移动端图标按钮

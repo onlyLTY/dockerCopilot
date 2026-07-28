@@ -20,3 +20,9 @@
 .stats-four { grid-template-columns: repeat(4, 1fr); }
 .stats-three { grid-template-columns: repeat(3, 1fr); }
 .stats-two { grid-template-columns: repeat(2, 1fr); }
+
+/* 紧凑统计条：占位更小，数字与标签同排更省空间 */
+.compact-stats { margin-bottom: 20px; border-radius: 12px; }
+.compact-stats div { padding: 12px 16px; display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.compact-stats strong { font-size: 20px; }
+.compact-stats span { margin-top: 0; font-size: 12px; }

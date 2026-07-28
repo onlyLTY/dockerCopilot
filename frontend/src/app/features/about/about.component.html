@@ -11,9 +11,15 @@
 <section class="about-grid">
   <article class="panel">
     <h2>版本信息</h2>
-    <p *ngIf="version.version">当前版本 <strong>{{ version.version }}</strong></p>
-    <p *ngIf="version.buildDate">构建日期 {{ version.buildDate }}</p>
-    <p class="muted" *ngIf="!version.version">版本信息暂不可用</p>
+    @if (version().version) {
+      <p>当前版本 <strong>{{ version().version }}</strong></p>
+    }
+    @if (version().buildDate) {
+      <p>构建日期 {{ version().buildDate }}</p>
+    }
+    @if (!version().version) {
+      <p class="muted">版本信息暂不可用</p>
+    }
   </article>
   <article class="panel">
     <h2>关于项目</h2>

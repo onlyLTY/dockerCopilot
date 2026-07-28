@@ -9,39 +9,47 @@
 
 <section class="icon-toolbar">
   <input [(ngModel)]="query" placeholder="搜索镜像或容器名称">
-  <span>共 {{ filtered.length }} 个</span>
+  <span>共 {{ filtered().length }} 个</span>
 </section>
 
 <section>
   <h2 class="section-title">自定义图标</h2>
   <div class="icon-grid">
-    <article class="icon-card" *ngFor="let item of filtered">
-      <img [src]="item[1]" [alt]="item[0]" (error)="fallback($event)">
-      <b>{{ item[0] }}</b>
-      <div class="icon-actions">
-        <button class="secondary" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
-        <button class="danger-link" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
-      </div>
-    </article>
-    <div class="empty" *ngIf="!filtered.length">暂无自定义图标</div>
+    @for (item of filtered(); track item[0]) {
+      <article class="icon-card">
+        <img [src]="item[1]" [alt]="item[0]" (error)="fallback($event)">
+        <b>{{ item[0] }}</b>
+        <div class="icon-actions">
+          <button class="secondary" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
+          <button class="danger-link" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
+        </div>
+      </article>
+    }
+    @if (!filtered().length) {
+      <div class="empty">暂无自定义图标</div>
+    }
   </div>
 </section>
 
-<div class="modal-backdrop" *ngIf="show" (click)="close($event)">
-  <section class="modal" role="dialog" aria-modal="true">
-    <div class="modal-head">
-      <div>
-        <p class="eyebrow">ICON LIBRARY</p>
-        <h2>{{ editing ? '替换图标' : '上传图标' }}</h2>
+@if (show()) {
+  <div class="modal-backdrop" (click)="close($event)">
+    <section class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">ICON LIBRARY</p>
+          <h2>{{ editing() ? '替换图标' : '上传图标' }}</h2>
+        </div>
+        <button class="modal-close" (click)="show.set(false)" aria-label="关闭">×</button>
       </div>
-      <button class="modal-close" (click)="show=false" aria-label="关闭">×</button>
-    </div>
-    <label class="form-field">镜像或容器名称<input [(ngModel)]="name" placeholder="例如 nginx 或 my-container"></label>
-    <label class="form-field">图标文件<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" (change)="choose($event)"></label>
-    <p class="message error" *ngIf="error">{{ error }}</p>
-    <div class="modal-actions">
-      <button class="secondary" (click)="show=false">取消</button>
-      <button class="primary" [disabled]="!file || !name.trim() || uploading" (click)="upload()">{{ uploading ? '上传中…' : '保存图标' }}</button>
-    </div>
-  </section>
-</div>
+      <label class="form-field">镜像或容器名称<input [(ngModel)]="name" placeholder="例如 nginx 或 my-container"></label>
+      <label class="form-field">图标文件<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" (change)="choose($event)"></label>
+      @if (error()) {
+        <p class="message error">{{ error() }}</p>
+      }
+      <div class="modal-actions">
+        <button class="secondary" (click)="show.set(false)">取消</button>
+        <button class="primary" [disabled]="!file() || !name.trim() || uploading()" (click)="upload()">{{ uploading() ? '上传中…' : '保存图标' }}</button>
+      </div>
+    </section>
+  </div>
+}

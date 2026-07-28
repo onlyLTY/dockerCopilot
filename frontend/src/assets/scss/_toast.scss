@@ -1,0 +1,33 @@
+// 全局轻提示：居中上部弹出，成功/失败/信息三种样式，可点击关闭
+.toast-stack {
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+  z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto; display: inline-flex; align-items: center; gap: 10px;
+  max-width: min(520px, 90vw); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 16px; background: var(--surface); color: var(--text);
+  box-shadow: 0 12px 30px #14203926; font-size: 13px; text-align: left; cursor: pointer;
+  animation: toast-in .18s ease-out;
+}
+.toast-mark {
+  display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  color: #fff; font-size: 12px; flex: none;
+}
+.toast-text { word-break: break-word; }
+.toast.success { border-color: #b6e6c9; background: #f2fbf6; color: #197a48; }
+.toast.success .toast-mark { background: #21a35e; }
+.toast.error { border-color: #f6d6d9; background: #fff2f3; color: #ae4e58; }
+.toast.error .toast-mark { background: var(--danger); }
+.toast.info { border-color: #cfe3f6; background: #f2f8ff; color: #2b5f9e; }
+.toast.info .toast-mark { background: var(--accent); }
+
+.dark-shell .toast.success { background: #16281e; }
+.dark-shell .toast.error { background: #2a1a1c; }
+.dark-shell .toast.info { background: #172231; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

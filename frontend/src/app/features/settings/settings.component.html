@@ -1,0 +1,43 @@
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">DOCKER OPERATIONS</p>
+    <h1>设置</h1>
+    <p class="subtitle">管理定时任务等应用设置</p>
+  </div>
+</section>
+
+<dc-section-toolbar title="定时任务" subtitle="配置后台自动执行的任务"></dc-section-toolbar>
+
+<section class="settings-card">
+  <div class="settings-item">
+    <div class="settings-item-text">
+      <b>更新检查频率</b>
+      <span>定时检查所有容器的镜像是否有新版本。你也可以随时在容器页手动检查。</span>
+    </div>
+    <div class="settings-item-control">
+      <select [(ngModel)]="updateDraft" [disabled]="loading() || updateSaving()">
+        @for (opt of updateOptions(); track opt) {
+          <option [value]="opt">{{ updateLabel(opt) }}</option>
+        }
+      </select>
+      <button class="primary" [disabled]="!updateDirty() || updateSaving()" (click)="saveUpdate()">{{ updateSaving() ? '保存中…' : '保存' }}</button>
+    </div>
+  </div>
+  <p class="settings-hint">当前：{{ updateLabel(updateInterval()) }}</p>
+
+  <div class="settings-item">
+    <div class="settings-item-text">
+      <b>自动备份频率</b>
+      <span>定时创建容器备份（同时生成 JSON 和 YAML）。保留数量沿用备份页的保留设置。你也可以随时在备份页手动备份。</span>
+    </div>
+    <div class="settings-item-control">
+      <select [(ngModel)]="backupDraft" [disabled]="loading() || backupSaving()">
+        @for (opt of backupOptions(); track opt) {
+          <option [value]="opt">{{ backupLabel(opt) }}</option>
+        }
+      </select>
+      <button class="primary" [disabled]="!backupDirty() || backupSaving()" (click)="saveBackup()">{{ backupSaving() ? '保存中…' : '保存' }}</button>
+    </div>
+  </div>
+  <p class="settings-hint">当前：{{ backupLabel(backupInterval()) }}</p>
+</section>

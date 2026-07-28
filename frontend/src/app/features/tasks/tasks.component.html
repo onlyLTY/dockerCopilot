@@ -1,0 +1,43 @@
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">DOCKER OPERATIONS</p>
+    <h1>任务</h1>
+    <p class="subtitle">查看容器更新、备份恢复、项目部署等异步任务的进度</p>
+  </div>
+  <div class="heading-actions">
+    <button class="secondary" [disabled]="!doneCount() && !failedCount()" (click)="clearDone()"><dc-icon name="clean"></dc-icon>清除已完成</button>
+    <button class="secondary" [disabled]="!list().length" (click)="clearAll()"><dc-icon name="delete"></dc-icon>清空全部</button>
+  </div>
+</section>
+
+<section class="stats stats-four compact-stats">
+  <div><strong>{{ list().length }}</strong><span>总任务</span></div>
+  <div class="amber"><strong>{{ activeCount() }}</strong><span>进行中</span></div>
+  <div class="green"><strong>{{ doneCount() }}</strong><span>已完成</span></div>
+  <div class="red"><strong>{{ failedCount() }}</strong><span>失败</span></div>
+</section>
+
+<dc-section-toolbar title="任务列表" [subtitle]="list().length + ' 个任务'"></dc-section-toolbar>
+
+@if (list().length) {
+  <section class="task-list">
+    @for (t of list(); track t.taskID) {
+      <article class="task-row" [class.done]="t.isDone && !t.failed" [class.failed]="t.failed">
+        <div class="task-row-main">
+          <div class="task-row-head">
+            <b>{{ t.title }}</b>
+            <span class="task-state" [class.active]="!t.isDone" [class.ok]="t.isDone && !t.failed" [class.bad]="t.failed">{{ statusText(t) }}</span>
+          </div>
+          <div class="task-bar"><i [style.width.%]="t.percentage" [class.bad]="t.failed"></i></div>
+          <small>{{ t.message }} · {{ t.percentage }}% · {{ time(t.updatedAt) }}</small>
+        </div>
+        <div class="task-row-actions">
+          <button class="secondary" (click)="view(t.taskID)"><dc-icon name="about"></dc-icon>详情</button>
+          <button class="danger-link" (click)="remove(t.taskID)"><dc-icon name="delete"></dc-icon>删除</button>
+        </div>
+      </article>
+    }
+  </section>
+} @else {
+  <dc-page-state emptyText="暂无任务"></dc-page-state>
+}

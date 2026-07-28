@@ -1,5 +1,4 @@
-import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 
 /**
  * 页面状态占位：读取中（旋转指示器）、错误、空状态。
@@ -8,11 +7,10 @@ import { Component, Input } from '@angular/core';
 @Component({
   selector: 'dc-page-state',
   standalone: true,
-  imports: [CommonModule],
   templateUrl: './page-state.component.html',
 })
 export class PageStateComponent {
-  @Input() loading = false;
-  @Input() error = '';
-  @Input() emptyText = '暂无数据';
+  readonly loading = input(false);
+  readonly error = input('');
+  readonly emptyText = input('暂无数据');
 }

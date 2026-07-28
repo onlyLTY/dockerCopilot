@@ -1,13 +1,11 @@
-import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 
 @Component({
   selector: 'dc-section-toolbar',
   standalone: true,
-  imports: [CommonModule],
-  template: `<div class="section-toolbar"><div><h2>{{ title }}</h2><p *ngIf="subtitle">{{ subtitle }}</p></div><div class="section-toolbar-actions"><ng-content /></div></div>`,
+  template: `<div class="section-toolbar"><div><h2>{{ title() }}</h2>@if (subtitle()) {<p>{{ subtitle() }}</p>}</div><div class="section-toolbar-actions"><ng-content /></div></div>`,
 })
 export class SectionToolbarComponent {
-  @Input() title = '';
-  @Input() subtitle = '';
+  readonly title = input('');
+  readonly subtitle = input('');
 }

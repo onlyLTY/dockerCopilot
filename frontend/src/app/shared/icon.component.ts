@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 /**
  * dc-icon 使用 CSS mask 渲染 assets/icons 下的 SVG，
@@ -10,8 +10,8 @@ import { Component, Input } from '@angular/core';
   standalone: true,
   template: '',
   host: {
-    '[style.-webkit-mask-image]': 'maskUrl',
-    '[style.mask-image]': 'maskUrl',
+    '[style.-webkit-mask-image]': 'maskUrl()',
+    '[style.mask-image]': 'maskUrl()',
   },
   styles: [`
     :host {
@@ -31,6 +31,6 @@ import { Component, Input } from '@angular/core';
   `],
 })
 export class IconComponent {
-  @Input({ required: true }) name = '';
-  get maskUrl(): string { return `url(assets/icons/${this.name}.svg)`; }
+  readonly name = input.required<string>();
+  readonly maskUrl = computed(() => `url(assets/icons/${this.name()}.svg)`);
 }

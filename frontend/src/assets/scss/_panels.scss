@@ -39,17 +39,48 @@
   margin-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px;
 }
 .running-dot { width: 8px; height: 8px; border-radius: 50%; background: #21a35e; }
+/* 容器"可更新"角标：与名称同排，名称过长时省略 */
+.resource-head b:has(.update-badge) { display: flex; align-items: center; gap: 8px; }
+.update-badge {
+  flex: none; padding: 2px 8px; border-radius: 20px; font-size: 10px; line-height: 1.6;
+  background: #f3ebff; color: #8c36e8; overflow: visible;
+}
 .resource-actions { display: flex; gap: 6px; margin-top: 14px; }
 .resource-actions button {
   flex: 1; border: 1px solid var(--line); border-radius: 8px;
   background: var(--surface); color: #2b63dc; padding: 8px 7px; font-size: 11px;
+  transition: background .15s, border-color .15s, color .15s;
 }
+.resource-actions button:hover { background: rgba(43, 99, 220, .08); border-color: #2b63dc; }
 .resource-actions .stop-action { color: #e32635; }
+.resource-actions .stop-action:hover { background: rgba(227, 38, 53, .08); border-color: #e32635; }
 .resource-actions .start-action { color: #0a9b52; }
+.resource-actions .start-action:hover { background: rgba(10, 155, 82, .08); border-color: #0a9b52; }
 .resource-actions .update-action { color: #8c36e8; }
+.resource-actions .update-action:hover { background: rgba(140, 54, 232, .08); border-color: #8c36e8; }
 
-/* 镜像卡内的删除动作靠右 */
-.image-grid .resource-actions { justify-content: flex-end; }
+/* ===== 卡片选择（容器批量操作） ===== */
+.resource-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 20px #18365c14; }
+.card-select { display: grid; place-items: center; flex: none; cursor: pointer; }
+.card-select input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+.select-all { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; cursor: pointer; }
+.select-all input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
+.select-count { color: var(--muted); font-size: 12px; }
+
+/* ===== 镜像卡：状态徽标 + 版本号一行带大小 + 发布时间 ===== */
+.image-name { display: flex !important; align-items: center; gap: 8px; overflow: visible !important; white-space: normal !important; }
+.image-name .status-badge {
+  display: inline-block; margin: 0; padding: 2px 8px; border-radius: 20px; flex: none;
+  font-size: 10px; background: #fdecec; color: #c4494e;
+}
+.image-name .status-badge.used { background: #e6f6ec; color: #17914f; }
+.image-tag-row { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; overflow: visible !important; white-space: nowrap; }
+.image-tag-row em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.image-tag-row .image-size { font-style: normal; color: var(--muted); flex: none; }
+.image-time { color: var(--muted); }
+
+/* 镜像卡内的删除动作居中 + 悬浮样式 */
+.image-grid .resource-actions { justify-content: center; gap: 18px; }
 .image-grid .resource-actions button { flex: none; }
 
 /* ===== 项目卡 ===== */
@@ -62,11 +93,14 @@
 /* ===== 端口卡 ===== */
 .port-icon {
   display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px;
-  background: #eaf7fd; color: var(--accent); font-size: 22px; flex: none;
+  background: #eaf7fd; color: var(--accent); flex: none;
 }
-.port-values { margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--line); }
-.port-values strong { display: block; color: var(--text); font-size: 14px; }
-.port-values span { display: block; color: var(--muted); font-size: 11px; margin-top: 6px; }
+.port-icon dc-icon { --icon-size: 22px; }
+.port-values { margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; }
+.port-values .port-line {
+  display: inline-block; padding: 5px 10px; border-radius: 7px;
+  background: #eef4fb; color: var(--text); font-size: 12px;
+}
 
 /* ===== 图标库 ===== */
 .icon-toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
@@ -88,9 +122,7 @@
 .empty { text-align: center; color: var(--muted); padding: 40px 20px; grid-column: 1 / -1; }
 
 /* ===== 备份 ===== */
-.backup-group { margin: 26px 0; }
-.backup-group > h2 { font-size: 20px; margin: 0 0 14px; color: var(--text); }
-.backup-group > h2 small { color: var(--muted); font-size: 13px; font-weight: 400; margin-left: 8px; }
+.backup-group { margin: 0 0 16px; }
 .backup-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .backup-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
@@ -98,8 +130,9 @@
 }
 .backup-icon {
   display: grid; place-items: center; float: left; width: 42px; height: 42px;
-  margin-right: 12px; border-radius: 10px; background: #dcfaf6; color: #0ca99b; font-size: 21px;
+  margin-right: 12px; border-radius: 10px; background: #dcfaf6; color: #0ca99b;
 }
+.backup-icon dc-icon { --icon-size: 21px; }
 .backup-card-body { min-height: 42px; }
 .backup-card-body b { color: var(--text); font-size: 16px; }
 .backup-card-body small {
@@ -111,8 +144,14 @@
   background: #e4efff; color: #2969dc; font-size: 11px;
 }
 .backup-card .backup-actions {
-  clear: both; display: flex; justify-content: space-around;
+  clear: both; display: flex; justify-content: center; gap: 18px;
   border-top: 1px solid var(--line); margin-top: 18px; padding-top: 14px;
 }
-.backup-card .backup-actions button { flex: none; border: 0; background: transparent; color: var(--accent); }
+.backup-card .backup-actions button {
+  flex: none; border: 0; border-radius: 8px; background: transparent;
+  padding: 6px 12px; font-size: 12px; transition: background .15s, color .15s;
+}
+.backup-card .backup-actions .restore-action { color: var(--accent); }
+.backup-card .backup-actions .restore-action:hover { background: rgba(8, 125, 183, .1); }
 .backup-card .backup-actions .danger-link { color: #bd5660; }
+.backup-card .backup-actions .danger-link:hover { background: rgba(189, 86, 96, .1); }

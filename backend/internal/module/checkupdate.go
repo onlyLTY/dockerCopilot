@@ -39,6 +39,26 @@ func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
 	}
 }
 
+// CheckUpdateWithProgress 与 CheckUpdate 相同，但在检查每个镜像后回调进度，
+// 供手动触发的检查更新任务上报进度使用。progress 参数为 (已完成数, 总数, 当前镜像名)。
+func (i *ImageUpdateData) CheckUpdateWithProgress(imageList []types.Image, progress func(done, total int, current string)) {
+	// 过滤掉自身镜像，得到实际需要检查的总数
+	targets := make([]types.Image, 0, len(imageList))
+	for _, image := range imageList {
+		if strings.Contains(image.ImageName, "0nlylty/dockercopilot") {
+			continue
+		}
+		targets = append(targets, image)
+	}
+	total := len(targets)
+	for idx, image := range targets {
+		i.checkSingleImage(image)
+		if progress != nil {
+			progress(idx+1, total, image.ImageName+":"+image.ImageTag)
+		}
+	}
+}
+
 func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 	token, err := GetToken(image, "")
 	if err != nil {

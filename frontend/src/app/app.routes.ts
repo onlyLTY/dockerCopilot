@@ -6,6 +6,8 @@ import { BackupsComponent } from './features/backups/backups.component';
 import { PortsComponent } from './features/ports/ports.component';
 import { AboutComponent } from './features/about/about.component';
 import { IconsComponent } from './features/icons/icons.component';
+import { TasksComponent } from './features/tasks/tasks.component';
+import { SettingsComponent } from './features/settings/settings.component';
 import { LoginComponent } from './features/login.component';
 import { authGuard } from './core/auth.guard';
 
@@ -19,5 +21,7 @@ export const routes: Routes = [
   { path: 'ports', component: PortsComponent, canActivate: [authGuard] },
   { path: 'about', component: AboutComponent, canActivate: [authGuard] },
   { path: 'icons', component: IconsComponent, canActivate: [authGuard] },
+  { path: 'tasks', component: TasksComponent, canActivate: [authGuard] },
+  { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: 'containers' },
 ];

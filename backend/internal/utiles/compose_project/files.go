@@ -198,10 +198,25 @@ func ParseComposeContent(root, filename string, content []byte) (*composeTypes.P
 	if _, ok := raw["services"]; !ok {
 		return nil, fmt.Errorf("Compose 文件必须包含 services")
 	}
+	// compose-go v1.20 要求显式项目名，否则报 "project name must not be empty"。
+	// 优先用内容里的 name 字段，其次用目录名推导，兜底 "app"，并规范化为合法名称。
+	projectName := ""
+	if v, ok := raw["name"].(string); ok {
+		projectName = v
+	}
+	if projectName == "" {
+		projectName = filepath.Base(root)
+	}
+	projectName = loader.NormalizeProjectName(projectName)
+	if projectName == "" {
+		projectName = "app"
+	}
 	project, err := loader.LoadWithContext(context.Background(), composeTypes.ConfigDetails{
 		WorkingDir:  root,
 		ConfigFiles: []composeTypes.ConfigFile{{Filename: filepath.Join(root, filename), Content: content}},
 		Environment: composeTypes.Mapping{},
+	}, func(o *loader.Options) {
+		o.SetProjectName(projectName, true)
 	})
 	if err != nil {
 		return nil, err

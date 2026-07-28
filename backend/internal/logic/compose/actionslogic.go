@@ -11,6 +11,7 @@ import (
 	"time"
 
 	composeTypes "github.com/compose-spec/compose-go/types"
+	"github.com/google/uuid"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	composeProject "github.com/onlyLTY/dockerCopilot/internal/utiles/compose_project"
@@ -78,17 +79,40 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 	if timeout <= 0 {
 		timeout = 5 * time.Minute
 	}
-	configResult, err := composeRunner.Config(l.ctx, root, files, timeout)
-	if err != nil {
-		l.Errorf("compose config: %v output=%s", err, configResult.Output)
-		return errorResp(resp, 400, composeErrMsg("Compose 配置检查失败", err, configResult.Output)), nil
-	}
-	result, err := composeRunner.Up(l.ctx, root, files, timeout)
-	if err != nil {
-		l.Errorf("compose up: %v output=%s", err, result.Output)
-		return errorResp(resp, 500, composeErrMsg("Compose 部署失败", err, result.Output)), nil
-	}
-	return successResp(resp, map[string]interface{}{"projectId": req.ProjectID, "filename": req.Filename, "output": result.Output}), nil
+
+	// 前置校验已通过，转为异步任务执行 compose up，前端通过 taskID 轮询进度。
+	taskID := uuid.New().String()
+	name := "部署 " + req.ProjectID
+	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{
+		TaskID: taskID, Name: name, Percentage: 0, Message: "任务已提交", DetailMsg: "", IsDone: false,
+	})
+	svcCtx := l.svcCtx
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "部署异常", DetailMsg: fmt.Sprintf("%v", r), IsDone: true})
+			}
+		}()
+		// 独立上下文：请求返回后原 ctx 会被取消，会中断 docker 命令
+		bg := context.Background()
+		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 20, Message: "正在检查配置", DetailMsg: "", IsDone: false})
+		configResult, err := composeRunner.Config(bg, root, files, timeout)
+		if err != nil {
+			logx.Errorf("compose config: %v output=%s", err, configResult.Output)
+			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 20, Message: "配置检查失败", DetailMsg: composeErrMsg("Compose 配置检查失败", err, configResult.Output), IsDone: true})
+			return
+		}
+		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "正在部署（compose up）", DetailMsg: "", IsDone: false})
+		result, err := composeRunner.Up(bg, root, files, timeout)
+		if err != nil {
+			logx.Errorf("compose up: %v output=%s", err, result.Output)
+			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "部署失败", DetailMsg: composeErrMsg("Compose 部署失败", err, result.Output), IsDone: true})
+			return
+		}
+		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "部署完成", DetailMsg: result.Output, IsDone: true})
+	}()
+
+	return successResp(resp, map[string]interface{}{"projectId": req.ProjectID, "filename": req.Filename, "taskID": taskID}), nil
 }
 
 func (l *ActionsLogic) CleanupPreview(req *types.ComposeCleanupPreviewReq) (*types.Resp, error) {

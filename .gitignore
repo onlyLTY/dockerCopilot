@@ -41,5 +41,7 @@ __pycache__/
 # 本地一键构建脚本（仅本地使用，不入库）
 /docker/build.sh
 
+# 忽略数据目录及其中的所有文件
+/data/
 
 .zcode
