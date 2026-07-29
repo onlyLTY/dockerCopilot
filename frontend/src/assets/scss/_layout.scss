@@ -6,7 +6,7 @@
 .sidebar {
   position: fixed; inset: 0 auto 0 0; width: 260px; height: 100vh;
   background: var(--surface); border-right: 1px solid var(--line);
-  padding: 24px 18px; display: flex; flex-direction: column; z-index: 10; overflow: hidden;
+  padding: 12px 12px; display: flex; flex-direction: column; z-index: 10; overflow: hidden;
 }
 
 .brand { flex: none;
@@ -40,7 +40,7 @@ nav a:hover dc-icon,
 nav a.active dc-icon { color: var(--accent); }
 
 /* ===== 侧边栏底部 ===== */
-.sidebar-bottom { flex: none; margin-top: auto; padding-top: 16px; }
+.sidebar-bottom { flex: none; margin-top: auto; padding-top: 8px; }
 .sidebar-actions {
   display: flex; align-items: center; gap: 6px;
   padding: 4px; margin-bottom: 14px;
