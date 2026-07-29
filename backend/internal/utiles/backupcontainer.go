@@ -8,7 +8,6 @@ import (
 	"github.com/onlyLTY/dockerCopilot/internal/backupstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"os"
 	"path/filepath"
 )
 
@@ -37,8 +36,12 @@ func BackupContainer(ctx *svc.ServiceContext) error {
 		inspectedContainer.Image = inspectedContainer.Config.Image
 		config := inspectedContainer.Config
 		hostConfig := inspectedContainer.HostConfig
+		var endpoints map[string]*network.EndpointSettings
+		if inspectedContainer.NetworkSettings != nil {
+			endpoints = inspectedContainer.NetworkSettings.Networks
+		}
 		networkingConfig := &network.NetworkingConfig{
-			EndpointsConfig: inspectedContainer.NetworkSettings.Networks,
+			EndpointsConfig: endpoints,
 		}
 		createConfig := dockerBackend.ContainerCreateConfig{Config: config, HostConfig: hostConfig, NetworkingConfig: networkingConfig, Name: containerName}
 		backupList = append(backupList, createConfig)
@@ -48,28 +51,20 @@ func BackupContainer(ctx *svc.ServiceContext) error {
 		logx.Error("Error marshalling data:", err)
 		return err
 	}
-	backupDir := os.Getenv("BACKUP_DIR") // 从环境变量中获取备份目录
-	if backupDir == "" {
-		backupDir = "/data/backups" // 如果环境变量未设置，使用默认值
-	}
-	_, err = os.Stat(backupDir)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(backupDir, 0755)
-		if err != nil {
-			logx.Error("Error creating backup directory:", err)
-			return err
-		}
-	}
-	fileName := backupstore.TimestampedName(".json")
-	fullPath := filepath.Join(backupDir, fileName)
-	err = os.WriteFile(fullPath, jsonData, 0644)
+	backupDir := backupstore.Directory()
+	fileName, err := backupstore.CreateBackupFile(backupDir, ".json", jsonData, 0644)
 	if err != nil {
-		logx.Error("Error writing to file:", err)
+		logx.Error("Error writing backup file:", err)
 		return err
 	}
+	fullPath := filepath.Join(backupDir, fileName)
 	retention, err := backupstore.GetRetention()
 	if err != nil {
-		return err
+		logx.Errorf("Error reading backup retention after writing %s: %v", fullPath, err)
+		return nil
 	}
-	return backupstore.Retain(retention)
+	if err := backupstore.Retain(retention); err != nil {
+		logx.Errorf("Error applying backup retention after writing %s: %v", fullPath, err)
+	}
+	return nil
 }

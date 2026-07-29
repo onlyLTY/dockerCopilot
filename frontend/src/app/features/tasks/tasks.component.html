@@ -17,8 +17,6 @@
   <div class="red"><strong>{{ failedCount() }}</strong><span>失败</span></div>
 </section>
 
-<dc-section-toolbar title="任务列表" [subtitle]="list().length + ' 个任务'"></dc-section-toolbar>
-
 @if (list().length) {
   <section class="task-list">
     @for (t of list(); track t.taskID) {

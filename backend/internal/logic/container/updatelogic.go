@@ -2,6 +2,8 @@ package container
 
 import (
 	"context"
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
@@ -27,18 +29,46 @@ func NewUpdateLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateLogi
 func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	taskID := uuid.New().String()
+	name := req.ContainerName
+	if name == "" {
+		name = req.Id
+	}
+	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "任务已提交", DetailMsg: "", IsDone: false})
+	if !l.svcCtx.TryStartContainerUpdate(req.Id, taskID) {
+		resp.Code = 409
+		resp.Msg = "该容器正在更新"
+		resp.Data = map[string]interface{}{}
+		return resp, nil
+	}
 	go func() {
-		// Catch any panic and log the error
+		defer l.svcCtx.FinishContainerUpdate(req.Id, taskID)
 		defer func() {
 			if r := recover(); r != nil {
-				l.Errorf("Recovered from panic in UpdateContainer: %v", r)
+				message := fmt.Sprintf("更新容器异常: %v", r)
+				l.Errorf("task=%s container=%s %s", taskID, req.Id, message)
+				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "更新失败", DetailMsg: message, IsDone: true})
 			}
 		}()
 		imageNameAndTag := req.ImageNameAndTag
-		delOldContainer := os.Getenv("DelOldContainer") != "false"
-		err := utiles.UpdateContainer(l.svcCtx, req.Id, req.ContainerName, imageNameAndTag, delOldContainer, taskID)
+		if imageNameAndTag == "" {
+			if l.svcCtx.DockerClient == nil {
+				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "更新失败", DetailMsg: "Docker 客户端不可用", IsDone: true})
+				return
+			}
+			inspected, inspectErr := l.svcCtx.DockerClient.ContainerInspect(context.Background(), req.Id)
+			if inspectErr != nil || inspected.Config == nil || inspected.Config.Image == "" {
+				message := "无法从容器获取镜像名称"
+				if inspectErr != nil {
+					message = inspectErr.Error()
+				}
+				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "更新失败", DetailMsg: message, IsDone: true})
+				return
+			}
+			imageNameAndTag = inspected.Config.Image
+		}
+		err := utiles.UpdateContainer(l.svcCtx, req.Id, name, imageNameAndTag, os.Getenv("DelOldContainer") != "false", taskID)
 		if err != nil {
-			l.Errorf("Error in UpdateContainer: %v", err)
+			l.Errorf("update container failed task=%s container=%s: %v", taskID, req.Id, err)
 		}
 	}()
 	resp.Code = 200

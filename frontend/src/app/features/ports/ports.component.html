@@ -19,14 +19,12 @@
   <div class="red"><strong>{{ data().conflicts.length }}</strong><span>端口冲突</span></div>
 </section>
 
-<dc-section-toolbar title="端口列表" [subtitle]="groups().length + ' 个容器'"></dc-section-toolbar>
-
 @if (groups().length) {
   <section class="resource-grid port-grid">
     @for (g of groups(); track g.containerName) {
       <article class="resource-card port-card">
         <div class="resource-head">
-          <span class="port-icon"><dc-icon name="ports"></dc-icon></span>
+          <img class="resource-icon" [src]="icon(g)" [alt]="g.containerName" (error)="fallback($event)">
           <div>
             <b>{{ g.containerName }}</b>
             <span>{{ g.project || '独立容器' }}</span>

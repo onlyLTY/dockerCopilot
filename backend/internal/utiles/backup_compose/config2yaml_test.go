@@ -3,7 +3,7 @@ package backupCompose
 import (
 	"testing"
 
-	composeTypes "github.com/compose-spec/compose-go/types"
+	composeTypes "github.com/compose-spec/compose-go/v2/types"
 	dockerTypes "github.com/docker/docker/api/types"
 	containerTypes "github.com/docker/docker/api/types/container"
 	mountTypes "github.com/docker/docker/api/types/mount"

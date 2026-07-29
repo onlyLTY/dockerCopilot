@@ -9,6 +9,9 @@
   --muted: #78849a;
   --accent: #087db7;
   --danger: #e5484d;
+  --success: #15915a;
+  --warning: #b8791b;
+  --info: #2b5f9e;
 }
 
 :root[data-theme="dark"] {
@@ -19,4 +22,7 @@
   --muted: #aab5c5;
   --accent: #5eb9e8;
   --danger: #ff7b83;
+  --success: #5ed490;
+  --warning: #e4b35f;
+  --info: #8bc8f2;
 }

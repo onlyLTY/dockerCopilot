@@ -3,7 +3,6 @@ import { PortService } from '../../core/port.service';
 import { PortUsage } from '../../core/compose.service';
 import { IconService } from '../../core/icon.service';
 import { PageStateComponent } from '../../shared/page-state.component';
-import { SectionToolbarComponent } from '../../shared/section-toolbar.component';
 import { IconComponent } from '../../shared/icon.component';
 
 interface PortLine { hostPort: string; containerPort: string; protocol: string; }
@@ -12,7 +11,7 @@ interface PortGroup { containerName: string; project: string; image: string; por
 @Component({
   selector: 'dc-ports',
   standalone: true,
-  imports: [PageStateComponent, SectionToolbarComponent, IconComponent],
+  imports: [PageStateComponent, IconComponent],
   templateUrl: './ports.component.html',
 })
 export class PortsComponent {
@@ -27,7 +26,7 @@ export class PortsComponent {
     const map = new Map<string, PortGroup>();
     for (const p of this.data().ports) {
       const key = p.containerID || p.containerName;
-      if (!map.has(key)) map.set(key, { containerName: p.containerName, project: p.project, image: p.containerName, ports: [] });
+      if (!map.has(key)) map.set(key, { containerName: p.containerName, project: p.project, image: p.image || '', ports: [] });
       const g = map.get(key)!;
       const line: PortLine = { hostPort: p.hostPort, containerPort: p.containerPort, protocol: p.protocol };
       const label = `${line.hostPort}|${line.containerPort}|${line.protocol}`;

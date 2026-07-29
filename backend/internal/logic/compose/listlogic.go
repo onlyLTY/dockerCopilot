@@ -22,6 +22,7 @@ func NewProjectsListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Proj
 func (l *ProjectsListLogic) List() (*types.Resp, error) {
 	resp := &types.Resp{}
 	if l.svcCtx.DockerClient == nil {
+		logx.Errorf("compose operation=project_list failed=docker service unavailable")
 		resp.Code = 503
 		resp.Msg = "Docker 服务不可用"
 		resp.Data = map[string]interface{}{}
@@ -32,9 +33,10 @@ func (l *ProjectsListLogic) List() (*types.Resp, error) {
 		resp.Code = 500
 		resp.Msg = "读取 Compose 项目失败"
 		resp.Data = map[string]interface{}{}
-		l.Errorf("scan compose projects: %v", err)
+		logx.Errorf("compose operation=project_list failed=scan error=%v", err)
 		return resp, err
 	}
+	logx.Infof("compose operation=project_list success")
 	resp.Code = 200
 	resp.Msg = "success"
 	resp.Data = data
@@ -54,6 +56,7 @@ func NewPortsListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PortsLi
 func (l *PortsListLogic) List() (*types.Resp, error) {
 	resp := &types.Resp{}
 	if l.svcCtx.DockerClient == nil {
+		logx.Errorf("compose operation=ports_list failed=docker service unavailable")
 		resp.Code = 503
 		resp.Msg = "Docker 服务不可用"
 		resp.Data = map[string]interface{}{}
@@ -64,9 +67,10 @@ func (l *PortsListLogic) List() (*types.Resp, error) {
 		resp.Code = 500
 		resp.Msg = "读取端口使用情况失败"
 		resp.Data = map[string]interface{}{}
-		l.Errorf("list container ports: %v", err)
+		logx.Errorf("compose operation=ports_list failed=list error=%v", err)
 		return resp, err
 	}
+	logx.Infof("compose operation=ports_list success")
 	resp.Code = 200
 	resp.Msg = "success"
 	resp.Data = data

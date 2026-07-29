@@ -40,13 +40,16 @@ type UnauthorizedResponse struct {
 }
 
 func main() {
-	logDir := "./logs"
-	ErrSetupLog := SetupLog(logDir)
+	logDir := os.Getenv("LOG_DIR")
+	if logDir == "" {
+		logDir = "./logs"
+	}
+	ErrSetupLog := SetupLog(logDir, settingstore.GetLogLevel())
 	if ErrSetupLog != nil {
 		logx.Errorf("failed to setup log: %v", ErrSetupLog)
 		os.Exit(1)
 	}
-	logx.SetLevel(logx.InfoLevel)
+	logx.SetLevel(setupLogLevel(settingstore.GetLogLevel()))
 
 	flag.Parse()
 	var c config.Config
@@ -206,6 +209,24 @@ func newFrontendHandler() http.Handler {
 	})
 }
 
+func setupLogLevel(level string) uint32 {
+	switch level {
+	case "debug":
+		return logx.DebugLevel
+	case "error", "warn":
+		return logx.ErrorLevel
+	default:
+		return logx.InfoLevel
+	}
+}
+
+func logxConfigLevel(level string) string {
+	if level == "warn" {
+		return "error"
+	}
+	return level
+}
+
 // 检查并创建日志目录
 func ensureLogDirectory(logDir string) error {
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
@@ -215,7 +236,10 @@ func ensureLogDirectory(logDir string) error {
 }
 
 // SetupLog 初始化日志设置
-func SetupLog(logDir string) error {
+func SetupLog(logDir, level string) error {
+	if !settingstore.ValidLogLevel(level) {
+		level = "info"
+	}
 	// 检查日志目录是否存在
 	if err := ensureLogDirectory(logDir); err != nil {
 		return fmt.Errorf("failed to create log directory: %v", err)
@@ -223,7 +247,7 @@ func SetupLog(logDir string) error {
 
 	logConf := logx.LogConf{
 		Path:     logDir,
-		Level:    "info",
+		Level:    logxConfigLevel(level),
 		KeepDays: 7,
 		Compress: true,
 		Mode:     "file",

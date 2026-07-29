@@ -25,6 +25,8 @@ type ServiceContext struct {
 	mu                         sync.Mutex
 	ComposeMu                  sync.Mutex
 	ComposeTokens              map[string]ComposeToken
+	updateMu                   sync.Mutex
+	updatingContainers         map[string]string
 
 	// 定时任务：更新检查与自动备份各持有一个 cronTask，job 由 main 注入（避免 svc 反向依赖 utiles）
 	updateTask cronTask
@@ -63,11 +65,12 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		logx.Errorf("Unable to create docker client: %s", err)
 	}
 	return &ServiceContext{
-		Config:        c,
-		HubImageInfo:  module.NewImageCheck(),
-		ProgressStore: make(ProgressStoreType),
-		ComposeTokens: make(map[string]ComposeToken),
-		DockerClient:  cli,
+		Config:             c,
+		HubImageInfo:       module.NewImageCheck(),
+		ProgressStore:      make(ProgressStoreType),
+		ComposeTokens:      make(map[string]ComposeToken),
+		DockerClient:       cli,
+		updatingContainers: make(map[string]string),
 	}
 }
 
@@ -84,7 +87,24 @@ func (ctx *ServiceContext) GetProgress(taskID string) (TaskProgress, bool) {
 	return progress, ok
 }
 
-// StartUpdateCron 启动更新检查定时任务；job 为要执行的检查逻辑（由 main 注入）。
+func (ctx *ServiceContext) TryStartContainerUpdate(containerID, taskID string) bool {
+	ctx.updateMu.Lock()
+	defer ctx.updateMu.Unlock()
+	if _, exists := ctx.updatingContainers[containerID]; exists {
+		return false
+	}
+	ctx.updatingContainers[containerID] = taskID
+	return true
+}
+
+func (ctx *ServiceContext) FinishContainerUpdate(containerID, taskID string) {
+	ctx.updateMu.Lock()
+	defer ctx.updateMu.Unlock()
+	if current, ok := ctx.updatingContainers[containerID]; ok && current == taskID {
+		delete(ctx.updatingContainers, containerID)
+	}
+}
+
 // spec 为 5 段 cron 表达式（分 时 日 月 周）。
 func (ctx *ServiceContext) StartUpdateCron(spec string, job func()) error {
 	ctx.cronMu.Lock()

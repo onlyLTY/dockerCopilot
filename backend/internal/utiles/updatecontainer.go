@@ -15,6 +15,13 @@ import (
 )
 
 func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string, imageNameAndTag string, delOldContainer bool, taskID string) error {
+	if serviceContext == nil {
+		return fmt.Errorf("服务上下文不可用")
+	}
+	if serviceContext.DockerClient == nil {
+		serviceContext.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "更新失败", DetailMsg: "Docker 客户端不可用", IsDone: true})
+		return fmt.Errorf("Docker 客户端不可用")
+	}
 	ctx := context.Background()
 	serviceContext.UpdateProgress(taskID, svc.TaskProgress{
 		TaskID:     taskID,
@@ -42,7 +49,6 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	oldTaskProgress.Percentage = 10
 	oldTaskProgress.DetailMsg = "正在拉取新镜像"
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
-	serviceContext.DockerClient.NegotiateAPIVersion(ctx)
 	reader, err := serviceContext.DockerClient.ImagePull(ctx, imageNameAndTag, image.PullOptions{})
 	if err != nil {
 		oldTaskProgress.Message = "拉取镜像失败"
@@ -52,8 +58,8 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 		logx.Errorf("Failed to pull image: %s", err)
 		return err
 	}
-	err = decodePullResp(reader, serviceContext, taskID)
-	if err != nil {
+	defer reader.Close()
+	if err := decodePullResp(reader, serviceContext, taskID); err != nil {
 		oldTaskProgress.Message = "拉取镜像失败"
 		oldTaskProgress.DetailMsg = err.Error()
 		oldTaskProgress.IsDone = true

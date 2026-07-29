@@ -5,7 +5,6 @@
     <p class="subtitle">创建、恢复和删除容器备份</p>
   </div>
   <div class="heading-actions">
-    <button class="secondary" (click)="openSettings()" title="备份保留设置"><dc-icon name="settings"></dc-icon>保留设置</button>
     <button class="secondary" (click)="create('yaml')" title="创建 YAML 备份"><dc-icon name="save"></dc-icon>YAML</button>
     <button class="secondary" (click)="create('json')" title="创建 JSON 备份"><dc-icon name="save"></dc-icon>JSON</button>
     <button class="primary" (click)="refresh()" title="刷新备份"><dc-icon name="refresh"></dc-icon>刷新</button>
@@ -18,8 +17,6 @@
   <div class="violet"><strong>{{ yamlCount() }}</strong><span>YAML 备份</span></div>
 </section>
 
-<dc-section-toolbar title="备份列表" [subtitle]="'每种格式保留 ' + retention() + ' 份'"></dc-section-toolbar>
-
 @if (files().length) {
   <section class="backup-list">
     @for (group of groups(); track group.date) {
@@ -27,13 +24,12 @@
         <div class="backup-card-grid">
           @for (file of group.files; track file) {
             <article class="backup-card">
-              <span class="backup-icon"><dc-icon name="save"></dc-icon></span>
               <div class="backup-card-body">
-                <div><b>{{ base(file) }}</b><span class="file-badge">{{ type(file) }}</span></div>
+                <div><span class="file-badge">{{ type(file) }}</span><b>{{ date(file) }}</b></div>
                 <small>{{ file }}</small>
               </div>
               <div class="backup-actions">
-                @if (file.endsWith('.json')) {
+                @if (extension(file) === '.json') {
                   <button class="restore-action" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
                 }
                 <button class="danger-link" (click)="remove(file)"><dc-icon name="delete"></dc-icon>删除</button>
@@ -46,27 +42,4 @@
   </section>
 } @else {
   <dc-page-state [loading]="loading()" [error]="error()" emptyText="暂无备份"></dc-page-state>
-}
-
-@if (showSettings()) {
-  <div class="modal-backdrop" (click)="closeSettings($event)">
-    <section class="modal settings-modal" role="dialog" aria-modal="true">
-      <div class="modal-head">
-        <div>
-          <p class="eyebrow">BACKUP SETTINGS</p>
-          <h2>备份保留数量</h2>
-          <p>JSON 和 YAML 分别保留最近的备份</p>
-        </div>
-        <button class="modal-close" (click)="closeSettings()" aria-label="关闭">×</button>
-      </div>
-      <label class="form-field">保留数量<input type="number" min="1" max="100" [(ngModel)]="retentionDraft"><span class="path-hint">请输入 1-100 之间的整数</span></label>
-      @if (settingsError()) {
-        <p class="message error">{{ settingsError() }}</p>
-      }
-      <div class="modal-actions">
-        <button class="secondary" (click)="closeSettings()">取消</button>
-        <button class="primary" (click)="saveSettings()" [disabled]="saving()">{{ saving() ? '保存中…' : '保存设置' }}</button>
-      </div>
-    </section>
-  </div>
 }

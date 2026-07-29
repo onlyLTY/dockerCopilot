@@ -25,6 +25,20 @@ func TestContainerPortsMergesDockerPortSources(t *testing.T) {
 	}
 }
 
+func TestContainerPortsDeduplicatesExposedPortWhenPublished(t *testing.T) {
+	bound, _ := nat.NewPort("tcp", "8080")
+	inspect := dockerTypes.ContainerJSON{
+		ContainerJSONBase: &dockerTypes.ContainerJSONBase{
+			HostConfig: &container.HostConfig{PortBindings: nat.PortMap{bound: []nat.PortBinding{{HostIP: "127.0.0.1", HostPort: "18080"}}}},
+		},
+		Config: &container.Config{ExposedPorts: nat.PortSet{bound: struct{}{}}},
+	}
+	ports := containerPorts(inspect)
+	if len(ports) != 1 || !ports[0].Published || ports[0].HostPort != "18080" {
+		t.Fatalf("expected exposed port to be replaced by published binding, got %#v", ports)
+	}
+}
+
 func TestContainerPortsIncludesHostBindingWithoutNetworkSettings(t *testing.T) {
 	bound, _ := nat.NewPort("udp", "5353")
 	inspect := dockerTypes.ContainerJSON{ContainerJSONBase: &dockerTypes.ContainerJSONBase{HostConfig: &container.HostConfig{PortBindings: nat.PortMap{bound: []nat.PortBinding{{HostPort: "15353"}}}}}}

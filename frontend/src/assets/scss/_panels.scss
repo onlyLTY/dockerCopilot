@@ -19,7 +19,7 @@
 
 /* ===== 资源网格 / 卡片（容器、镜像、项目、端口共用） ===== */
 .resource-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
-.image-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.image-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .resource-card {
   min-width: 0; background: var(--surface); border: 1px solid var(--line);
   border-radius: 14px; padding: 18px; box-shadow: 0 8px 20px #18365c0b;
@@ -96,10 +96,24 @@
   background: #eaf7fd; color: var(--accent); flex: none;
 }
 .port-icon dc-icon { --icon-size: 22px; }
-.port-values { margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; }
+.port-values {
+  margin-top: 15px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
 .port-values .port-line {
-  display: inline-block; padding: 5px 10px; border-radius: 7px;
-  background: #eef4fb; color: var(--text); font-size: 12px;
+  display: block;
+  padding: 5px 10px;
+  border-radius: 7px;
+  background: #eef4fb;
+  color: var(--text);
+  font-size: 12px;
+  text-align: center;
 }
 
 /* ===== 图标库 ===== */
@@ -110,20 +124,22 @@
 }
 .icon-toolbar span { color: var(--muted); }
 .section-title { margin: 0 0 14px; color: var(--text); font-size: 18px; }
-.icon-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+.icon-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .icon-card {
   min-width: 0; background: var(--surface); border: 1px solid var(--line);
   border-radius: 14px; padding: 20px; text-align: center;
 }
+.icon-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 20px #18365c14; }
 .icon-card img { width: 82px; height: 82px; object-fit: contain; display: block; margin: 0 auto 15px; }
 .icon-card b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .icon-actions { display: flex; gap: 8px; margin-top: 14px; justify-content: center; }
 .icon-actions button { flex: none; }
+.icon-actions .secondary { border: 1px solid var(--line); padding: 8px 10px; font-size: 11px; }
 .empty { text-align: center; color: var(--muted); padding: 40px 20px; grid-column: 1 / -1; }
 
 /* ===== 备份 ===== */
 .backup-group { margin: 0 0 16px; }
-.backup-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.backup-card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .backup-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
   padding: 18px; box-shadow: 0 8px 20px #18365c0b;
@@ -137,10 +153,10 @@
 .backup-card-body b { color: var(--text); font-size: 16px; }
 .backup-card-body small {
   display: block; color: var(--muted); margin-top: 6px; font-size: 11px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  white-space: normal; overflow-wrap: anywhere; word-break: break-word;
 }
 .file-badge {
-  display: inline-block; margin-left: 8px; padding: 4px 7px; border-radius: 5px;
+  display: inline-block; margin-right: 8px; padding: 4px 7px; border-radius: 5px;
   background: #e4efff; color: #2969dc; font-size: 11px;
 }
 .backup-card .backup-actions {

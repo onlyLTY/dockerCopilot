@@ -5,8 +5,9 @@
     <p class="subtitle">管理您的 Docker 容器，包括启动、停止、重启等操作</p>
   </div>
   <div class="heading-actions">
-    <button class="secondary" [disabled]="checking()" (click)="checkUpdate()" title="检查所有容器是否有镜像更新"><dc-icon name="update"></dc-icon>{{ checking() ? '检查中…' : '检查更新' }}</button>
-    <button class="primary" (click)="refresh()" title="刷新容器"><dc-icon name="refresh"></dc-icon>刷新</button>
+    <button class="secondary d-inline-flex items-center gap-8" (click)="enterSelection()" title="批量选择容器"><dc-icon name="edit"></dc-icon>批量选择</button>
+    <button class="secondary d-inline-flex items-center gap-8" [disabled]="checking()" (click)="checkUpdate()" title="检查所有容器是否有镜像更新"><dc-icon name="update"></dc-icon>{{ checking() ? '检查中…' : '检查更新' }}</button>
+    <button class="primary d-inline-flex items-center gap-8" (click)="refresh()" title="刷新容器"><dc-icon name="refresh"></dc-icon>刷新</button>
   </div>
 </section>
 
@@ -17,22 +18,28 @@
   <div class="amber"><strong>{{ updateCount() }}</strong><span>有更新</span></div>
 </section>
 
-<dc-section-toolbar title="容器列表" [subtitle]="containers().length + ' 个容器'">
-  @if (containers().length) {
-    <label class="select-all"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
-    <button class="secondary start-action" [disabled]="!selectedCount() || busy()" (click)="bulkStart()"><dc-icon name="start"></dc-icon>批量启动</button>
-    <button class="secondary stop-action" [disabled]="!selectedCount() || busy()" (click)="bulkStop()"><dc-icon name="stop"></dc-icon>批量停止</button>
-    <button class="secondary update-action" [disabled]="!selectedCount() || busy()" (click)="bulkUpdate()"><dc-icon name="update"></dc-icon>批量更新</button>
-    @if (selectedCount()) { <span class="select-count">已选 {{ selectedCount() }} 个</span> }
-  }
-</dc-section-toolbar>
+@if (selectionMode()) {
+  <div class="batch-toolbar">
+    <span class="batch-title">批量操作</span>
+    @if (containers().length) {
+      <label class="select-all"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
+      <button class="secondary d-inline-flex items-center gap-8 start-action" [disabled]="!selectedCount() || busy()" (click)="bulkStart()"><dc-icon name="start"></dc-icon>批量启动</button>
+      <button class="secondary d-inline-flex items-center gap-8 stop-action" [disabled]="!selectedCount() || busy()" (click)="bulkStop()"><dc-icon name="stop"></dc-icon>批量停止</button>
+      <button class="secondary d-inline-flex items-center gap-8 update-action" [disabled]="!selectedCount() || busy() || hasActiveUpdates()" (click)="bulkUpdate()"><dc-icon name="update"></dc-icon>批量更新</button>
+      @if (selectedCount()) { <span class="select-count">已选 {{ selectedCount() }} 个</span> }
+    }
+          <button class="secondary batch-exit" (click)="exitSelection()">完成</button>
+  </div>
+}
 
 @if (containers().length) {
   <section class="resource-grid dense-grid">
     @for (item of containers(); track item.id) {
-      <article class="resource-card" [class.selected]="isSelected(item.id)">
+      <article class="resource-card" [class.selected]="selectionMode() && isSelected(item.id)">
         <div class="resource-head">
-          <label class="card-select"><input type="checkbox" [checked]="isSelected(item.id)" (change)="toggleSelect(item.id)"></label>
+          @if (selectionMode()) {
+            <label class="card-select"><input type="checkbox" [checked]="isSelected(item.id)" (change)="toggleSelect(item.id)"></label>
+          }
           <img class="resource-icon" [src]="icon(item)" [alt]="item.name" (error)="fallback($event)">
           <div>
             <b>{{ item.name }}@if (item.haveUpdate) { <small class="update-badge" title="有新版本可更新">可更新</small> }</b>
@@ -42,12 +49,12 @@
         </div>
         <div class="resource-actions">
           @if (isRunning(item)) {
-            <button class="stop-action" (click)="stop(item)"><dc-icon name="stop"></dc-icon>停止</button>
+            <button class="stop-action d-inline-flex items-center gap-4" (click)="stop(item)"><dc-icon name="stop"></dc-icon>停止</button>
           } @else {
-            <button class="start-action" (click)="start(item)"><dc-icon name="start"></dc-icon>启动</button>
+            <button class="start-action d-inline-flex items-center gap-4" (click)="start(item)"><dc-icon name="start"></dc-icon>启动</button>
           }
-          <button (click)="restart(item)"><dc-icon name="restart"></dc-icon>重启</button>
-          <button class="update-action" [class.has-update]="item.haveUpdate" (click)="update(item)"><dc-icon name="update"></dc-icon>更新</button>
+          <button class="d-inline-flex items-center gap-4" (click)="restart(item)"><dc-icon name="restart"></dc-icon>重启</button>
+          <button class="update-action d-inline-flex items-center gap-4" [class.has-update]="item.haveUpdate" [disabled]="activeUpdateIds().has(item.id)" (click)="update(item)"><dc-icon name="update"></dc-icon>{{ activeUpdateIds().has(item.id) ? '更新中' : '更新' }}</button>
         </div>
       </article>
     }

@@ -1,7 +1,7 @@
 package backupCompose
 
 import (
-	composeType "github.com/compose-spec/compose-go/types"
+	composeType "github.com/compose-spec/compose-go/v2/types"
 )
 
 type composeYaml struct {

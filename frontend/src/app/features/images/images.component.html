@@ -18,8 +18,6 @@
   <div class="red"><strong>{{ untaggedCount() }}</strong><span>无 Tag</span></div>
 </section>
 
-<dc-section-toolbar title="镜像列表" [subtitle]="images().length + ' 个镜像'"></dc-section-toolbar>
-
 @if (images().length) {
   <section class="resource-grid image-grid">
     @for (image of images(); track image.id) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"regexp"
+	"sort"
 
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
@@ -14,54 +14,34 @@ import (
 
 func ObtainHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		jsPath := "/data/icon/imageLogos.js"
-		logx.Infof("Reading icons from: %s", jsPath)
-
-		contentBytes, err := os.ReadFile(jsPath)
+		icons, err := readIcons(iconConfigPath())
 		if err != nil {
 			if os.IsNotExist(err) {
-				logx.Info("Config file does not exist, returning empty.")
-				httpx.OkJsonCtx(r.Context(), w, types.Resp{
-					Code: 200,
-					Msg:  "Success",
-					Data: map[string]string{},
-				})
+				icons = map[string]string{}
+			} else {
+				logx.Errorf("读取图标配置失败: %v", err)
+				httpx.ErrorCtx(r.Context(), w, fmt.Errorf("failed to read config: %v", err))
 				return
 			}
-			logx.Errorf("Error reading config: %v", err)
-			httpx.ErrorCtx(r.Context(), w, fmt.Errorf("failed to read config: %v", err))
-			return
 		}
-
-		content := string(contentBytes)
-
-		// 改进的正则表达式：匹配 "key": "value"，允许一定的格式变化
-		// 使用反引号表示原始字符串。
-		re := regexp.MustCompile(`"([^"]+)"\s*:\s*"([^"]+)"`)
-		matches := re.FindAllStringSubmatch(content, -1)
-
-		icons := make(map[string]string)
-		for _, match := range matches {
-			if len(match) == 3 {
-				key := match[1]
-				val := match[2]
-				icons[key] = val
+		canonical := make(map[string]string, len(icons))
+		keys := make([]string, 0, len(icons))
+		for key := range icons {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			value := icons[key]
+			repository, err := normalizeRepository(key)
+			if err != nil {
+				continue
+			}
+			if current, exists := canonical[repository]; !exists || key == repository {
+				canonical[repository] = value
+			} else {
+				_ = current
 			}
 		}
-
-		logx.Infof("Total icons found: %d", len(icons))
-
-		response := struct {
-			Code int               `json:"code"`
-			Msg  string            `json:"msg"`
-			Data map[string]string `json:"data"`
-		}{
-			Code: 200,
-			Msg:  "Success",
-			Data: icons,
-		}
-
-		httpx.OkJsonCtx(r.Context(), w, response)
+		httpx.OkJsonCtx(r.Context(), w, types.Resp{Code: 200, Msg: "Success", Data: canonical})
 	}
-
 }

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	url2 "net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,10 +21,24 @@ type ImageCheckList struct {
 	NeedUpdate bool
 }
 type ImageUpdateData struct {
+	mu   sync.RWMutex
 	Data map[string]ImageCheckList
 }
 
 const ContentDigestHeader = "Docker-Content-Digest"
+
+func (i *ImageUpdateData) Set(imageID string, value ImageCheckList) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.Data[imageID] = value
+}
+
+func (i *ImageUpdateData) Get(imageID string) (ImageCheckList, bool) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	value, ok := i.Data[imageID]
+	return value, ok
+}
 
 func NewImageCheck() *ImageUpdateData {
 	return &ImageUpdateData{
@@ -94,7 +109,7 @@ func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 			needUpdate = false
 		}
 	}
-	i.Data[image.ID] = ImageCheckList{NeedUpdate: needUpdate}
+	i.Set(image.ID, ImageCheckList{NeedUpdate: needUpdate})
 }
 
 func BuildManifestURL(image types.Image) (string, error) {

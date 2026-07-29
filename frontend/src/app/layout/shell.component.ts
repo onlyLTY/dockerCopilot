@@ -15,9 +15,20 @@ import { IconComponent } from '../shared/icon.component';
 export class ShellComponent {
   readonly auth = inject(AuthService); readonly ui = inject(UiStateService); readonly tasks = inject(TaskService); private readonly router = inject(Router); private readonly versionService = inject(VersionService);
   open = false; readonly version = signal({ version: '', buildDate: '' });
-  constructor() { if (this.auth.isAuthenticated()) this.versionService.local().subscribe({ next: result => { if (result.code === 200) this.version.set(result.data); } }); }
+  constructor() {
+    if (this.auth.isAuthenticated()) {
+      this.versionService.local().subscribe({
+        next: result => { if (result.code === 200) this.version.set(result.data); },
+        error: () => this.version.set({ version: '', buildDate: '' }),
+      });
+    }
+  }
   navigate(path: string): void { this.router.navigateByUrl(path); this.closeMenu(); }
-  isActive(path: string): boolean { return this.router.url.startsWith(path); }
+  isActive(path: string): boolean {
+    const current = this.router.url.split('?')[0].replace(/^\//, '');
+    const target = path.replace(/^\//, '');
+    return current === target || current.startsWith(target + '/');
+  }
   closeMenu(): void { this.open = false; }
   logout(): void { this.auth.logout(); this.closeMenu(); this.router.navigateByUrl('/login'); }
 }

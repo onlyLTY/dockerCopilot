@@ -1,6 +1,6 @@
-// 全局样式入口：按职责拆分到同目录下的分片
 @use 'variables';
 @use 'base';
+@use 'utilities';
 @use 'layout';
 @use 'page-heading';
 @use 'stats';

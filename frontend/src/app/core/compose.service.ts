@@ -11,7 +11,7 @@ export interface ComposeFile { name: string; size: number; modifiedAt: string; v
 export interface ComposeProject { id: string; name: string; root: string; files: ComposeFile[]; status: 'using' | 'stopped' | 'unused' | 'unknown'; containers: ComposeContainer[]; ports: ComposePort[]; warnings?: string[]; }
 export interface ComposeSummary { total: number; using: number; stopped: number; unused: number; unknown: number; }
 export interface ProjectsData { summary: ComposeSummary; projects: ComposeProject[]; }
-export interface PortUsage { project: string; containerID: string; containerName: string; state: string; hostIP: string; hostPort: string; containerPort: string; protocol: string; published: boolean; conflictKey?: string; }
+export interface PortUsage { project: string; containerID: string; containerName: string; image?: string; state: string; hostIP: string; hostPort: string; containerPort: string; protocol: string; published: boolean; conflictKey?: string; }
 
 @Injectable({ providedIn: 'root' })
 export class ComposeService {
@@ -48,4 +48,6 @@ export class ComposeService {
   deploy(projectId: string, filename: string, confirmToken: string, confirmWarnings: boolean): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/' + projectId + '/deploy', { projectId, filename, confirmToken, confirmWarnings });
   }
+  cleanupPreview(projectId: string): Observable<ApiResponse<Record<string, unknown>>> { return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/cleanup/preview', { projectId }); }
+  cleanup(projectId: string, previewToken: string, deleteDir = false): Observable<ApiResponse<Record<string, unknown>>> { return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/cleanup', { projectId, previewToken, deleteDir, confirm: true }); }
 }

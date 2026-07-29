@@ -1,18 +1,17 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { from, forkJoin, of } from 'rxjs';
+import { catchError, map, mergeMap, toArray } from 'rxjs/operators';
 import { ContainerService, ContainerRow } from '../../core/container.service';
 import { IconService } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
 import { PageStateComponent } from '../../shared/page-state.component';
-import { SectionToolbarComponent } from '../../shared/section-toolbar.component';
 import { IconComponent } from '../../shared/icon.component';
 
 @Component({
   selector: 'dc-containers',
   standalone: true,
-  imports: [PageStateComponent, SectionToolbarComponent, IconComponent],
+  imports: [PageStateComponent, IconComponent],
   templateUrl: './containers.component.html',
 })
 export class ContainersComponent {
@@ -23,12 +22,24 @@ export class ContainersComponent {
   readonly error = this.service.cache.error;
   readonly iconMap = computed(() => this.icons.cache.data() || {});
   readonly selected = signal<Set<string>>(new Set());
+  readonly selectionMode = signal(false);
   readonly busy = signal(false);
   readonly checking = signal(false);
+  readonly activeUpdateIds = signal<Set<string>>(new Set());
   readonly runningCount = computed(() => this.containers().filter(x => this.isRunning(x)).length); readonly updateCount = computed(() => this.containers().filter(x => x.haveUpdate).length);
   readonly selectedCount = computed(() => this.selected().size);
   readonly allSelected = computed(() => this.containers().length > 0 && this.selected().size === this.containers().length);
-  constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
+  readonly hasActiveUpdates = computed(() => this.activeUpdateIds().size > 0);
+  constructor() {
+    this.service.ensureLoaded();
+    this.icons.ensureLoaded();
+    this.tasks.completed.subscribe(({ resourceID }) => {
+      if (!resourceID) return;
+      const next = new Set(this.activeUpdateIds());
+      next.delete(resourceID);
+      this.activeUpdateIds.set(next);
+    });
+  }
   refresh(): void { this.service.refresh(); }
   // 手动检查更新：异步任务，登记进度；完成后刷新容器列表以更新“有更新”标识
   checkUpdate(): void {
@@ -47,7 +58,7 @@ export class ContainersComponent {
   }
   hasUpdate(x: ContainerRow) { return !!x.haveUpdate; }
   isRunning(x: ContainerRow) { return x.status.includes('Up') || x.status.includes('running') || x.status.includes('运行'); }
-  icon(x: ContainerRow) { return this.icons.resolve(x.usingImage || x.name, this.iconMap()); } fallback(e: Event) { (e.target as HTMLImageElement).src = this.icons.actionIcon('containers'); }
+  icon(x: ContainerRow) { return this.icons.resolve(x.usingImage, this.iconMap()); } fallback(e: Event) { (e.target as HTMLImageElement).src = this.icons.actionIcon('containers'); }
 
   // 将 Docker 状态文本（如 "Up 3 hours"）解析为本地化时长
   private duration(text: string): string {
@@ -70,7 +81,9 @@ export class ContainersComponent {
     return this.stateLabel(x.status);
   }
 
-  // ===== 选择（批量操作） =====
+  enterSelection() { this.selectionMode.set(true); }
+  exitSelection() { this.selectionMode.set(false); this.selected.set(new Set()); }
+
   isSelected(id: string) { return this.selected().has(id); }
   toggleSelect(id: string) { const next = new Set(this.selected()); next.has(id) ? next.delete(id) : next.add(id); this.selected.set(next); }
   toggleAll() { this.selected.set(this.allSelected() ? new Set() : new Set(this.containers().map(x => x.id))); }
@@ -90,14 +103,22 @@ export class ContainersComponent {
   restart(x: ContainerRow) { this.run(x, id => this.service.restart(id), '重启'); }
   // 更新是异步任务：拿到 taskID 后登记进度，弹窗展示进度
   update(x: ContainerRow) {
-    this.service.update(x.id).subscribe({
+    if (this.activeUpdateIds().has(x.id)) return;
+    this.markUpdateActive(x.id);
+    this.service.update(x.id, x.usingImage, x.name).subscribe({
       next: (r: any) => {
         const taskID = r.data?.taskID;
-        if (r.code === 200 && taskID) this.tasks.track(String(taskID), '更新 ' + x.name, true);
-        else if (r.code === 200) this.toast.info(`${x.name} 更新任务已提交`);
-        else this.toast.error(`${x.name} 更新失败：${r.msg || '未知错误'}`);
+        if (r.code === 200 && taskID) this.tasks.track(String(taskID), '更新 ' + x.name, true, x.id);
+        else {
+          this.markUpdateInactive(x.id);
+          if (r.code === 200) this.toast.info(`${x.name} 更新任务已提交`);
+          else this.toast.error(`${x.name} 更新失败：${r.msg || '未知错误'}`);
+        }
       },
-      error: (e: any) => this.toast.error(`${x.name} 更新失败：${e.error?.msg || e.message || '请求错误'}`),
+      error: (e: any) => {
+        this.markUpdateInactive(x.id);
+        this.toast.error(`${x.name} 更新失败：${e.error?.msg || e.message || '请求错误'}`);
+      },
     });
   }
 
@@ -119,21 +140,40 @@ export class ContainersComponent {
   }
   bulkStart() { this.bulk(id => this.service.start(id), '启动'); }
   bulkStop() { this.bulk(id => this.service.stop(id), '停止'); }
-  // 批量更新：为每个容器登记一个进度任务
+  // 批量更新使用固定并发窗口，避免一次性启动大量 Docker 重建任务
   bulkUpdate() {
-    const targets = this.containers().filter(x => this.selected().has(x.id));
+    const targets = this.containers().filter(x => this.selected().has(x.id) && !this.activeUpdateIds().has(x.id));
     if (!targets.length || this.busy()) return;
     this.busy.set(true);
-    forkJoin(targets.map(x => this.service.update(x.id).pipe(
-      map((r: any) => ({ name: x.name, ok: r.code === 200, taskID: r.data?.taskID, msg: r.msg })),
-      catchError((e: any) => of({ name: x.name, ok: false, taskID: undefined, msg: e.error?.msg || e.message || '请求错误' })),
-    ))).subscribe(results => {
+    targets.forEach(x => this.markUpdateActive(x.id));
+    from(targets).pipe(
+      mergeMap(x => this.service.update(x.id, x.usingImage, x.name).pipe(
+        map((r: any) => ({ container: x, ok: r.code === 200, taskID: r.data?.taskID, msg: r.msg })),
+        catchError((e: any) => of({ container: x, ok: false, taskID: undefined, msg: e.error?.msg || e.message || '请求错误' })),
+      ), 3),
+      toArray(),
+    ).subscribe(results => {
       this.busy.set(false);
-      results.forEach(r => { if (r.ok && r.taskID) this.tasks.track(String(r.taskID), '更新 ' + r.name, true); });
+      results.forEach(r => {
+        if (r.ok && r.taskID) this.tasks.track(String(r.taskID), '更新 ' + r.container.name, true, r.container.id);
+        else this.markUpdateInactive(r.container.id);
+      });
       const ok = results.filter(r => r.ok).length; const fail = results.length - ok;
       if (fail === 0) this.toast.info(`已提交 ${ok} 个容器的更新任务`);
       else { const first = results.find(r => !r.ok); this.toast.error(`更新提交 ${ok} 个，失败 ${fail} 个${first ? '：' + first.msg : ''}`); }
       this.selected.set(new Set());
     });
+  }
+
+  private markUpdateActive(id: string): void {
+    const next = new Set(this.activeUpdateIds());
+    next.add(id);
+    this.activeUpdateIds.set(next);
+  }
+
+  private markUpdateInactive(id: string): void {
+    const next = new Set(this.activeUpdateIds());
+    next.delete(id);
+    this.activeUpdateIds.set(next);
   }
 }

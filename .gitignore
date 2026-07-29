@@ -42,6 +42,6 @@ __pycache__/
 /docker/build.sh
 /docker/docker-compose.yml
 # 忽略数据目录及其中的所有文件
-/data/
+/docker/test/
 
 .zcode

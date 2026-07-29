@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	composeTypes "github.com/compose-spec/compose-go/types"
+	composeTypes "github.com/compose-spec/compose-go/v2/types"
 )
 
 type Risk struct {

@@ -48,63 +48,53 @@
 } @else {
   <dc-page-state [loading]="loading()" [error]="messageType() === 'error' ? message() : ''" emptyText="暂无项目"></dc-page-state>
 }
-
-@if (editorProject(); as ep) {
-  <div class="modal-backdrop" (click)="closeEditor($event)">
-    <section class="modal editor-modal" role="dialog" aria-modal="true">
-      <div class="modal-head">
-        <div>
-          <p class="eyebrow">COMPOSE PROJECT</p>
-          <h2>{{ ep.name || '项目' }}</h2>
-          <p>{{ ep.root }}</p>
+@if (composeDialog() !== 'closed') {
+  <div class="modal-backdrop" (click)="composeDialog() === 'edit' ? closeEditor($event) : closeCreate($event)">
+    <section class="modal modal-form modal-xl" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      @if (editorProject(); as ep) {
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">COMPOSE PROJECT</p>
+            <h2>{{ ep.name || '项目' }}</h2>
+            <p>{{ ep.root }}</p>
+          </div>
+          <button class="modal-close" (click)="closeEditor()" aria-label="关闭">×</button>
         </div>
-        <button class="modal-close" (click)="closeEditor()" aria-label="关闭">×</button>
-      </div>
-      <div class="file-tabs">
-        @for (file of ep.files; track file.name) {
-          <button [class.active]="filename() === file.name" (click)="openFile(file.name)">{{ file.name }}</button>
-        }
-      </div>
-      <textarea class="code-editor" [(ngModel)]="content" spellcheck="false"></textarea>
-      <div class="editor-foot">
-        <span class="message" [class.error]="messageType() === 'error'">{{ message() }}</span>
-        <button class="secondary" (click)="validate()">格式校验</button>
-        <button class="secondary" (click)="previewDeploy()">部署预览</button>
-        <button class="primary" (click)="save()">保存文件</button>
-      </div>
-      @if (preview(); as p) {
-        <div class="risk-box">
-          <b>部署预览</b>
-          <p>服务：{{ p['services']?.join(', ') }}</p>
-          @if (risks().length) {
-            <p>风险：{{ risks().length }} 项，请确认后部署</p>
+        <div class="modal-body compose-body">
+          <div class="file-tabs">
+            @for (file of ep.files; track file.name) { <button [class.active]="filename() === file.name" (click)="openFile(file.name)">{{ file.name }}</button> }
+          </div>
+          <textarea class="code-editor" [(ngModel)]="content" spellcheck="false"></textarea>
+          @if (preview(); as p) {
+            <div class="risk-box">
+              <b>部署预览</b><p>服务：{{ p['services']?.join(', ') }}</p>
+              @if (risks().length) { <p>风险：{{ risks().length }} 项，请确认后部署</p> }
+              <button class="primary d-inline-flex items-center gap-8" (click)="deploy()">部署</button>
+            </div>
           }
-          <button class="primary" (click)="deploy()">确认部署</button>
+        </div>
+        <div class="editor-foot">
+          <span class="message">{{ message() }}</span>
+          <button class="secondary d-inline-flex items-center gap-8" (click)="validate()">格式校验</button>
+          <button class="secondary d-inline-flex items-center gap-8" (click)="previewDeploy()">部署预览</button>
+          <button class="primary d-inline-flex items-center gap-8" (click)="save()">保存文件</button>
+        </div>
+      } @else {
+        <div class="modal-head">
+          <div><p class="eyebrow">NEW PROJECT</p><h2>新建项目</h2></div>
+          <button class="modal-close" (click)="closeCreate()" aria-label="关闭">×</button>
+        </div>
+        <div class="modal-body compose-body">
+          <label class="form-field">项目名称<input [(ngModel)]="projectName" placeholder="例如：my-app"></label>
+          <label class="form-field compose-config-field">Compose 配置<textarea class="code-editor" [(ngModel)]="projectContent" spellcheck="false"></textarea></label>
+        </div>
+        <div class="editor-foot">
+          <span class="message">{{ createValidated() ? '格式已通过，可创建或部署' : '' }}</span>
+          <button class="secondary d-inline-flex items-center gap-8" (click)="validateCreate()">格式校验</button>
+          <button class="secondary d-inline-flex items-center gap-8" [disabled]="creating()" (click)="deployNewProject()">创建并部署</button>
+          <button class="primary d-inline-flex items-center gap-8" [disabled]="creating()" (click)="createProject()">{{ creating() ? '创建中…' : '创建项目' }}</button>
         </div>
       }
-    </section>
-  </div>
-}
-
-@if (showCreate()) {
-  <div class="modal-backdrop" (click)="closeCreate($event)">
-    <section class="modal" role="dialog" aria-modal="true">
-      <div class="modal-head">
-        <div>
-          <p class="eyebrow">NEW PROJECT</p>
-          <h2>新建项目</h2>
-        </div>
-        <button class="modal-close" (click)="closeCreate()" aria-label="关闭">×</button>
-      </div>
-      <label class="form-field">项目名称<input [(ngModel)]="projectName" placeholder="例如：my-app"></label>
-      <label class="form-field">Compose 配置<textarea class="compose-input" [(ngModel)]="projectContent" spellcheck="false"></textarea></label>
-      @if (createError()) {
-        <p class="message error">{{ createError() }}</p>
-      }
-      <div class="modal-actions">
-        <button class="secondary" (click)="closeCreate()">取消</button>
-        <button class="primary" [disabled]="creating()" (click)="createProject()">{{ creating() ? '创建中…' : '创建项目' }}</button>
-      </div>
     </section>
   </div>
 }

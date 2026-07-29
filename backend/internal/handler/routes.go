@@ -175,6 +175,21 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/settings/auto-backup",
 				Handler: container.UpdateAutoBackupSettingsHandler(serverCtx),
 			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/settings/log-level",
+				Handler: GetLogLevelHandler,
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/settings/log-level",
+				Handler: UpdateLogLevelHandler,
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/logs",
+				Handler: GetLogsHandler,
+			},
 
 			{
 				Method:  http.MethodGet,

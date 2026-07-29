@@ -35,8 +35,8 @@
 .task-row-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 
 /* ===== 进度弹窗 ===== */
-.modal.task-modal { width: min(520px, 100%); }
-.task-progress { margin-top: 20px; }
+.task-content { display: flex; min-height: 0; flex-direction: column; overflow: hidden; }
+.task-progress { min-height: 0; margin-top: 20px; }
 .task-progress .progress-bar { height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; }
 .task-progress .progress-bar span { display: block; height: 100%; background: var(--accent); transition: width .3s ease; }
 .task-progress .progress-bar.done span { background: #17a35a; }
@@ -45,11 +45,11 @@
 .progress-meta .failed { color: var(--danger); }
 .progress-meta .muted { color: var(--muted); }
 .task-detail {
-  margin: 16px 0 0; padding: 12px 14px; max-height: 220px; overflow: auto;
+  margin: 16px 0 0; padding: 12px 14px; min-height: 0; max-height: 220px; overflow: auto;
   background: var(--page-bg); border: 1px solid var(--line); border-radius: 8px;
   color: var(--muted); font: 12px/1.6 "SFMono-Regular", Consolas, monospace; white-space: pre-wrap; word-break: break-word;
 }
-.task-modal .modal-actions { justify-content: space-between; }
+.task-actions { margin-top: auto; padding-top: 16px; }
 
 /* ===== 设置页 ===== */
 .settings-card {

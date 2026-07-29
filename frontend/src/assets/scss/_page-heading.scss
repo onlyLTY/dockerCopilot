@@ -18,4 +18,11 @@
 .section-toolbar h2 { margin: 0; color: var(--text); font-size: 18px; }
 .section-toolbar p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 .section-toolbar-actions { display: flex; align-items: center; gap: 8px; }
-.settings-trigger { white-space: nowrap; }
+.batch-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--surface);
+}
+.batch-toolbar .batch-title { color: var(--text); font-size: 13px; font-weight: 650; margin-right: auto; }
+.batch-toolbar .select-all { margin-right: 4px; }
+.batch-toolbar .batch-exit { margin-left: auto; }

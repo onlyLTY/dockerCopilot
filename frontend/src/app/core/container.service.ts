@@ -28,7 +28,7 @@ export class ContainerService {
   start(id: string) { return this.done(this.http.post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/start', {})); }
   stop(id: string) { return this.done(this.http.post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/stop', {})); }
   restart(id: string) { return this.done(this.http.post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/restart', {})); }
-  update(id: string) { return this.done(this.http.post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/update', {})); }
+  update(id: string, imageNameAndTag = '', containerName = '') { return this.http.post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/update', { imageNameAndTag, containerName }); }
 
   /** 操作成功后：刷新容器自身缓存，并让端口/镜像缓存失效（起停会影响端口占用与镜像使用状态） */
   private done(obs: Observable<ApiResponse<unknown>>): Observable<ApiResponse<unknown>> {

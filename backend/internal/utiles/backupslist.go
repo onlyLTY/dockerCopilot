@@ -3,6 +3,7 @@ package utiles
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/onlyLTY/dockerCopilot/internal/backupstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
@@ -19,9 +20,11 @@ func BackupList(ctx *svc.ServiceContext) ([]string, error) {
 		return nil, err
 	}
 	for _, entry := range entries {
-		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
-			backupList = append(backupList, entry.Name())
-		} else if !entry.IsDir() && filepath.Ext(entry.Name()) == ".yaml" {
+		if entry.IsDir() {
+			continue
+		}
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
+		if ext == ".json" || ext == ".yaml" || ext == ".yml" {
 			backupList = append(backupList, entry.Name())
 		}
 	}

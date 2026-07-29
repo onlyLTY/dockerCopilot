@@ -8,7 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	composecli "github.com/compose-spec/compose-go/cli"
+	composecli "github.com/compose-spec/compose-go/v2/cli"
+	composeTypes "github.com/compose-spec/compose-go/v2/types"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
@@ -50,9 +51,12 @@ func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.Co
 	}
 	for _, group := range groups {
 		project := appTypes.ComposeProject{
-			ID:    ProjectID(group.root),
-			Root:  displayRoot(svcCtx, group.root),
-			Files: make([]appTypes.ComposeFile, 0, len(group.files)),
+			ID:         ProjectID(group.root),
+			Root:       displayRoot(svcCtx, group.root),
+			Files:      make([]appTypes.ComposeFile, 0, len(group.files)),
+			Containers: make([]appTypes.ComposeContainer, 0),
+			Ports:      make([]appTypes.ComposePort, 0),
+			Warnings:   make([]string, 0),
 		}
 		for _, file := range group.files {
 			info, statErr := os.Stat(file)
@@ -120,10 +124,14 @@ func ListPorts(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.Ports
 		}
 		project := item.Labels["com.docker.compose.project"]
 		ports := containerPorts(inspect)
+		image := ""
+		if inspect.Config != nil {
+			image = inspect.Config.Image
+		}
 		for _, port := range ports {
 			usage := appTypes.PortUsage{
 				Project: project, ContainerID: item.ID, ContainerName: firstName(item.Names),
-				State: inspect.State.Status, HostIP: port.HostIP, HostPort: port.HostPort,
+				Image: image, State: inspect.State.Status, HostIP: port.HostIP, HostPort: port.HostPort,
 				ContainerPort: port.ContainerPort, Protocol: port.Protocol, Published: port.Published,
 			}
 			if usage.Published {
@@ -204,15 +212,30 @@ func discoverFiles(svcCtx *svc.ServiceContext) ([]projectFiles, error) {
 }
 
 func loadProject(group projectFiles) (*composeProject, error) {
-	options, err := composecli.NewProjectOptions(group.files, composecli.WithWorkingDirectory(group.root))
-	if err != nil {
-		return nil, err
-	}
-	project, err := composecli.ProjectFromOptions(options)
+	project, err := LoadProject(context.Background(), group.root, group.files)
 	if err != nil {
 		return nil, err
 	}
 	return &composeProject{Name: project.Name}, nil
+}
+
+// LoadProject loads the same normalized Compose model used by deployment and validation.
+func LoadProject(ctx context.Context, root string, files []string) (*composeTypes.Project, error) {
+	if root == "" || len(files) == 0 {
+		return nil, fmt.Errorf("Compose 项目文件不完整")
+	}
+	options, err := composecli.NewProjectOptions(
+		files,
+		composecli.WithWorkingDirectory(root),
+		composecli.WithOsEnv,
+		composecli.WithDotEnv,
+		composecli.WithResolvedPaths(true),
+		composecli.WithDiscardEnvFile,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return composecli.ProjectFromOptions(ctx, options)
 }
 
 type composeProject struct{ Name string }
@@ -266,16 +289,36 @@ func firstName(names []string) string {
 func containerPorts(inspect dockerTypes.ContainerJSON) []appTypes.ComposePort {
 	ports := make([]appTypes.ComposePort, 0)
 	seen := make(map[string]bool)
+	unpublished := make(map[string]int)
+	publishedTargets := make(map[string]bool)
 	add := func(hostIP, hostPort, containerPort, protocol string, published bool) {
 		if containerPort == "" {
 			return
 		}
-		key := hostIP + ":" + hostPort + ":" + containerPort + ":" + protocol
+		targetKey := containerPort + ":" + protocol
+		key := hostIP + ":" + hostPort + ":" + targetKey
 		if seen[key] {
+			return
+		}
+		// Docker can report an exposed target as well as its published binding.
+		// Replace the unbound entry when the real binding is discovered.
+		if published {
+			if index, ok := unpublished[targetKey]; ok {
+				ports[index] = appTypes.ComposePort{HostIP: hostIP, HostPort: hostPort, ContainerPort: containerPort, Protocol: protocol, Published: true}
+				delete(unpublished, targetKey)
+				seen[key] = true
+				publishedTargets[targetKey] = true
+				return
+			}
+			publishedTargets[targetKey] = true
+		} else if hostIP == "" && hostPort == "" && publishedTargets[targetKey] {
 			return
 		}
 		ports = append(ports, appTypes.ComposePort{HostIP: hostIP, HostPort: hostPort, ContainerPort: containerPort, Protocol: protocol, Published: published})
 		seen[key] = true
+		if !published && hostIP == "" && hostPort == "" {
+			unpublished[targetKey] = len(ports) - 1
+		}
 	}
 	if inspect.NetworkSettings != nil {
 		for target, bindings := range inspect.NetworkSettings.Ports {

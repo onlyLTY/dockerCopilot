@@ -3,7 +3,7 @@ package compose_project
 import (
 	"testing"
 
-	composeTypes "github.com/compose-spec/compose-go/types"
+	composeTypes "github.com/compose-spec/compose-go/v2/types"
 )
 
 func TestProjectNameValidation(t *testing.T) {
@@ -33,7 +33,9 @@ func TestComposeFilenameValidation(t *testing.T) {
 }
 
 func TestInspectRisks(t *testing.T) {
-	project := &composeTypes.Project{Services: composeTypes.Services{{Name: "app", Privileged: true, NetworkMode: "host"}}}
+	project := &composeTypes.Project{Services: composeTypes.Services{
+		"app": {Name: "app", Privileged: true, NetworkMode: "host"},
+	}}
 	risks := InspectRisks(project, "/compose/app")
 	if len(risks) != 2 {
 		t.Fatalf("expected two risks, got %d", len(risks))

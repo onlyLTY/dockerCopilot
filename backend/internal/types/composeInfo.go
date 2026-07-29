@@ -55,6 +55,7 @@ type PortUsage struct {
 	Project       string `json:"project"`
 	ContainerID   string `json:"containerID"`
 	ContainerName string `json:"containerName"`
+	Image         string `json:"image"`
 	State         string `json:"state"`
 	HostIP        string `json:"hostIP"`
 	HostPort      string `json:"hostPort"`

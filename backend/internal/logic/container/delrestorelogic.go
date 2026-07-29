@@ -37,15 +37,17 @@ func (l *DelRestoreLogic) DelRestore(req *types.DelContainerBackupReq) (resp *ty
 	}
 	fullPath, err := utiles.ResolveBackupPath(fileName)
 	if err != nil {
+		l.Errorf("删除备份文件失败，filename=%q, error=%v", fileName, err)
 		resp.Code = 400
-		resp.Msg = "备份文件名不合法"
+		resp.Msg = "备份文件名不合法：" + err.Error()
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
 	err = os.Remove(fullPath)
 	if err != nil {
+		l.Errorf("删除备份文件失败，filename=%q, error=%v", fileName, err)
 		resp.Code = 400
-		resp.Msg = "删除失败"
+		resp.Msg = "删除失败：" + err.Error()
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}

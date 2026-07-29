@@ -1,0 +1,51 @@
+// 可复用的显示、颜色、图标和间距工具类
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.d-flex { display: flex !important; }
+.d-inline-flex { display: inline-flex !important; }
+.d-grid { display: grid !important; }
+.flex-1 { flex: 1 1 0 !important; }
+.items-center { align-items: center !important; }
+.justify-between { justify-content: space-between !important; }
+.justify-end { justify-content: flex-end !important; }
+
+@each $size in (4, 8, 12, 16, 20, 24) {
+  .gap-#{$size} { gap: #{$size}px !important; }
+}
+
+.text-primary { color: var(--accent) !important; }
+.text-muted { color: var(--muted) !important; }
+.text-danger { color: var(--danger) !important; }
+.text-success { color: var(--success) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-info { color: var(--info) !important; }
+.text-inherit { color: inherit !important; }
+.bg-primary { background: var(--accent) !important; }
+.bg-danger { background: var(--danger) !important; }
+.bg-success { background: var(--success) !important; }
+.bg-warning { background: var(--warning) !important; }
+.bg-info { background: var(--info) !important; }
+
+.icon-xs { --icon-size: 12px; }
+.icon-sm { --icon-size: 14px; }
+.icon-md { --icon-size: 16px; }
+.icon-lg { --icon-size: 20px; }
+.icon-xl { --icon-size: 24px; }
+.icon-2xl { --icon-size: 32px; }
+
+@each $size in (0, 4, 8, 12, 16, 20, 24, 32) {
+  .m-#{$size} { margin: #{$size}px !important; }
+  .mt-#{$size} { margin-top: #{$size}px !important; }
+  .mr-#{$size} { margin-right: #{$size}px !important; }
+  .mb-#{$size} { margin-bottom: #{$size}px !important; }
+  .ml-#{$size} { margin-left: #{$size}px !important; }
+  .mx-#{$size} { margin-left: #{$size}px !important; margin-right: #{$size}px !important; }
+  .my-#{$size} { margin-top: #{$size}px !important; margin-bottom: #{$size}px !important; }
+  .p-#{$size} { padding: #{$size}px !important; }
+  .pt-#{$size} { padding-top: #{$size}px !important; }
+  .pr-#{$size} { padding-right: #{$size}px !important; }
+  .pb-#{$size} { padding-bottom: #{$size}px !important; }
+  .pl-#{$size} { padding-left: #{$size}px !important; }
+  .px-#{$size} { padding-left: #{$size}px !important; padding-right: #{$size}px !important; }
+  .py-#{$size} { padding-top: #{$size}px !important; padding-bottom: #{$size}px !important; }
+}

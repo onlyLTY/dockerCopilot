@@ -1,12 +1,11 @@
 package backupCompose
 
 import (
-	composeType "github.com/compose-spec/compose-go/types"
+	composeType "github.com/compose-spec/compose-go/v2/types"
 	dockerTypes "github.com/docker/docker/api/types"
 	composeNat "github.com/docker/go-connections/nat"
 	"github.com/onlyLTY/dockerCopilot/internal/backupstore"
 	"github.com/zeromicro/go-zero/core/logx"
-	"os"
 	"path/filepath"
 	"sigs.k8s.io/yaml"
 	"strconv"
@@ -25,35 +24,27 @@ func DockerConfig2ComposeYaml(containerJSONs []dockerTypes.ContainerJSON) (err e
 		formatVolumeServiceConfig(containerJSON, &s)
 		c.Services[s.Name] = s
 	}
-	// write to file
-	backupDir := os.Getenv("BACKUP_DIR") // 从环境变量中获取备份目录
-	if backupDir == "" {
-		backupDir = "/data/backups" // 如果环境变量未设置，使用默认值
-	}
-	_, err = os.Stat(backupDir)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(backupDir, 0755)
-		if err != nil {
-			logx.Error("Error creating backup directory:", err)
-			return err
-		}
-	}
+	backupDir := backupstore.Directory()
 	yamlData, yamlMarshalErr := yaml.Marshal(c)
 	if yamlMarshalErr != nil {
 		logx.Errorf("Error marshalling data err is: %v", yamlMarshalErr)
+		return yamlMarshalErr
 	}
-	fileName := backupstore.TimestampedName(".yaml")
-	fullPath := filepath.Join(backupDir, fileName)
-	err = os.WriteFile(fullPath, yamlData, 0644)
+	fileName, err := backupstore.CreateBackupFile(backupDir, ".yaml", yamlData, 0644)
 	if err != nil {
-		logx.Error("Error writing to file:", err)
+		logx.Error("Error writing backup file:", err)
 		return err
 	}
+	fullPath := filepath.Join(backupDir, fileName)
 	retention, err := backupstore.GetRetention()
 	if err != nil {
-		return err
+		logx.Errorf("Error reading backup retention after writing %s: %v", fullPath, err)
+		return nil
 	}
-	return backupstore.Retain(retention)
+	if err := backupstore.Retain(retention); err != nil {
+		logx.Errorf("Error applying backup retention after writing %s: %v", fullPath, err)
+	}
+	return nil
 }
 
 func formatBaseServiceConfig(containerJSON dockerTypes.ContainerJSON, s *composeType.ServiceConfig) {

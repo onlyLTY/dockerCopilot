@@ -3,13 +3,13 @@ package container
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 	"path/filepath"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
-
+	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -20,16 +20,13 @@ type RestoreLogic struct {
 }
 
 func NewRestoreLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RestoreLogic {
-	return &RestoreLogic{
-		Logger: logx.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
+	return &RestoreLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
 func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	taskID := uuid.New().String()
+	name := "恢复容器"
 	fileName := req.Filename
 	if _, err := utiles.ResolveBackupPath(fileName); err != nil {
 		resp.Code = 400
@@ -37,29 +34,28 @@ func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
-	if filepath.Ext(fileName) != ".json" {
+	if strings.ToLower(filepath.Ext(fileName)) != ".json" {
 		err = fmt.Errorf("目前仅支持config备份恢复")
 		resp.Code = 400
 		resp.Msg = err.Error()
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
+	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Message: "任务已提交", DetailMsg: "", IsDone: false})
 	go func() {
-		// Catch any panic and log the error
 		defer func() {
 			if r := recover(); r != nil {
-				l.Errorf("Recovered from panic in restoreContainer: %v", r)
+				message := fmt.Sprintf("恢复容器异常: %v", r)
+				l.Errorf("task=%s file=%s %s", taskID, fileName, message)
+				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Message: "恢复失败", DetailMsg: message, IsDone: true})
 			}
 		}()
-		err := utiles.RestoreContainer(l.svcCtx, fileName, taskID)
-		if err != nil {
-			l.Errorf("Error in restoreContainer: %v", err)
+		if err := utiles.RestoreContainer(l.svcCtx, fileName, taskID); err != nil {
+			l.Errorf("restore container failed task=%s file=%s: %v", taskID, fileName, err)
 		}
 	}()
 	resp.Code = 200
 	resp.Msg = "success"
-	resp.Data = map[string]interface{}{
-		"taskID": taskID,
-	}
+	resp.Data = map[string]interface{}{"taskID": taskID}
 	return resp, nil
 }

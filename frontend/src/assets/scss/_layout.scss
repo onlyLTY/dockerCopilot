@@ -6,10 +6,10 @@
 .sidebar {
   position: fixed; inset: 0 auto 0 0; width: 260px; height: 100vh;
   background: var(--surface); border-right: 1px solid var(--line);
-  padding: 24px 18px; display: flex; flex-direction: column; z-index: 10; overflow-y: auto;
+  padding: 24px 18px; display: flex; flex-direction: column; z-index: 10; overflow: hidden;
 }
 
-.brand {
+.brand { flex: none;
   display: flex; align-items: center; gap: 12px;
   padding: 0 8px 24px; border-bottom: 1px solid var(--line);
 }
@@ -19,7 +19,15 @@
 .brand span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
 
 /* ===== 导航菜单 ===== */
-nav { display: grid; gap: 6px; margin-top: 12px; }
+nav {
+  display: grid; gap: 6px; margin-top: 12px;
+  flex: 1; min-height: 0; overflow-y: auto; align-content: start;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+nav::-webkit-scrollbar { width: 5px; }
+nav::-webkit-scrollbar-track { background: transparent; }
+nav::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
+nav::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 nav a {
   display: flex; align-items: center; gap: 12px;
   color: var(--muted); text-decoration: none;
@@ -32,7 +40,7 @@ nav a:hover dc-icon,
 nav a.active dc-icon { color: var(--accent); }
 
 /* ===== 侧边栏底部 ===== */
-.sidebar-bottom { margin-top: auto; padding-top: 16px; }
+.sidebar-bottom { flex: none; margin-top: auto; padding-top: 16px; }
 .sidebar-actions {
   display: flex; align-items: center; gap: 6px;
   padding: 4px; margin-bottom: 14px;
@@ -70,9 +78,9 @@ nav a.active dc-icon { color: var(--accent); }
   display: none; height: 56px; background: var(--surface); border-bottom: 1px solid var(--line);
   align-items: center; gap: 16px; padding: 0 22px;
 }
-.icon-button { border: 0; background: transparent; color: var(--text); display: grid; place-items: center; }
+.icon-button { border: 0; background: transparent; color: var(--text); }
 .icon-button dc-icon { --icon-size: 20px; }
-.mobile-logout { margin-left: auto; border: 0; background: transparent; color: var(--danger); display: grid; place-items: center; }
+.mobile-logout { margin-left: auto; border: 0; background: transparent; color: var(--danger); display: inline-flex; align-items: center; justify-content: center; }
 .mobile-logout dc-icon { --icon-size: 20px; }
 .sidebar-overlay { display: none; }
 

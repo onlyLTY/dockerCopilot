@@ -1,9 +1,10 @@
 // 响应式断点
 
 @media (max-width: 1200px) {
-  .resource-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .image-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .icon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .resource-grid,
+  .image-grid,
+  .backup-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .icon-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .backup-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .about-grid { grid-template-columns: 1fr 1fr; }
 }
@@ -19,10 +20,13 @@
   .topbar { display: flex; }
   .content-wrap main { padding: 0 22px 45px; }
   .resource-grid,
-  .image-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .image-grid,
+  .backup-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .icon-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .about-grid { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(3, 1fr); }
+  .stats.stats-two { grid-template-columns: repeat(2, 1fr); }
+  .stats.stats-four { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 600px) {
@@ -31,6 +35,7 @@
   .page-heading h1 { font-size: 27px; }
   .stats,
   .stats-four { grid-template-columns: repeat(2, 1fr); }
+  .stats.stats-three { grid-template-columns: repeat(2, 1fr); }
   .resource-grid,
   .image-grid,
   .backup-card-grid { grid-template-columns: 1fr; }

@@ -1,24 +1,19 @@
 package backupstore
 
 import (
-	"encoding/json"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
-)
 
-const (
-	defaultRetention = 10
-	minRetention     = 1
-	maxRetention     = 100
+	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
+	"github.com/zeromicro/go-zero/core/logx"
 )
-
-type Settings struct {
-	Retention int `json:"retention"`
-}
 
 func Directory() string {
 	if dir := os.Getenv("BACKUP_DIR"); dir != "" {
@@ -27,46 +22,24 @@ func Directory() string {
 	return "/data/backups"
 }
 
-func SettingsPath() string { return "/data/config/backupSettings.json" }
-
 func GetRetention() (int, error) {
-	content, err := os.ReadFile(SettingsPath())
-	if os.IsNotExist(err) {
-		return defaultRetention, nil
-	}
-	if err != nil {
-		return 0, err
-	}
-	var settings Settings
-	if err := json.Unmarshal(content, &settings); err != nil {
-		return 0, err
-	}
-	return clamp(settings.Retention), nil
+	return settingstore.GetRetention(), nil
 }
 
 func SetRetention(value int) (int, error) {
-	if value < minRetention || value > maxRetention {
-		return 0, fmt.Errorf("备份保留数量必须在 %d-%d 之间", minRetention, maxRetention)
-	}
-	if err := os.MkdirAll(filepath.Dir(SettingsPath()), 0755); err != nil {
-		return 0, err
-	}
-	content, err := json.MarshalIndent(Settings{Retention: value}, "", "  ")
+	retention, err := settingstore.SetRetention(value)
 	if err != nil {
 		return 0, err
 	}
-	if err := os.WriteFile(SettingsPath(), content, 0644); err != nil {
-		return 0, err
+	if err := Retain(retention); err != nil {
+		logx.Errorf("保存备份保留设置成功，但清理旧备份失败: %v", err)
 	}
-	if err := Retain(value); err != nil {
-		return 0, err
-	}
-	return value, nil
+	return retention, nil
 }
 
 func Retain(limit int) error {
-	if limit < minRetention {
-		limit = defaultRetention
+	if !settingstore.ValidRetention(limit) {
+		limit = settingstore.GetRetention()
 	}
 	entries, err := os.ReadDir(Directory())
 	if os.IsNotExist(err) {
@@ -87,6 +60,9 @@ func Retain(limit int) error {
 	}
 	for ext, files := range byExt {
 		sort.Slice(files, func(i, j int) bool { return files[i].Name() > files[j].Name() })
+		if len(files) <= limit {
+			continue
+		}
 		for _, entry := range files[limit:] {
 			if err := os.Remove(filepath.Join(Directory(), entry.Name())); err != nil && !os.IsNotExist(err) {
 				return err
@@ -98,12 +74,39 @@ func Retain(limit int) error {
 }
 
 func TimestampedName(ext string) string {
-	return "backup-" + time.Now().UTC().Format("2006-01-02T15-04-05.000000000Z") + ext
+	var suffix [3]byte
+	if _, err := io.ReadFull(rand.Reader, suffix[:]); err != nil {
+		return "backup-" + time.Now().UTC().Format("20060102T150405") + "-" + fmt.Sprintf("%06x", uint64(time.Now().UnixNano())&0xffffff) + ext
+	}
+	return "backup-" + time.Now().UTC().Format("20060102T150405") + "-" + hex.EncodeToString(suffix[:]) + ext
 }
 
-func clamp(value int) int {
-	if value < minRetention || value > maxRetention {
-		return defaultRetention
+// CreateBackupFile creates a uniquely named backup and writes it without replacing an existing file.
+func CreateBackupFile(dir, ext string, content []byte, perm os.FileMode) (string, error) {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", err
 	}
-	return value
+	for attempt := 0; attempt < 10; attempt++ {
+		name := TimestampedName(ext)
+		path := filepath.Join(dir, name)
+		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
+		if err != nil {
+			if os.IsExist(err) {
+				continue
+			}
+			return "", err
+		}
+		_, writeErr := file.Write(content)
+		closeErr := file.Close()
+		if writeErr != nil {
+			_ = os.Remove(path)
+			return "", writeErr
+		}
+		if closeErr != nil {
+			_ = os.Remove(path)
+			return "", closeErr
+		}
+		return name, nil
+	}
+	return "", fmt.Errorf("无法生成唯一备份文件名")
 }

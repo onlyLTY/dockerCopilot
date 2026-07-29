@@ -1,7 +1,9 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Subject } from 'rxjs';
 import { ApiResponse } from './compose.service';
 import { CacheBus } from './cache-bus';
+import { ToastService } from './toast.service';
 
 /** 单个任务的进度快照 */
 export interface TaskItem {
@@ -15,6 +17,7 @@ export interface TaskItem {
   refresh: boolean;       // 完成后是否需要联动刷新资源缓存
   createdAt: number;      // 创建时间戳，用于排序/清理
   updatedAt: number;      // 最近一次进度更新时间
+  resourceID?: string;    // 关联资源 ID，例如容器更新对应的容器 ID
 }
 
 /** 后端 /api/progress/:taskid 的 data 结构 */
@@ -41,22 +44,26 @@ const DONE_KEEP = 60 * 60 * 1000; // 已完成任务保留 1 小时后可被清�
 export class TaskService {
   private readonly http = inject(HttpClient);
   private readonly bus = inject(CacheBus);
+  private readonly toast = inject(ToastService);
+  readonly completed = new Subject<{ taskID: string; resourceID?: string; refresh: boolean }>();
   readonly tasks = signal<TaskItem[]>(this.restore());
   readonly activeCount = computed(() => this.tasks().filter(t => !t.isDone).length);
   readonly hasActive = computed(() => this.activeCount() > 0);
   /** 当前在弹窗中查看的任务 ID（空表示不显示进度弹窗） */
   readonly viewing = signal<string>('');
-  private timers = new Map<string, ReturnType<typeof setInterval>>();
+  private timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private polling = new Set<string>();
+  private unknownCounts = new Map<string, number>();
 
   constructor() { this.tasks().forEach(t => { if (!t.isDone) this.startPolling(t.taskID); }); }
 
   /** 登记一个异步任务并开始轮询；refresh 表示完成后要联动刷新资源缓存 */
-  track(taskID: string, title: string, refresh = false): void {
+  track(taskID: string, title: string, refresh = false, resourceID = ''): void {
     if (!taskID) return;
     const now = Date.now();
     const existing = this.tasks().find(t => t.taskID === taskID);
     if (existing) { this.viewing.set(taskID); return; }
-    const item: TaskItem = { taskID, title, percentage: 0, message: '任务已提交', detailMsg: '', isDone: false, failed: false, refresh, createdAt: now, updatedAt: now };
+    const item: TaskItem = { taskID, title, percentage: 0, message: '任务已提交', detailMsg: '', isDone: false, failed: false, refresh, createdAt: now, updatedAt: now, resourceID };
     this.tasks.update(list => [item, ...list]);
     this.persist();
     this.viewing.set(taskID);
@@ -78,7 +85,7 @@ export class TaskService {
 
   /** 清空全部任务 */
   clearAll(): void {
-    this.timers.forEach(t => clearInterval(t));
+    this.timers.forEach(t => clearTimeout(t));
     this.timers.clear();
     this.tasks.set([]);
     this.viewing.set('');
@@ -94,42 +101,86 @@ export class TaskService {
   }
 
   private startPolling(taskID: string): void {
-    if (this.timers.has(taskID)) return;
+    if (this.timers.has(taskID) || this.polling.has(taskID)) return;
     this.poll(taskID);
-    this.timers.set(taskID, setInterval(() => this.poll(taskID), POLL_INTERVAL));
+  }
+
+  private schedulePolling(taskID: string): void {
+    if (this.timers.has(taskID) || this.polling.has(taskID)) return;
+    const item = this.tasks().find(t => t.taskID === taskID);
+    if (!item || item.isDone) return;
+    this.timers.set(taskID, setTimeout(() => {
+      this.timers.delete(taskID);
+      this.poll(taskID);
+    }, POLL_INTERVAL));
   }
 
   private stopPolling(taskID: string): void {
     const timer = this.timers.get(taskID);
-    if (timer) { clearInterval(timer); this.timers.delete(taskID); }
+    if (timer) { clearTimeout(timer); this.timers.delete(taskID); }
+    this.polling.delete(taskID);
+    this.unknownCounts.delete(taskID);
   }
 
   private poll(taskID: string): void {
+    if (this.polling.has(taskID)) return;
+    this.polling.add(taskID);
+    const finish = () => {
+      this.polling.delete(taskID);
+      this.schedulePolling(taskID);
+    };
     this.http.get<ApiResponse<ProgressData>>('/api/progress/' + encodeURIComponent(taskID)).subscribe({
       next: r => {
-        if (r.code !== 200 || !r.data) { this.markUnknown(taskID, r.msg); return; }
-        this.apply(taskID, r.data);
+        if (r.code !== 200 || !r.data) {
+          this.markUnknown(taskID, r.msg);
+        } else {
+          this.unknownCounts.delete(taskID);
+          this.apply(taskID, r.data);
+        }
+        finish();
       },
-      error: () => { /* 网络抖动忽略，下次轮询再试 */ },
+      error: () => finish(),
     });
   }
 
   private apply(taskID: string, d: ProgressData): void {
-    let doneNow = false; let refreshNeeded = false;
+    let doneNow = false; let refreshNeeded = false; let failedNow = false; let failureTitle = ''; let failureMessage = '';
     this.tasks.update(list => list.map(t => {
-      if (t.taskID !== taskID) return t;
+      if (t.taskID !== taskID || t.isDone) return t;
       const failed = d.isDone && (d.percentage < 100 || /失败|错误|error|fail/i.test(d.message || ''));
-      if (d.isDone && !t.isDone) { doneNow = true; refreshNeeded = t.refresh; }
+      if (d.isDone) {
+        doneNow = true;
+        refreshNeeded = t.refresh;
+        failedNow = failed;
+        failureTitle = d.name || t.title;
+        failureMessage = d.detailMsg || d.message || '任务执行失败';
+      }
       return { ...t, percentage: d.percentage, message: d.message || t.message, detailMsg: d.detailMsg || '', isDone: d.isDone, failed, updatedAt: Date.now() };
     }));
-    if (doneNow) { this.stopPolling(taskID); if (refreshNeeded) this.bus.refresh(['containers', 'ports', 'images', 'compose']); }
+    if (doneNow) {
+      this.stopPolling(taskID);
+      if (failedNow) this.toast.error(failureTitle || '任务失败', failureMessage);
+      if (refreshNeeded) this.bus.refresh(['containers', 'ports', 'images', 'compose']);
+      this.completed.next({ taskID, resourceID: this.tasks().find(t => t.taskID === taskID)?.resourceID, refresh: refreshNeeded });
+    }
     this.persist();
   }
 
   private markUnknown(taskID: string, msg: string): void {
-    // taskID 未找到：后端重启或任务过期，标记为结束
-    this.tasks.update(list => list.map(t => t.taskID === taskID && !t.isDone ? { ...t, isDone: true, failed: true, message: msg || '任务不存在或已过期', updatedAt: Date.now() } : t));
+    const attempts = (this.unknownCounts.get(taskID) || 0) + 1;
+    this.unknownCounts.set(taskID, attempts);
+    if (attempts < 4) return;
+    let changed = false;
+    this.tasks.update(list => list.map(t => {
+      if (t.taskID !== taskID || t.isDone) return t;
+      changed = true;
+      return { ...t, isDone: true, failed: true, message: msg || '任务不存在或已过期', detailMsg: msg || '', updatedAt: Date.now() };
+    }));
     this.stopPolling(taskID);
+    if (changed) {
+      this.toast.error('任务失败', msg || '任务不存在或已过期');
+      this.completed.next({ taskID, resourceID: this.tasks().find(t => t.taskID === taskID)?.resourceID, refresh: false });
+    }
     this.persist();
   }
 

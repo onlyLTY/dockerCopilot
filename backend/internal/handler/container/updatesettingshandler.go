@@ -36,7 +36,14 @@ func UpdateUpdateSettingsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 		if err := svcCtx.RescheduleUpdateCron(settingstore.UpdateCheckCron(interval)); err != nil {
-			httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{"code": 500, "msg": "重新调度定时任务失败：" + err.Error(), "data": map[string]interface{}{}})
+			httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+				"code": 200, "msg": "设置已保存，但重新调度定时任务失败：" + err.Error(),
+				"data": map[string]interface{}{
+					"interval": interval,
+					"options":  settingstore.UpdateCheckOptions(),
+					"warning":  err.Error(),
+				},
+			})
 			return
 		}
 		httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
@@ -76,7 +83,14 @@ func UpdateAutoBackupSettingsHandler(svcCtx *svc.ServiceContext) http.HandlerFun
 			return
 		}
 		if err := svcCtx.RescheduleBackupCron(settingstore.AutoBackupCron(interval)); err != nil {
-			httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{"code": 500, "msg": "重新调度定时任务失败：" + err.Error(), "data": map[string]interface{}{}})
+			httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+				"code": 200, "msg": "设置已保存，但重新调度定时任务失败：" + err.Error(),
+				"data": map[string]interface{}{
+					"interval": interval,
+					"options":  settingstore.AutoBackupOptions(),
+					"warning":  err.Error(),
+				},
+			})
 			return
 		}
 		httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{

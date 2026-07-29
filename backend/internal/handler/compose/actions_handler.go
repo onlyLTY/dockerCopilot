@@ -2,6 +2,7 @@ package compose
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/onlyLTY/dockerCopilot/internal/logic/compose"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
@@ -10,49 +11,40 @@ import (
 )
 
 func DeployPreviewHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.ComposeDeployPreviewReq
-		if err := httpx.Parse(r, &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-			return
-		}
-		resp, err := compose.NewActionsLogic(r.Context(), svcCtx).DeployPreview(&req)
-		writeResponse(r, w, resp, err)
-	}
+	return actionRequestHandler(svcCtx, "deploy_preview", func(l *compose.ActionsLogic, req *types.ComposeDeployPreviewReq) (*types.Resp, error) {
+		return l.DeployPreview(req)
+	})
 }
 
 func DeployHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.ComposeDeployReq
-		if err := httpx.Parse(r, &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-			return
-		}
-		resp, err := compose.NewActionsLogic(r.Context(), svcCtx).Deploy(&req)
-		writeResponse(r, w, resp, err)
-	}
+	return actionRequestHandler(svcCtx, "deploy", func(l *compose.ActionsLogic, req *types.ComposeDeployReq) (*types.Resp, error) {
+		return l.Deploy(req)
+	})
 }
 
 func CleanupPreviewHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.ComposeCleanupPreviewReq
-		if err := httpx.Parse(r, &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-			return
-		}
-		resp, err := compose.NewActionsLogic(r.Context(), svcCtx).CleanupPreview(&req)
-		writeResponse(r, w, resp, err)
-	}
+	return actionRequestHandler(svcCtx, "cleanup_preview", func(l *compose.ActionsLogic, req *types.ComposeCleanupPreviewReq) (*types.Resp, error) {
+		return l.CleanupPreview(req)
+	})
 }
 
 func CleanupHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return actionRequestHandler(svcCtx, "cleanup", func(l *compose.ActionsLogic, req *types.ComposeCleanupReq) (*types.Resp, error) {
+		return l.Cleanup(req)
+	})
+}
+
+func actionRequestHandler[T any](svcCtx *svc.ServiceContext, operation string, fn func(*compose.ActionsLogic, *T) (*types.Resp, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.ComposeCleanupReq
+		started := time.Now()
+		var req T
 		if err := httpx.Parse(r, &req); err != nil {
+			auditError(operation, r, err, started)
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
-		resp, err := compose.NewActionsLogic(r.Context(), svcCtx).Cleanup(&req)
+		resp, err := fn(compose.NewActionsLogic(r.Context(), svcCtx), &req)
+		audit(operation, r, resp, started)
 		writeResponse(r, w, resp, err)
 	}
 }

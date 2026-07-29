@@ -1,20 +1,99 @@
 // 弹窗、表单字段、Compose 编辑器、关于页
 
-/* ===== 弹窗 ===== */
-.modal-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 22px; background: #14203966; }
-.modal {
-  width: min(720px, 100%); max-height: calc(100vh - 44px); overflow: auto;
-  background: var(--surface); border-radius: 14px; box-shadow: 0 24px 70px #1420393d; padding: 28px;
+/* ===== 弹窗分类 ===== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  overflow: hidden;
+  background: #14203966;
 }
-.modal.settings-modal { width: min(480px, 100%); }
-.editor-modal { width: min(960px, 100%); }
-.modal-head { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+
+.modal {
+  width: min(720px, 90vw);
+  max-width: 90vw;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: 0 24px 70px #1420393d;
+  padding: 28px;
+  color: var(--text);
+}
+
+.modal-confirm {
+  height: auto;
+  max-height: 85vh;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  overflow: hidden;
+}
+
+.modal-form {
+  height: min(760px, 85vh);
+  max-height: 85vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.modal-content {
+  height: min(760px, 85vh);
+  max-height: 85vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+.modal-content:has(.log-list) { height: auto; min-height: 220px; }
+
+.modal-s { width: min(360px, 90vw); }
+.modal-m { width: min(520px, 90vw); }
+.modal-l { width: min(720px, 90vw); }
+.modal-xl { width: min(960px, 90vw); }
+.modal-xll { width: min(1200px, 90vw); }
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
 .modal-head h2 { margin: 0; color: var(--text); font-size: 23px; }
 .modal-head p:not(.eyebrow) { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
 .modal-close {
-  border: 0; background: var(--page-bg); color: var(--muted); border-radius: 50%;
-  width: 32px; height: 32px; font-size: 22px; line-height: 1; display: grid; place-items: center; flex: none;
+  border: 0;
+  background: var(--page-bg);
+  color: var(--muted);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 22px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  flex: none;
 }
+.modal-body {
+  min-height: 0;
+  padding: 2px 4px 4px 0;
+}
+.modal-confirm .modal-body { overflow: auto; }
+.modal-form .modal-body { overflow: hidden; }
+.modal-content .modal-body { overflow: hidden; }
+.modal-form > .modal-actions,
+.modal-form > .editor-foot { margin-top: 0; }
+.modal-confirm > .modal-actions,
+.modal-form > .modal-actions,
+.modal-form > .editor-foot { border-top: 1px solid var(--line); }
+
+/* ===== 确认弹窗 ===== */
+.confirm-message { margin: 22px 0; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
+.danger-button { border: 0; border-radius: 8px; padding: 11px 16px; font-weight: 650; font-size: 13px; background: var(--danger); color: #fff; }
+.danger-button:hover { filter: brightness(.94); }
 
 /* ===== 表单字段 ===== */
 .form-field { display: block; color: var(--muted); font-size: 12px; font-weight: 650; margin-top: 20px; }
@@ -25,26 +104,55 @@
 }
 .form-field input:focus,
 .form-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #138bc21a; }
-.path-hint { margin-top: 8px; padding: 0; color: var(--muted); font-size: 12px; }
-.settings-modal .path-hint { display: block; }
-.compose-input { min-height: 260px; resize: vertical; color: #d8e2f0; background: #172236; font: 13px/1.65 "SFMono-Regular", Consolas, monospace; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.path-hint { display: block; margin-top: 8px; padding: 0; color: var(--muted); font-size: 12px; }
+.form-hint { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.setting-control { display: flex; align-items: center; gap: 8px; }
+.setting-control input { width: 80px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--text); }
+.setting-control span { color: var(--muted); font-size: 12px; }
+select.form-select,
+.form-field select { display: block; width: 100%; margin-top: 8px; border: 1px solid var(--line); border-radius: 7px; padding: 11px 12px; background: var(--surface); color: var(--text); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 18px; }
 .message.error { margin-top: 12px; color: #c44c55; font-size: 12px; }
 
 /* ===== Compose 编辑器 ===== */
-.file-tabs { display: flex; gap: 2px; padding: 10px 0 0; overflow: auto; }
-.file-tabs button { border: 0; padding: 9px 13px; background: var(--page-bg); color: var(--muted); font-size: 12px; }
+.compose-body { display: flex; min-height: 0; flex-direction: column; overflow: hidden !important; }
+.file-tabs { display: flex; flex: none; gap: 2px; padding: 10px 0 0; overflow-x: auto; }
+.file-tabs button { border: 0; padding: 9px 13px; background: var(--page-bg); color: var(--muted); font-size: 12px; white-space: nowrap; }
 .file-tabs button.active { color: var(--accent); background: var(--surface); border-top: 2px solid var(--accent); }
 .code-editor {
-  display: block; width: 100%; min-height: 430px; border: 0; resize: vertical;
-  padding: 22px; color: #d8e2f0; background: #172236; font: 13px/1.65 "SFMono-Regular", Consolas, monospace; outline: 0;
+  display: block;
+  width: 100%;
+  height: min(480px, 58vh);
+  min-height: 260px;
+  flex: 1 1 auto;
+  border: 0;
+  resize: none;
+  overflow-y: auto;
+  padding: 22px;
+  color: #d8e2f0;
+  background: #172236;
+  font: 13px/1.65 "SFMono-Regular", Consolas, monospace;
+  outline: 0;
 }
 .editor-actions { display: flex; gap: 8px; }
-.editor-foot { display: flex; align-items: center; gap: 15px; padding: 14px 0; color: var(--muted); font-size: 11px; }
-.editor-foot .message { flex: 1; color: #15915a; }
+.editor-foot { display: flex; align-items: center; gap: 15px; padding: 14px 0 0; color: var(--muted); font-size: 11px; }
+.editor-foot .message { flex: 1; min-width: 0; color: var(--success); }
 .editor-foot .message.error { color: #c44c55; }
-.risk-box { margin: 0 0 18px; padding: 16px; border-left: 3px solid #d29a19; background: #fff9e9; color: #705719; font-size: 12px; }
+.risk-box { flex: none; margin: 0 0 18px; padding: 16px; border-left: 3px solid var(--warning); background: #fff9e9; color: #705719; font-size: 12px; overflow: auto; }
 .risk-box p { margin: 8px 0; }
+
+/* ===== 日志内容弹窗 ===== */
+.log-list { min-height: 0; height: 100%; overflow-y: auto; }
+.log-entry { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.log-entry:last-child { border-bottom: 0; }
+.log-meta { display: flex; align-items: center; gap: 9px; }
+.log-level { min-width: 46px; font-size: 10px; font-weight: 750; letter-spacing: .04em; }
+.log-level.level-debug { color: #6e7d91; }
+.log-level.level-info { color: var(--accent); }
+.log-level.level-warn { color: var(--warning); }
+.log-level.level-error { color: var(--danger); }
+.log-entry time { display: block; color: var(--muted); font-size: 11px; }
+.log-entry p { margin: 7px 0 0; color: var(--text); white-space: pre-wrap; word-break: break-word; font-size: 12px; }
 
 /* ===== 关于页 ===== */
 .about-hero { text-align: center; padding: 60px 24px; }
@@ -59,15 +167,20 @@
 .about-grid p { color: var(--muted); line-height: 1.7; }
 .about-grid .muted { color: var(--muted); }
 
-/* ===== 备份保留设置 ===== */
-.setting-control { display: flex; align-items: center; gap: 8px; }
-.setting-control input { width: 80px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--text); }
-.setting-control span { color: var(--muted); font-size: 12px; }
-
-/* ===== 深色主题微调 ===== */
 .dark-shell .secondary { background: #303a4a; color: #dce5f1; }
 .dark-shell .modal-close { background: #303a4a; }
 .dark-shell .resource-actions button { background: transparent; }
 .dark-shell .icon-toolbar input,
 .dark-shell .form-field input,
 .dark-shell .form-field textarea { background: #1a2130; }
+
+@media (max-width: 600px) {
+  .modal-backdrop { padding: 16px; }
+  .modal { width: 90vw; padding: 20px; }
+  .modal-head { gap: 12px; padding-bottom: 14px; }
+  .modal-head h2 { font-size: 19px; }
+  .modal-actions { gap: 8px; }
+  .editor-foot { flex-wrap: wrap; gap: 8px; }
+  .editor-foot .message { flex-basis: 100%; }
+  .code-editor { height: min(420px, 52vh); min-height: 220px; padding: 14px; }
+}

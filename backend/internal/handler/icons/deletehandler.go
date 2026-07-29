@@ -5,40 +5,49 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 func DeleteHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		key := r.URL.Query().Get("imageName")
-		if key == "" {
-			httpx.ErrorCtx(r.Context(), w, fmt.Errorf("imageName is required"))
-			return
-		}
-		if strings.ContainsAny(key, "\\/\"'") {
-			httpx.ErrorCtx(r.Context(), w, fmt.Errorf("invalid imageName"))
-			return
-		}
-		jsPath := "/data/icon/imageLogos.js"
-		content, err := os.ReadFile(jsPath)
-		if err != nil && !os.IsNotExist(err) {
+		repository, err := normalizeRepository(r.URL.Query().Get("imageName"))
+		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
-		text := string(content)
-		re := regexp.MustCompile(`(?m)^\s*"` + regexp.QuoteMeta(key) + `"\s*:\s*"([^"]+)"\s*,?\s*\r?\n?`)
-		match := re.FindStringSubmatch(text)
-		if len(match) == 2 {
-			_ = os.Remove(filepath.Join("/data/icon/icons", filepath.Base(match[1])))
-			text = re.ReplaceAllString(text, "")
-		}
-		if err := os.WriteFile(jsPath, []byte(text), 0644); err != nil {
+		result, err := withIconConfigLock(func() (bool, error) {
+			icons, err := readIcons(iconConfigPath())
+			if err != nil {
+				return false, err
+			}
+			removed := false
+			files := make([]string, 0)
+			for _, key := range matchingKeys(icons, repository) {
+				files = append(files, filepath.Base(icons[key]))
+				delete(icons, key)
+				removed = true
+			}
+			if !removed {
+				return false, nil
+			}
+			if err := writeIcons(iconConfigPath(), icons); err != nil {
+				return false, err
+			}
+			for _, file := range files {
+				if !iconFileReferenced(icons, file) {
+					if err := os.Remove(filepath.Join(iconDirectory(), file)); err != nil && !os.IsNotExist(err) {
+						return false, fmt.Errorf("删除图标文件失败: %v", err)
+					}
+				}
+			}
+			return true, nil
+		})
+		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
+		_ = result
 		httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{"code": 200, "msg": "Success", "data": nil})
 	}
 }
