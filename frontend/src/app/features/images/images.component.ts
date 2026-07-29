@@ -2,8 +2,8 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { ImageRow, ImageService } from '../../core/image.service';
 import { IconService } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
-import { PageStateComponent } from '../../shared/page-state.component';
-import { IconComponent } from '../../shared/icon.component';
+import { PageStateComponent } from '../../shared/page-state/page-state.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
 
 @Component({

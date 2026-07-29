@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { SettingsService } from '../../core/settings.service';
@@ -7,7 +7,7 @@ import { VersionService, VersionInfo } from '../../core/version.service';
 import { ToastService } from '../../core/toast.service';
 import { ApiResponse } from '../../core/compose.service';
 import { HttpClient } from '@angular/common/http';
-import { IconComponent } from '../../shared/icon.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 interface LogEntry { timestamp: string; level: string; message: string; }
 interface LogLevelData { level: string; options: string[]; }

@@ -3,19 +3,19 @@
 .stats {
   display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
-  overflow: hidden; box-shadow: 0 12px 25px #18365c0b; margin-bottom: 28px;
+  overflow: hidden; box-shadow: 0 12px 24px var(--shadow-sm); margin-bottom: 28px;
 }
-.stats div { padding: 23px 20px; text-align: center; border-right: 1px solid var(--line); }
+.stats div { padding: 22px 20px; text-align: center; border-right: 1px solid var(--line); }
 .stats div:last-child { border-right: 0; }
 .stats strong,
 .stats span { display: block; }
 .stats strong { color: var(--accent); font-size: 30px; }
-.stats span { margin-top: 5px; color: var(--muted); font-size: 13px; }
-.stats .green strong { color: #17a35a; }
-.stats .amber strong { color: #c99515; }
-.stats .violet strong { color: #855bd0; }
-.stats .red strong { color: #d65554; }
-.stats .blue strong { color: #2473d1; }
+.stats span { margin-top: 5px; color: var(--muted); font-size: 14px; }
+.stats .green strong { color: var(--green); }
+.stats .amber strong { color: var(--amber); }
+.stats .violet strong { color: var(--violet); }
+.stats .red strong { color: var(--red); }
+.stats .blue strong { color: var(--blue); }
 
 .stats-four { grid-template-columns: repeat(4, 1fr); }
 .stats-three { grid-template-columns: repeat(3, 1fr); }

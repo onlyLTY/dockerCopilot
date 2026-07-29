@@ -2,31 +2,25 @@
   <div>
     <p class="eyebrow">DOCKER OPERATIONS</p>
     <h1>图标库</h1>
-    <p class="subtitle">管理镜像和容器的自定义图标</p>
+    <p class="subtitle">管理镜像和容器的自定义图标 · 共 {{ filtered().length }} 个</p>
   </div>
-  <div class="heading-actions">
-    <button class="secondary" (click)="enterSelection()"><dc-icon name="edit"></dc-icon>批量选择</button>
-    <button class="primary" (click)="openUpload()"><dc-icon name="upload"></dc-icon>上传图标</button>
+  <div class="heading-actions d-flex items-center gap-8">
+    <button class="btn btn-secondary" (click)="enterSelection()"><dc-icon name="edit"></dc-icon>批量选择</button>
+    <button class="btn btn-primary" (click)="openUpload()"><dc-icon name="upload"></dc-icon>上传图标</button>
   </div>
-</section>
-
-<section class="icon-toolbar">
-  <input [(ngModel)]="query" placeholder="搜索镜像或容器名称">
-  <span>共 {{ filtered().length }} 个</span>
 </section>
 
 @if (selectionMode()) {
   <div class="batch-toolbar">
-    <span class="batch-title">批量操作</span>
-    <label class="select-all"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
-    <span class="select-count">已选 {{ selected().size }} 个</span>
-    <button class="danger-link" [disabled]="!selected().size || busy()" (click)="bulkRemove()"><dc-icon name="delete"></dc-icon>批量删除</button>
-    <button class="secondary batch-exit" (click)="exitSelection()">完成</button>
+    <span class="batch-title mr-auto fs-13 fw-650 text-text">批量操作</span>
+    <label class="select-all mr-4"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
+    <span class="text-muted fs-12">已选 {{ selected().size }} 个</span>
+    <button class="btn btn-link btn-danger-link" [disabled]="!selected().size || busy()" (click)="bulkRemove()"><dc-icon name="delete"></dc-icon>批量删除</button>
+    <button class="btn btn-secondary batch-exit ml-auto" (click)="exitSelection()">完成</button>
   </div>
 }
 
 <section>
-  <h2 class="section-title">自定义图标</h2>
   <div class="icon-grid">
     @for (item of filtered(); track item[0]) {
       <article class="icon-card" [class.selected]="selectionMode() && isSelected(item[0])">
@@ -34,8 +28,8 @@
         <img [src]="item[1]" [alt]="item[0]" (error)="fallback($event)">
         <b>{{ item[0] }}</b>
         <div class="icon-actions">
-          <button class="danger-link" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
-          <button class="danger-link" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
+          <button class="btn btn-link btn-danger-link" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
+          <button class="btn btn-link btn-danger-link" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
         </div>
       </article>
     }
@@ -47,7 +41,7 @@
 
 @if (show()) {
   <div class="modal-backdrop" (click)="close($event)">
-    <section class="modal modal-form modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <section class="modal modal-form modal-auto modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       <div class="modal-head">
         <div>
           <p class="eyebrow">ICON LIBRARY</p>
@@ -63,9 +57,9 @@
           <p class="message error">{{ error() }}</p>
         }
       </div>
-      <div class="modal-actions d-flex items-center justify-end gap-8">
-        <button class="secondary d-inline-flex items-center justify-center" (click)="show.set(false)">取消</button>
-        <button class="primary d-inline-flex items-center justify-center" [disabled]="!file() || !name.trim() || uploading()" (click)="upload()">{{ uploading() ? '上传中…' : '保存图标' }}</button>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="show.set(false)">取消</button>
+        <button class="btn btn-primary" [disabled]="!file() || !name.trim() || uploading()" (click)="upload()">{{ uploading() ? '上传中…' : '保存图标' }}</button>
       </div>
     </section>
   </div>

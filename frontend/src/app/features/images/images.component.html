@@ -4,10 +4,10 @@
     <h1>镜像管理</h1>
     <p class="subtitle">查看和管理 Docker 镜像</p>
   </div>
-  <div class="heading-actions">
-    <button class="secondary" [disabled]="!untaggedCount() || cleaning()" (click)="cleanup('untagged')"><dc-icon name="clean"></dc-icon>清理无 Tag ({{ untaggedCount() }})</button>
-    <button class="secondary" [disabled]="!unusedCount() || cleaning()" (click)="cleanup('unused')"><dc-icon name="clean"></dc-icon>清理未使用 ({{ unusedCount() }})</button>
-    <button class="primary" (click)="refresh()" title="刷新镜像"><dc-icon name="refresh"></dc-icon>刷新</button>
+  <div class="heading-actions d-flex items-center gap-8">
+    <button class="btn btn-secondary" [disabled]="!untaggedCount() || cleaning()" (click)="cleanup('untagged')"><dc-icon name="clean"></dc-icon>清理无 Tag ({{ untaggedCount() }})</button>
+    <button class="btn btn-secondary" [disabled]="!unusedCount() || cleaning()" (click)="cleanup('unused')"><dc-icon name="clean"></dc-icon>清理未使用 ({{ unusedCount() }})</button>
+    <button class="btn btn-primary" (click)="refresh()" title="刷新镜像"><dc-icon name="refresh"></dc-icon>刷新</button>
   </div>
 </section>
 
@@ -25,15 +25,15 @@
         <div class="resource-head">
           <img class="resource-icon" [src]="icon(image)" [alt]="image.name" (error)="fallback($event)">
           <div>
-            <b class="image-name">{{ image.name || 'None' }}<small class="status-badge" [class.used]="image.inUsed">{{ image.inUsed ? '使用中' : '未使用' }}</small></b>
+            <b class="image-name"><span class="image-name-text">{{ image.name || 'None' }}</span><small class="status-badge" [class.used]="image.inUsed">{{ image.inUsed ? '使用中' : '未使用' }}</small></b>
             <span class="image-tag-row"><em>{{ image.tag || 'None' }}</em><i class="image-size">{{ image.size }}</i></span>
-            @if (image.createTime) { <small class="image-time">发布于 {{ image.createTime }}</small> }
+            @if (image.createTime) { <small class="text-muted">发布于 {{ image.createTime }}</small> }
           </div>
         </div>
         <div class="resource-actions">
-          <button class="danger-link" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
+          <button class="btn btn-link btn-danger-link" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
           @if (!image.inUsed) {
-            <button class="danger-link force" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
+            <button class="btn btn-link btn-danger-link force" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
           }
         </div>
       </article>

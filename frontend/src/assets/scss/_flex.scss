@@ -1,0 +1,61 @@
+// Flex / 布局工具类：display、flex 方向与对齐、flex 比例、gap
+
+/* display */
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.d-inline { display: inline !important; }
+.d-flex { display: flex !important; }
+.d-inline-flex { display: inline-flex !important; }
+.d-grid { display: grid !important; }
+.d-inline-grid { display: inline-grid !important; }
+.d-contents { display: contents !important; }
+
+/* flex 容器方向 */
+.flex-row { flex-direction: row !important; }
+.flex-col { flex-direction: column !important; }
+.flex-wrap { flex-wrap: wrap !important; }
+.flex-nowrap { flex-wrap: nowrap !important; }
+
+/* flex 比例 */
+.flex-1 { flex: 1 1 0 !important; }
+.flex-auto { flex: 1 1 auto !important; }
+.flex-none { flex: none !important; }
+.flex-grow { flex-grow: 1 !important; }
+.flex-shrink-0 { flex-shrink: 0 !important; }
+
+/* 交叉轴对齐 */
+.items-center { align-items: center !important; }
+.items-start { align-items: flex-start !important; }
+.items-end { align-items: flex-end !important; }
+.items-baseline { align-items: baseline !important; }
+.items-stretch { align-items: stretch !important; }
+
+/* 主轴对齐 */
+.justify-center { justify-content: center !important; }
+.justify-start { justify-content: flex-start !important; }
+.justify-end { justify-content: flex-end !important; }
+.justify-between { justify-content: space-between !important; }
+.justify-around { justify-content: space-around !important; }
+.justify-evenly { justify-content: space-evenly !important; }
+
+/* grid 居中 */
+.place-items-center { place-items: center !important; }
+
+/* gap（与 spacing 共用档位） */
+$gaps: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32;
+
+@each $gap in $gaps {
+  .gap-#{$gap} { gap: #{$gap}px !important; }
+  .row-gap-#{$gap} { row-gap: #{$gap}px !important; }
+  .col-gap-#{$gap} { column-gap: #{$gap}px !important; }
+}
+
+/* 尺寸辅助 */
+.w-full { width: 100% !important; }
+.w-auto { width: auto !important; }
+.min-w-0 { min-width: 0 !important; }
+.h-full { height: 100% !important; }
+.min-h-0 { min-height: 0 !important; }
+.overflow-hidden { overflow: hidden !important; }
+.overflow-auto { overflow: auto !important; }
+.overflow-visible { overflow: visible !important; }

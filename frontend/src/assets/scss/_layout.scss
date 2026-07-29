@@ -11,7 +11,7 @@
 
 .brand { flex: none;
   display: flex; align-items: center; gap: 12px;
-  padding: 0 8px 24px; border-bottom: 1px solid var(--line);
+  padding: 0 8px 12px; border-bottom: 1px solid var(--line);
 }
 .brand.centered { justify-content: center; border: 0; padding: 0; }
 .brand-logo { width: 48px; height: 48px; border-radius: 14px; object-fit: contain; flex: none; }
@@ -68,8 +68,8 @@ nav a.active dc-icon { color: var(--accent); }
   display: flex; justify-content: space-between; align-items: center;
   padding: 14px 16px;
 }
-.version-card-head span { color: var(--muted); font-size: 11px; }
-.version-card-head strong { color: var(--text); font-size: 15px; }
+.version-card-head span { color: var(--muted); font-size: 12px; }
+.version-card-head strong { color: var(--text); font-size: 16px; }
 
 /* ===== 内容区 / 顶栏 ===== */
 .content-wrap { margin-left: 260px; flex: 1; min-width: 0; height: 100vh; overflow-y: auto; }
@@ -85,12 +85,15 @@ nav a.active dc-icon { color: var(--accent); }
 .sidebar-overlay { display: none; }
 
 /* ===== 折叠态 ===== */
-.compact-shell .sidebar { width: 82px; padding: 24px 14px; }
+.compact-shell .sidebar { width: 82px; padding: 12px 12px; }
 .compact-shell .content-wrap { margin-left: 82px; }
 .compact-shell .brand { justify-content: center; padding-left: 0; padding-right: 0; }
 .compact-shell .brand > div:last-child { display: none; }
 .compact-shell nav a { justify-content: center; gap: 0; padding: 12px; }
 .compact-shell nav a span { display: none; }
+/* 折叠态隐藏导航滚动条，避免占用本就很窄的侧边栏宽度并挤出横向滚动条 */
+.compact-shell nav { scrollbar-width: none; }
+.compact-shell nav::-webkit-scrollbar { width: 0; }
 .compact-shell .sidebar-actions { flex-direction: column; align-items: center; gap: 8px; padding: 0; }
 .compact-shell .sidebar-actions .sidebar-logout { margin-left: 0; }
 .compact-shell .version-card { display: none; }

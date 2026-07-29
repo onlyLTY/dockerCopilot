@@ -81,8 +81,12 @@ func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 	}
 
 	out := &strings.Builder{}
+	// 记录每一步耗时：以上一条日志为基准计算增量，方便前端展示每步花费的时间。
+	stepStart := time.Now()
 	logf := func(format string, args ...interface{}) {
-		fmt.Fprintf(out, format+"\n", args...)
+		elapsed := time.Since(stepStart)
+		stepStart = time.Now()
+		fmt.Fprintf(out, format+" (耗时 %s)\n", append(args, formatDuration(elapsed))...)
 	}
 
 	// Reject build-only services early: without an image we cannot proceed and
@@ -409,6 +413,14 @@ func loadProject(ctx context.Context, projectDir string, files []string, timeout
 		return nil, err
 	}
 	return composecli.ProjectFromOptions(loadCtx, options)
+}
+
+// formatDuration 输出人类可读的耗时，毫秒级用 ms，其余保留一位小数的秒。
+func formatDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	return fmt.Sprintf("%.1fs", d.Seconds())
 }
 
 func sanitizeOutput(output string) string {

@@ -20,7 +20,7 @@
           <option [value]="opt">{{ updateLabel(opt) }}</option>
         }
       </select>
-      <button class="primary" [disabled]="!updateDirty() || updateSaving()" (click)="saveUpdate()">{{ updateSaving() ? '保存中…' : '保存' }}</button>
+      <button class="btn btn-primary" [disabled]="!updateDirty() || updateSaving()" (click)="saveUpdate()">{{ updateSaving() ? '保存中…' : '保存' }}</button>
     </div>
   </div>
   <p class="settings-hint">当前：{{ updateLabel(updateInterval()) }}</p>
@@ -36,7 +36,7 @@
           <option [value]="opt">{{ backupLabel(opt) }}</option>
         }
       </select>
-      <button class="primary" [disabled]="!backupDirty() || backupSaving()" (click)="saveBackup()">{{ backupSaving() ? '保存中…' : '保存' }}</button>
+      <button class="btn btn-primary" [disabled]="!backupDirty() || backupSaving()" (click)="saveBackup()">{{ backupSaving() ? '保存中…' : '保存' }}</button>
     </div>
   </div>
   <p class="settings-hint">当前：{{ backupLabel(backupInterval()) }}</p>

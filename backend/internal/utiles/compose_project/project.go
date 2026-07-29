@@ -296,7 +296,15 @@ func containerPorts(inspect dockerTypes.ContainerJSON) []appTypes.ComposePort {
 			return
 		}
 		targetKey := containerPort + ":" + protocol
+		// Published bindings that differ only by host IP (IPv4 0.0.0.0, IPv6 ::,
+		// or an empty wildcard) map to the same host port and would otherwise
+		// appear as duplicate rows. Collapse them by keying on the host port
+		// alone for published entries; keep the host IP in the key for
+		// unpublished entries so exposed-only targets stay distinct.
 		key := hostIP + ":" + hostPort + ":" + targetKey
+		if published {
+			key = hostPort + ":" + targetKey
+		}
 		if seen[key] {
 			return
 		}

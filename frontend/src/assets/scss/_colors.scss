@@ -1,0 +1,150 @@
+// 颜色总集：CSS 自定义属性（主题变量） + 颜色工具类
+// 所有色值集中在此声明，其他 scss 一律引用 var(--xxx)，不再硬编码。
+
+/* ===== 主题基础变量 ===== */
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --page-bg: #f6f8fb;
+  --surface: #fff;
+  --line: #e3e8ef;
+  --text: #172033;
+  --muted: #78849a;
+  --accent: #087db7;
+  --accent-shadow: #087db733;
+  --danger: #e5484d;
+  --success: #15915a;
+  --warning: #b8791b;
+  --info: #2b5f9e;
+  --white: #fff;
+
+  /* 统计卡 / 状态徽标用的语义强调色 */
+  --green: #17a35a;
+  --green-soft: #e6f6ec;
+  --amber: #c99515;
+  --amber-soft: #fff5e2;
+  --violet: #855bd0;
+  --red: #d65554;
+  --red-soft: #fdecec;
+  --blue: #2473d1;
+  --overlay: #14203966;
+
+  /* 运行状态：running 文字 / 圆点 */
+  --running-text: #19a35a;
+  --running-dot: #21a35e;
+
+  /* 浅色卡片底色（柔和的强调背景） */
+  --accent-soft: #eef4fb;        /* 通用浅蓝底（资源图标、状态盒、徽标） */
+  --port-soft: #eaf7fd;          /* 端口图标底 */
+  --file-soft: #e4efff;          /* 文件徽标底 */
+  --update-soft: #f3ebff;        /* 可更新徽标底 */
+  --teal: #0ca99b;               /* 备份图标色 */
+  --teal-soft: #dcfaf6;          /* 备份图标底 */
+  --badge-blue: #2b63dc;
+  --badge-blue-soft: #e4efff;
+
+  /* 次级按钮（secondary）配色 */
+  --btn-secondary-bg: #edf2f7;
+  --btn-secondary-text: #42516a;
+
+  /* 链接式危险操作配色（danger-link） */
+  --danger-link: #bd5660;
+  --danger-link-strong: #92535b;
+  --danger-link-hover: #a5424c;
+
+  /* 操作按钮文字色（stop/start/update） */
+  --action-stop: #e32635;
+  --action-start: #0a9b52;
+  --action-update: #8c36e8;
+
+  /* 提示条 alert 配色 */
+  --alert-error-text: #ae4e58;
+  --alert-error-bg: #fff0f1;
+  --alert-error-line: #f6d6d9;
+  --alert-warning-text: #8a681b;
+  --alert-warning-bg: #fff8e4;
+  --alert-warning-line: #f4e2a8;
+
+  /* 轻提示 toast 配色 */
+  --toast-success-line: #b6e6c9;
+  --toast-success-bg: #f2fbf6;
+  --toast-success-text: #197a48;
+  --toast-success-mark: #21a35e;
+  --toast-error-line: #f6d6d9;
+  --toast-error-bg: #fff2f3;
+  --toast-error-text: #ae4e58;
+  --toast-info-line: #cfe3f6;
+  --toast-info-bg: #f2f8ff;
+
+  /* 风险提示框 risk-box 配色 */
+  --risk-bg: #fff9e9;
+  --risk-text: #705719;
+
+  /* 代码编辑器（深色）配色 */
+  --code-bg: #172236;
+  --code-text: #d8e2f0;
+
+  /* 日志级别色 */
+  --log-debug: #6e7d91;
+
+  /* 杂项 */
+  --page-state-icon: #68aaca;
+  --message-error: #c44c55;
+
+  /* 阴影色（带透明度的品牌灰蓝） */
+  --shadow-xs: #18365c08;
+  --shadow-sm: #18365c0b;
+  --shadow-md: #18365c14;
+  --shadow-modal: #1420393d;
+  --overlay-sidebar: #14203955;
+  --toast-shadow: #14203926;
+
+  /* 焦点环色（accent 系透明） */
+  --focus-ring: #138bc21a;
+}
+
+:root[data-theme="dark"] {
+  --page-bg: #151a24;
+  --surface: #202735;
+  --line: #354052;
+  --text: #edf2f8;
+  --muted: #aab5c5;
+  --accent: #5eb9e8;
+  --danger: #ff7b83;
+  --success: #5ed490;
+  --warning: #e4b35f;
+  --info: #8bc8f2;
+
+  /* dark 主题下的深色容器底（按钮、输入、弹窗关闭键） */
+  --btn-secondary-bg: #303a4a;
+  --btn-secondary-text: #dce5f1;
+  --modal-close-bg: #303a4a;
+  --form-input-bg: #1a2130;
+  --select-bg: #1a2130;
+
+  /* dark toast 背景 */
+  --toast-success-bg: #16281e;
+  --toast-error-bg: #2a1a1c;
+  --toast-info-bg: #172231;
+}
+
+/* ===== 文字色工具类 ===== */
+.text-primary { color: var(--accent) !important; }
+.text-muted { color: var(--muted) !important; }
+.text-text { color: var(--text) !important; }
+.text-danger { color: var(--danger) !important; }
+.text-success { color: var(--success) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-info { color: var(--info) !important; }
+.text-inherit { color: inherit !important; }
+.text-white { color: var(--white) !important; }
+
+/* ===== 背景色工具类 ===== */
+.bg-primary { background: var(--accent) !important; }
+.bg-surface { background: var(--surface) !important; }
+.bg-page { background: var(--page-bg) !important; }
+.bg-danger { background: var(--danger) !important; }
+.bg-success { background: var(--success) !important; }
+.bg-warning { background: var(--warning) !important; }
+.bg-info { background: var(--info) !important; }
+.bg-transparent { background: transparent !important; }

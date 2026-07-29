@@ -1,0 +1,30 @@
+// 间距工具类：margin / padding 缩写
+// 用法：m-16 = margin:16px，mt-16 = margin-top:16px，
+//      mx-16 = 左右外边距，my-16 = 上下外边距，p-16/p{t,r,b,l,x,y}-16 同理。
+// 档位覆盖项目里常用间距（0、2、4 直到 48）。
+
+$sizes: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 40, 48;
+
+@each $size in $sizes {
+  .m-#{$size} { margin: #{$size}px !important; }
+  .mt-#{$size} { margin-top: #{$size}px !important; }
+  .mr-#{$size} { margin-right: #{$size}px !important; }
+  .mb-#{$size} { margin-bottom: #{$size}px !important; }
+  .ml-#{$size} { margin-left: #{$size}px !important; }
+  .mx-#{$size} { margin-left: #{$size}px !important; margin-right: #{$size}px !important; }
+  .my-#{$size} { margin-top: #{$size}px !important; margin-bottom: #{$size}px !important; }
+
+  .p-#{$size} { padding: #{$size}px !important; }
+  .pt-#{$size} { padding-top: #{$size}px !important; }
+  .pr-#{$size} { padding-right: #{$size}px !important; }
+  .pb-#{$size} { padding-bottom: #{$size}px !important; }
+  .pl-#{$size} { padding-left: #{$size}px !important; }
+  .px-#{$size} { padding-left: #{$size}px !important; padding-right: #{$size}px !important; }
+  .py-#{$size} { padding-top: #{$size}px !important; padding-bottom: #{$size}px !important; }
+}
+
+// 便捷别名：m-auto / mx-auto 居中
+.m-auto { margin: auto !important; }
+.mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.ml-auto { margin-left: auto !important; }
+.mr-auto { margin-right: auto !important; }

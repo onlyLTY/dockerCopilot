@@ -4,7 +4,7 @@ import { AuthService } from '../core/auth.service';
 import { VersionService } from '../core/version.service';
 import { UiStateService } from '../core/ui-state.service';
 import { TaskService } from '../core/task.service';
-import { IconComponent } from '../shared/icon.component';
+import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
   selector: 'dc-shell',

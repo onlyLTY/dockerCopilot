@@ -1,74 +1,69 @@
-// 通用按钮：布局统一，颜色和尺寸按语义拆分
-.primary,
-.secondary,
-.danger-link,
-.icon-button,
-.logout,
-.resource-actions button,
-.icon-actions button,
-.backup-actions button,
-.section-toolbar-actions button,
-.editor-actions button,
-.file-tabs button {
+// 通用按钮：一个基础类 .btn 统一布局/形状/字号/悬浮加成，
+// 颜色与边框由语义修饰类或 _color 的工具类提供，避免重复定义。
+
+/* ===== 基础按钮 =====
+   .btn 统一 inline-flex 布局、圆角、字号、内边距、禁用态和 hover 提亮。
+   语义修饰类只覆盖文字/背景/边框颜色。 */
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-}
-
-.primary,
-.secondary {
   border: 0;
   border-radius: 8px;
-  padding: 11px 16px;
+  padding: 12px 16px;
   font-weight: 650;
-  font-size: 13px;
-}
-
-.primary {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 5px 12px #087db733;
-
-  &:hover { filter: brightness(0.94); }
-  &:disabled { opacity: 0.55; cursor: wait; }
-}
-
-.secondary {
-  background: #edf2f7;
-  color: #42516a;
-  transition: filter .15s, background .15s;
-
-  &:hover:not(:disabled) { filter: brightness(0.96); }
-  &:disabled { opacity: 0.55; cursor: not-allowed; }
-}
-
-.full { width: 100%; margin-top: 20px; }
-
-// 危险操作链接式按钮：图标颜色跟随文字颜色（由 dc-icon 的 currentColor 继承）
-.danger-link {
-  border: 0;
-  background: transparent;
-  color: #bd5660;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 7px;
-  transition: background .15s, color .15s;
-
-  &:hover { background: rgba(189, 86, 96, .1); color: #a5424c; }
-  &.force { color: #92535b; }
-  &.force:hover { background: rgba(146, 83, 91, .12); }
-}
-
-// 顶部/移动端图标按钮
-.icon-button {
-  border: 0;
+  font-size: 14px;
   background: transparent;
   color: var(--text);
+  cursor: pointer;
+  transition: filter .15s, background .15s, color .15s, border-color .15s;
+
+  &:hover { filter: brightness(0.94); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
+}
+/* 链接式按钮：透明底、小内边距，常用于图标+文字的次级删除类操作 */
+.btn-link { padding: 6px 10px; border-radius: 7px; font-size: 12px; font-weight: 500;
+  background: transparent;
+  &:hover { filter: none; }
+}
+/* 整宽按钮 */
+.btn-full { width: 100%; margin-top: 20px; }
+
+/* ===== 颜色语义修饰类（只管背景/文字/边框，布局归 .btn） ===== */
+.btn-primary { background: var(--accent); color: var(--white); box-shadow: 0 5px 12px var(--accent-shadow); }
+.btn-secondary { background: var(--btn-secondary-bg); color: var(--btn-secondary-text); }
+.btn-danger { background: var(--danger); color: var(--white); font-weight: 650; }
+/* 危险操作链接式按钮：透明底 + 危险文字色 */
+.btn-danger-link { color: var(--danger-link);
+  &.force { color: var(--danger-link-strong); }
+  &:hover { filter: none; background: rgba(189, 86, 96, .1); color: var(--danger-link-hover); }
+  &.force:hover { background: rgba(146, 83, 91, .12); }
+}
+/* 幽灵按钮：纯透明底，文字色由工具类决定 */
+.btn-ghost { background: transparent;
+  &:hover { filter: none; }
 }
 
-.logout {
-  border: 0;
-  background: transparent;
-  color: var(--danger);
+/* ===== 操作按钮颜色修饰类（脱离容器作用域，可任意使用） ===== */
+.btn-stop { color: var(--action-stop);
+  &:hover { background: rgba(227, 38, 53, .08); }
 }
+.btn-start { color: var(--action-start);
+  &:hover { background: rgba(10, 155, 82, .08); }
+}
+.btn-update { color: var(--action-update);
+  &:hover { background: rgba(140, 54, 232, .08); }
+}
+.btn-restore { color: var(--accent);
+  &:hover { background: rgba(8, 125, 183, .1); }
+}
+
+/* ===== 暗色主题微调（btn 专属；modal-close/resource-actions/form-field 输入框等
+   通用 dark 覆盖统一在 _modals.scss 声明，避免重复） ===== */
+.dark-shell .btn-secondary { background: var(--btn-secondary-bg); color: var(--btn-secondary-text); }
+.dark-shell .btn-ghost { background: var(--modal-close-bg); }
+
+/* ===== 顶部/移动端图标按钮 ===== */
+.icon-button { border: 0; background: transparent; color: var(--text); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.icon-button dc-icon { --icon-size: 20px; }

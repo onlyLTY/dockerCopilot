@@ -4,7 +4,7 @@
 .nav-badge {
   margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px;
   display: inline-grid; place-items: center; border-radius: 9px;
-  background: var(--accent); color: #fff; font-size: 11px; font-style: normal; line-height: 1;
+  background: var(--accent); color: var(--white); font-size: 12px; font-style: normal; line-height: 1;
 }
 .compact-shell .nav-badge {
   position: absolute; top: 6px; right: 6px; margin: 0;
@@ -16,30 +16,29 @@
 .task-row {
   display: flex; align-items: center; gap: 16px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
-  padding: 16px 18px; box-shadow: 0 8px 20px #18365c0b;
+  padding: 16px 18px; box-shadow: 0 8px 20px var(--shadow-sm);
 }
 .task-row-main { flex: 1; min-width: 0; }
 .task-row-head { display: flex; align-items: center; gap: 10px; }
-.task-row-head b { color: var(--text); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.task-row-main small { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-row-head b { color: var(--text); font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-row-main small { display: block; margin-top: 8px; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-state {
-  flex: none; padding: 2px 9px; border-radius: 20px; font-size: 11px;
-  background: #eef4fb; color: var(--muted);
+  flex: none; padding: 2px 9px; border-radius: 20px; font-size: 12px;
+  background: var(--accent-soft); color: var(--muted);
 }
-.task-state.active { background: #fff5e2; color: #b8791b; }
-.task-state.ok { background: #e6f6ec; color: #17914f; }
-.task-state.bad { background: #fdecec; color: #c4494e; }
+.task-state.active { background: var(--amber-soft); color: var(--warning); }
+.task-state.ok { background: var(--green-soft); color: var(--green); }
+.task-state.bad { background: var(--red-soft); color: var(--danger); }
 .task-bar { margin-top: 10px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .task-bar i { display: block; height: 100%; background: var(--accent); transition: width .3s ease; }
 .task-bar i.bad { background: var(--danger); }
-.task-row-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 
 /* ===== 进度弹窗 ===== */
 .task-content { display: flex; min-height: 0; flex-direction: column; overflow: hidden; }
 .task-progress { min-height: 0; margin-top: 20px; }
 .task-progress .progress-bar { height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; }
 .task-progress .progress-bar span { display: block; height: 100%; background: var(--accent); transition: width .3s ease; }
-.task-progress .progress-bar.done span { background: #17a35a; }
+.task-progress .progress-bar.done span { background: var(--green); }
 .task-progress .progress-bar.failed span { background: var(--danger); }
 .progress-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--text); }
 .progress-meta .failed { color: var(--danger); }
@@ -54,17 +53,17 @@
 /* ===== 设置页 ===== */
 .settings-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
-  padding: 22px 24px; box-shadow: 0 8px 20px #18365c0b; margin-bottom: 24px;
+  padding: 22px 24px; box-shadow: 0 8px 20px var(--shadow-sm); margin-bottom: 24px;
 }
 .settings-item { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .settings-item-text { min-width: 0; }
-.settings-item-text b { display: block; color: var(--text); font-size: 15px; }
+.settings-item-text b { display: block; color: var(--text); font-size: 16px; }
 .settings-item-text span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .settings-item-control { display: flex; align-items: center; gap: 10px; flex: none; }
 .settings-item-control select {
   padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px;
-  background: var(--surface); color: var(--text); font-size: 13px; min-width: 160px;
+  background: var(--surface); color: var(--text); font-size: 14px; min-width: 160px;
 }
-.settings-item-control select:focus { border-color: var(--accent); outline: 0; box-shadow: 0 0 0 3px #138bc21a; }
+.settings-item-control select:focus { border-color: var(--accent); outline: 0; box-shadow: 0 0 0 3px var(--focus-ring); }
 .settings-hint { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
-.dark-shell .settings-item-control select { background: #1a2130; }
+.dark-shell .settings-item-control select { background: var(--select-bg); }

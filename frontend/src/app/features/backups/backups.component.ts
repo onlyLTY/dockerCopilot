@@ -2,8 +2,8 @@ import { Component, inject, computed } from '@angular/core';
 import { BackupService } from '../../core/backup.service';
 import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
-import { PageStateComponent } from '../../shared/page-state.component';
-import { IconComponent } from '../../shared/icon.component';
+import { PageStateComponent } from '../../shared/page-state/page-state.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
 
 @Component({

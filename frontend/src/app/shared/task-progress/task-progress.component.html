@@ -1,0 +1,36 @@
+@if (task(); as t) {
+  <div class="modal-backdrop" (click)="close($event)">
+    <section class="modal modal-content modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">TASK PROGRESS</p>
+          <h2>{{ t.title }}</h2>
+          <p>{{ t.message }}</p>
+        </div>
+        <button class="modal-close" (click)="tasks.closeView()" aria-label="关闭">×</button>
+      </div>
+
+      <div class="modal-body task-content">
+        <div class="task-progress">
+          <div class="progress-bar" [class.failed]="t.failed" [class.done]="t.isDone && !t.failed">
+            <span [style.width.%]="t.percentage"></span>
+          </div>
+          <div class="progress-meta">
+            <span [class.failed]="t.failed">
+              {{ t.failed ? '失败' : t.isDone ? '已完成' : '进行中' }} · {{ t.percentage }}%
+            </span>
+            @if (!t.isDone) { <span class="muted">后台执行中，可关闭此窗口</span> }
+          </div>
+          @if (t.detailMsg) {
+            <pre class="task-detail">{{ t.detailMsg }}</pre>
+          }
+        </div>
+        <div class="task-actions d-flex items-center justify-end gap-8">
+          <button class="btn btn-link btn-danger-link gap-4" (click)="remove(t.taskID)"><dc-icon class="icon-sm" name="delete"></dc-icon>删除任务</button>
+          <button class="btn btn-secondary gap-4" (click)="goTasks()"><dc-icon class="icon-sm" name="tasks"></dc-icon>前往任务</button>
+          <button class="btn btn-primary" (click)="tasks.closeView()">关闭</button>
+        </div>
+      </div>
+    </section>
+  </div>
+}

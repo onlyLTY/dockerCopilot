@@ -2,7 +2,7 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../core/settings.service';
 import { ToastService } from '../../core/toast.service';
-import { SectionToolbarComponent } from '../../shared/section-toolbar.component';
+import { SectionToolbarComponent } from '../../shared/section-toolbar/section-toolbar.component';
 
 /**
  * 设置页：提供定时任务配置（预设下拉）。

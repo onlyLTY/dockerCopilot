@@ -12,7 +12,7 @@
   border: 3px solid var(--line); border-top-color: var(--accent);
   animation: dc-spin 0.7s linear infinite;
 }
-.page-state-icon { color: #68aaca; font-size: 28px; }
-.page-state-text { font-size: 13px; }
+.page-state-icon { color: var(--page-state-icon); font-size: 28px; }
+.page-state-text { font-size: 14px; }
 
 @keyframes dc-spin { to { transform: rotate(360deg); } }

@@ -4,7 +4,7 @@ import { catchError, map } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 import { IconService, IconMap } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
-import { IconComponent } from '../../shared/icon.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
 
 @Component({

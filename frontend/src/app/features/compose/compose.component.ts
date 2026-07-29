@@ -4,11 +4,11 @@ import { ComposeService, ComposeProject, ProjectsData } from '../../core/compose
 import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
 import { ConfirmService } from '../../core/confirm.service';
-import { PageStateComponent } from '../../shared/page-state.component';
-import { SectionToolbarComponent } from '../../shared/section-toolbar.component';
-import { IconComponent } from '../../shared/icon.component';
+import { PageStateComponent } from '../../shared/page-state/page-state.component';
+import { SectionToolbarComponent } from '../../shared/section-toolbar/section-toolbar.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
-const defaultCompose = `services:\n  app:\n    image: nginx:alpine\n    ports:\n      - "8080:80"\n`;
+const defaultCompose = '';
 
 @Component({
   selector: 'dc-compose',
@@ -29,17 +29,17 @@ export class ComposeComponent {
   });
   readonly loading = this.service.cache.loading;
   readonly selectionMode = signal(false); readonly selected = signal<Set<string>>(new Set()); readonly cleanupBusy = signal(false);
-  readonly editorProject = signal<ComposeProject | undefined>(undefined); readonly filename = signal(''); content = ''; readonly version = signal(''); readonly message = signal(''); readonly messageType = signal(''); readonly preview = signal<Record<string, any> | undefined>(undefined); readonly risks = signal<any[]>([]); readonly showCreate = signal(false); readonly creating = signal(false); projectName = ''; projectContent = defaultCompose; readonly createError = signal(''); readonly confirmDeploy = signal(false); readonly deployBusy = signal(false); readonly createPreview = signal<Record<string, any> | undefined>(undefined); readonly createValidated = signal(false);
+  readonly editorProject = signal<ComposeProject | undefined>(undefined); readonly filename = signal(''); readonly content = signal(''); readonly version = signal(''); readonly message = signal(''); readonly messageType = signal(''); readonly preview = signal<Record<string, any> | undefined>(undefined); readonly risks = signal<any[]>([]); readonly showCreate = signal(false); readonly creating = signal(false); projectName = ''; projectContent = defaultCompose; readonly createError = signal(''); readonly confirmDeploy = signal(false); readonly deployBusy = signal(false); readonly createPreview = signal<Record<string, any> | undefined>(undefined); readonly createValidated = signal(false);
   readonly composeDialog = computed(() => this.editorProject() ? 'edit' : this.showCreate() ? 'create' : 'closed');
   constructor() { this.service.ensureLoaded(); }
   refresh() { this.service.refresh(); }
   openEditor(p: ComposeProject) { const normalized = { ...p, files: Array.isArray(p.files) ? p.files : [], containers: Array.isArray(p.containers) ? p.containers : [], ports: Array.isArray(p.ports) ? p.ports : [] }; this.editorProject.set(normalized); this.preview.set(undefined); this.message.set(''); this.messageType.set(''); const f = normalized.files.find(x => x.name === 'compose.yaml') || normalized.files[0]; if (f) this.openFile(f.name); }
-  openFile(n: string) { const ep = this.editorProject(); if (!ep) return; this.filename.set(n); this.service.file(ep.id, n).subscribe({ next: r => r.code === 200 ? (this.content = r.data.content, this.version.set(r.data.version), this.message.set('')) : this.showError(r.msg, '读取文件'), error: e => this.showError(e.error?.msg || '读取文件失败', '读取文件') }); }
-  save() { const ep = this.editorProject(); if (!ep) return; this.service.update(ep.id, this.filename(), this.content, this.version()).subscribe({ next: r => r.code === 200 ? (this.version.set(r.data.version), this.message.set('已保存')) : this.showError(r.msg, '保存文件'), error: e => this.showError(e.error?.msg || '保存失败', '保存文件') }); }
-  validate() { const ep = this.editorProject(); if (!ep) return; this.service.validate(ep.id, this.filename(), this.content).subscribe({ next: r => r.code === 200 ? (this.message.set('校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务'), this.messageType.set('')) : this.showError(r.msg, '校验'), error: e => this.showError(e.error?.msg || '校验失败', '校验') }); }
+  openFile(n: string) { const ep = this.editorProject(); if (!ep) return; this.filename.set(n); this.service.file(ep.id, n).subscribe({ next: r => r.code === 200 ? (this.content.set(r.data.content), this.version.set(r.data.version), this.message.set('')) : this.showError(r.msg, '读取文件'), error: e => this.showError(e.error?.msg || '读取文件失败', '读取文件') }); }
+  save() { const ep = this.editorProject(); if (!ep) return; this.service.update(ep.id, this.filename(), this.content(), this.version()).subscribe({ next: r => r.code === 200 ? (this.version.set(r.data.version), this.message.set('已保存')) : this.showError(r.msg, '保存文件'), error: e => this.showError(e.error?.msg || '保存失败', '保存文件') }); }
+  validate() { const ep = this.editorProject(); if (!ep) return; this.service.validate(ep.id, this.filename(), this.content()).subscribe({ next: r => r.code === 200 ? (this.message.set('校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务'), this.messageType.set('')) : this.showError(r.msg, '校验'), error: e => this.showError(e.error?.msg || '校验失败', '校验') }); }
   previewDeploy() {
     const ep = this.editorProject(); if (!ep) return;
-    this.service.update(ep.id, this.filename(), this.content, this.version()).subscribe({
+    this.service.update(ep.id, this.filename(), this.content(), this.version()).subscribe({
       next: saved => {
         if (saved.code !== 200) { this.showError(saved.msg, '部署预览'); return; }
         this.version.set(saved.data.version);

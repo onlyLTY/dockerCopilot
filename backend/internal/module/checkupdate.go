@@ -75,6 +75,13 @@ func (i *ImageUpdateData) CheckUpdateWithProgress(imageList []types.Image, progr
 }
 
 func (i *ImageUpdateData) checkSingleImage(image types.Image) {
+	// 纯本地构建的镜像只有 RepoTags、没有 RepoDigests（RepoDigests 仅在 pull/push
+	// 后才会写入）。这类镜像没有可比对的远程引用，向 registry 查询必然 401/404，
+	// 因此提前跳过，避免无意义的网络请求与噪音日志。
+	if len(image.RepoDigests) == 0 {
+		logx.Infof("跳过本地镜像（无远程引用）%s:%s", image.ImageName, image.ImageTag)
+		return
+	}
 	token, err := GetToken(image, "")
 	if err != nil {
 		logx.Error("获取token失败或者无需获取token，继续尝试检查" + err.Error())
@@ -86,11 +93,8 @@ func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 	}
 	remoteDigest, err := GetDigest(digestURL, token)
 	if err != nil {
-		logx.Error("获取digest失败" + err.Error())
-		return
-	}
-	if len(image.RepoDigests) == 0 {
-		logx.Error("未在本地获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
+		// 私有镜像无凭据、镜像已从 registry 删除等均属预期情况，降为 info 避免刷 error。
+		logx.Infof("获取digest失败（跳过该镜像更新检查）%s:%s: %v", image.ImageName, image.ImageTag, err)
 		return
 	}
 	needUpdate := false

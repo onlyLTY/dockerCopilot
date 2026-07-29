@@ -7,7 +7,7 @@ import { PortsComponent } from './features/ports/ports.component';
 import { IconsComponent } from './features/icons/icons.component';
 import { TasksComponent } from './features/tasks/tasks.component';
 import { MeComponent } from './features/me/me.component';
-import { LoginComponent } from './features/login.component';
+import { LoginComponent } from './features/login/login.component';
 import { authGuard } from './core/auth.guard';
 
 export const routes: Routes = [

@@ -4,9 +4,9 @@
     <h1>项目</h1>
     <p class="subtitle">管理 Compose 项目和配置文件</p>
   </div>
-  <div class="heading-actions">
-    <button class="secondary" (click)="refresh()" title="刷新项目"><dc-icon name="refresh"></dc-icon>刷新</button>
-    <button class="primary" (click)="newProject()" title="新建项目"><dc-icon name="add"></dc-icon>新建</button>
+  <div class="heading-actions d-flex items-center gap-8">
+    <button class="btn btn-secondary" (click)="refresh()" title="刷新项目"><dc-icon name="refresh"></dc-icon>刷新</button>
+    <button class="btn btn-primary" (click)="newProject()" title="新建项目"><dc-icon name="add"></dc-icon>新建</button>
   </div>
 </section>
 
@@ -40,7 +40,7 @@
           <span>{{ project.ports.length }} 个端口</span>
         </div>
         <div class="resource-actions">
-          <button class="primary" (click)="openEditor(project)">查看 / 编辑</button>
+          <button class="btn btn-primary" (click)="openEditor(project)">查看 / 编辑</button>
         </div>
       </article>
     }
@@ -64,20 +64,20 @@
           <div class="file-tabs">
             @for (file of ep.files; track file.name) { <button [class.active]="filename() === file.name" (click)="openFile(file.name)">{{ file.name }}</button> }
           </div>
-          <textarea class="code-editor" [(ngModel)]="content" spellcheck="false"></textarea>
+          <textarea class="code-editor" [ngModel]="content()" (ngModelChange)="content.set($event)" spellcheck="false"></textarea>
           @if (preview(); as p) {
             <div class="risk-box">
               <b>部署预览</b><p>服务：{{ p['services']?.join(', ') }}</p>
               @if (risks().length) { <p>风险：{{ risks().length }} 项，请确认后部署</p> }
-              <button class="primary d-inline-flex items-center gap-8" (click)="deploy()">部署</button>
+              <button class="btn btn-primary" (click)="deploy()">部署</button>
             </div>
           }
         </div>
         <div class="editor-foot">
           <span class="message">{{ message() }}</span>
-          <button class="secondary d-inline-flex items-center gap-8" (click)="validate()">格式校验</button>
-          <button class="secondary d-inline-flex items-center gap-8" (click)="previewDeploy()">部署预览</button>
-          <button class="primary d-inline-flex items-center gap-8" (click)="save()">保存文件</button>
+          <button class="btn btn-secondary" (click)="validate()">格式校验</button>
+          <button class="btn btn-secondary" (click)="previewDeploy()">部署预览</button>
+          <button class="btn btn-primary" (click)="save()">保存文件</button>
         </div>
       } @else {
         <div class="modal-head">
@@ -86,13 +86,13 @@
         </div>
         <div class="modal-body compose-body">
           <label class="form-field">项目名称<input [(ngModel)]="projectName" placeholder="例如：my-app"></label>
-          <label class="form-field compose-config-field">Compose 配置<textarea class="code-editor" [(ngModel)]="projectContent" spellcheck="false"></textarea></label>
+          <label class="form-field compose-config-field">Compose 配置<textarea class="code-editor" [(ngModel)]="projectContent" spellcheck="false" placeholder="services:&#10;  app:&#10;    image: nginx:alpine&#10;    ports:&#10;      - &quot;8080:80&quot;"></textarea></label>
         </div>
         <div class="editor-foot">
           <span class="message">{{ createValidated() ? '格式已通过，可创建或部署' : '' }}</span>
-          <button class="secondary d-inline-flex items-center gap-8" (click)="validateCreate()">格式校验</button>
-          <button class="secondary d-inline-flex items-center gap-8" [disabled]="creating()" (click)="deployNewProject()">创建并部署</button>
-          <button class="primary d-inline-flex items-center gap-8" [disabled]="creating()" (click)="createProject()">{{ creating() ? '创建中…' : '创建项目' }}</button>
+          <button class="btn btn-secondary" (click)="validateCreate()">格式校验</button>
+          <button class="btn btn-secondary" [disabled]="creating()" (click)="deployNewProject()">创建并部署</button>
+          <button class="btn btn-primary" [disabled]="creating()" (click)="createProject()">{{ creating() ? '创建中…' : '创建项目' }}</button>
         </div>
       }
     </section>

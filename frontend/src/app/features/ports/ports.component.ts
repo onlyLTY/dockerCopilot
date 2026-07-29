@@ -2,8 +2,8 @@ import { Component, inject, computed } from '@angular/core';
 import { PortService } from '../../core/port.service';
 import { PortUsage } from '../../core/compose.service';
 import { IconService } from '../../core/icon.service';
-import { PageStateComponent } from '../../shared/page-state.component';
-import { IconComponent } from '../../shared/icon.component';
+import { PageStateComponent } from '../../shared/page-state/page-state.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 interface PortLine { hostPort: string; containerPort: string; protocol: string; }
 interface PortGroup { containerName: string; project: string; image: string; ports: PortLine[]; }

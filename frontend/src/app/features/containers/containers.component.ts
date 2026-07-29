@@ -5,8 +5,8 @@ import { ContainerService, ContainerRow } from '../../core/container.service';
 import { IconService } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
-import { PageStateComponent } from '../../shared/page-state.component';
-import { IconComponent } from '../../shared/icon.component';
+import { PageStateComponent } from '../../shared/page-state/page-state.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 @Component({
   selector: 'dc-containers',

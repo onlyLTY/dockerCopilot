@@ -4,10 +4,10 @@
     <h1>备份管理</h1>
     <p class="subtitle">创建、恢复和删除容器备份</p>
   </div>
-  <div class="heading-actions">
-    <button class="secondary" (click)="create('yaml')" title="创建 YAML 备份"><dc-icon name="save"></dc-icon>YAML</button>
-    <button class="secondary" (click)="create('json')" title="创建 JSON 备份"><dc-icon name="save"></dc-icon>JSON</button>
-    <button class="primary" (click)="refresh()" title="刷新备份"><dc-icon name="refresh"></dc-icon>刷新</button>
+  <div class="heading-actions d-flex items-center gap-8">
+    <button class="btn btn-secondary" (click)="create('yaml')" title="创建 YAML 备份"><dc-icon name="save"></dc-icon>YAML</button>
+    <button class="btn btn-secondary" (click)="create('json')" title="创建 JSON 备份"><dc-icon name="save"></dc-icon>JSON</button>
+    <button class="btn btn-primary" (click)="refresh()" title="刷新备份"><dc-icon name="refresh"></dc-icon>刷新</button>
   </div>
 </section>
 
@@ -30,9 +30,9 @@
               </div>
               <div class="backup-actions">
                 @if (extension(file) === '.json') {
-                  <button class="restore-action" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
+                  <button class="btn btn-link btn-restore" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
                 }
-                <button class="danger-link" (click)="remove(file)"><dc-icon name="delete"></dc-icon>删除</button>
+                <button class="btn btn-link btn-danger-link" (click)="remove(file)"><dc-icon name="delete"></dc-icon>删除</button>
               </div>
             </article>
           }
