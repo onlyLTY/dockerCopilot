@@ -84,12 +84,13 @@
 
 .port-tags {
   display: flex; flex-wrap: wrap; gap: 8px;
-  justify-content: center; text-align: center;
+  justify-content: flex-start; text-align: left;
 }
 .port-tags > span { display: block; }
-/* 超过 2 个端口：每行 2 个，紧凑排列避免单卡过长 */
+/* 超过 2 个端口：每行 2 个，按内容宽度左对齐排列避免单卡过长 */
 .port-tags.port-tags-grid {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  display: grid; grid-template-columns: repeat(2, min-content); gap: 6px;
+  justify-content: flex-start;
 }
 
 /* ===== 项目卡 ===== */

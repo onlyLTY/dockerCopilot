@@ -26,7 +26,7 @@
         </div>
         <div resource-card-content class="port-tags {{ multiPorts(g) ? 'port-tags-grid' : '' }}">
           @for (p of g.ports; track $index) {
-            <span class="text-port-detail rounded-7 py-5 px-10 fs-12">{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
+            <span class="rounded-7 py-5 px-4 fs-12">{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
           }
         </div>
       </dc-resource-card>
