@@ -1,8 +1,8 @@
 <section class="page-heading">
   <div>
-    <p class="eyebrow">DOCKER OPERATIONS</p>
-    <h1>镜像管理</h1>
-    <p class="subtitle">查看和管理 Docker 镜像</p>
+    <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
+    <h1 class="m-0">镜像管理</h1>
+    <p class="subtitle mt-7">查看和管理 Docker 镜像</p>
   </div>
   <div class="heading-actions d-flex items-center gap-8">
     <button class="btn btn-secondary" [disabled]="!untaggedCount() || cleaning()" (click)="cleanup('untagged')"><dc-icon name="clean"></dc-icon>清理无 Tag ({{ untaggedCount() }})</button>
@@ -12,28 +12,28 @@
 </section>
 
 <section class="stats stats-four compact-stats">
-  <div><strong>{{ images().length }}</strong><span>总镜像</span></div>
-  <div class="green"><strong>{{ usedCount() }}</strong><span>使用中</span></div>
-  <div class="amber"><strong>{{ unusedCount() }}</strong><span>未使用</span></div>
-  <div class="red"><strong>{{ untaggedCount() }}</strong><span>无 Tag</span></div>
+  <div><strong class="d-block fs-20">{{ images().length }}</strong><span class="d-block mt-0 fs-12">总镜像</span></div>
+  <div class="green"><strong class="d-block fs-20">{{ usedCount() }}</strong><span class="d-block mt-0 fs-12">使用中</span></div>
+  <div class="amber"><strong class="d-block fs-20">{{ unusedCount() }}</strong><span class="d-block mt-0 fs-12">未使用</span></div>
+  <div class="red"><strong class="d-block fs-20">{{ untaggedCount() }}</strong><span class="d-block mt-0 fs-12">无 Tag</span></div>
 </section>
 
 @if (images().length) {
-  <section class="resource-grid image-grid">
+  <section class="resource-grid image-grid gap-16 mb-24">
     @for (image of images(); track image.id) {
-      <article class="resource-card">
+      <article class="resource-card p-18">
         <div class="resource-head">
           <img class="resource-icon" [src]="icon(image)" [alt]="image.name" (error)="fallback($event)">
           <div>
-            <b class="image-name"><span class="image-name-text">{{ image.name || 'None' }}</span><small class="status-badge" [class.used]="image.inUsed">{{ image.inUsed ? '使用中' : '未使用' }}</small></b>
-            <span class="image-tag-row"><em>{{ image.tag || 'None' }}</em><i class="image-size">{{ image.size }}</i></span>
-            @if (image.createTime) { <small class="text-muted">发布于 {{ image.createTime }}</small> }
+            <b class="image-name d-flex items-center gap-8 fs-16"><span class="image-name-text">{{ image.name || 'None' }}</span><small class="status-badge d-inline-block py-2 px-8 fs-10" [class.used]="image.inUsed">{{ image.inUsed ? '使用中' : '未使用' }}</small></b>
+            <span class="image-tag-row d-flex items-center justify-between gap-10"><em>{{ image.tag || 'None' }}</em><i class="image-size">{{ image.size }}</i></span>
+            @if (image.createTime) { <small class="d-block mt-5 fs-12 text-muted">发布于 {{ image.createTime }}</small> }
           </div>
         </div>
-        <div class="resource-actions">
-          <button class="btn btn-link btn-danger-link" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
+        <div class="resource-actions mt-14">
+          <button class="btn btn-link btn-danger-link py-8 px-7 fs-12" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
           @if (!image.inUsed) {
-            <button class="btn btn-link btn-danger-link force" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
+            <button class="btn btn-link btn-danger-link force py-8 px-7 fs-12" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
           }
         </div>
       </article>

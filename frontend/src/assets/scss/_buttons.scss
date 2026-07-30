@@ -23,12 +23,12 @@
   &:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
 }
 /* 链接式按钮：透明底、小内边距，常用于图标+文字的次级删除类操作 */
-.btn-link { padding: 6px 10px; border-radius: 7px; font-size: 12px; font-weight: 500;
+.btn-link { border-radius: 7px; font-weight: 500;
   background: transparent;
   &:hover { filter: none; }
 }
 /* 整宽按钮 */
-.btn-full { width: 100%; margin-top: 20px; }
+.btn-full { width: 100%; }
 
 /* ===== 颜色语义修饰类（只管背景/文字/边框，布局归 .btn） ===== */
 .btn-primary { background: var(--accent); color: var(--white); box-shadow: 0 5px 12px var(--accent-shadow); }
@@ -37,8 +37,8 @@
 /* 危险操作链接式按钮：透明底 + 危险文字色 */
 .btn-danger-link { color: var(--danger-link);
   &.force { color: var(--danger-link-strong); }
-  &:hover { filter: none; background: rgba(189, 86, 96, .1); color: var(--danger-link-hover); }
-  &.force:hover { background: rgba(146, 83, 91, .12); }
+  &:hover { filter: none; background: var(--danger-link-hover-bg); color: var(--danger-link-hover); }
+  &.force:hover { background: var(--danger-link-force-hover-bg); }
 }
 /* 幽灵按钮：纯透明底，文字色由工具类决定 */
 .btn-ghost { background: transparent;
@@ -47,16 +47,16 @@
 
 /* ===== 操作按钮颜色修饰类（脱离容器作用域，可任意使用） ===== */
 .btn-stop { color: var(--action-stop);
-  &:hover { background: rgba(227, 38, 53, .08); }
+  &:hover { background: var(--action-stop-hover); }
 }
 .btn-start { color: var(--action-start);
-  &:hover { background: rgba(10, 155, 82, .08); }
+  &:hover { background: var(--action-start-hover); }
 }
 .btn-update { color: var(--action-update);
-  &:hover { background: rgba(140, 54, 232, .08); }
+  &:hover { background: var(--action-update-hover); }
 }
 .btn-restore { color: var(--accent);
-  &:hover { background: rgba(8, 125, 183, .1); }
+  &:hover { background: var(--accent-hover-bg); }
 }
 
 /* ===== 暗色主题微调（btn 专属；modal-close/resource-actions/form-field 输入框等

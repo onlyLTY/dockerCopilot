@@ -52,6 +52,27 @@ func TestReadRecentParsesPlainJSONAndGzipLogs(t *testing.T) {
 	}
 }
 
+func TestReadRecentParsesFormattedLogBlocks(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LOG_DIR", dir)
+	path := filepath.Join(dir, "access.log")
+	content := "【INFO】2026-07-29T07:00:00Z\n第一行\n第二行\n--------------------------------\n"
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := ReadRecent(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected one entry, got %#v", entries)
+	}
+	want := Entry{Timestamp: "2026-07-29T07:00:00Z", Level: "info", Message: "第一行\n第二行"}
+	if entries[0] != want {
+		t.Fatalf("expected %#v, got %#v", want, entries[0])
+	}
+}
 func TestReadRecentReturnsEmptyForMissingDirectory(t *testing.T) {
 	t.Setenv("LOG_DIR", filepath.Join(t.TempDir(), "missing"))
 	entries, err := ReadRecent(10)

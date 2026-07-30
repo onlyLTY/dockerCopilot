@@ -5,9 +5,9 @@
   display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
   margin: 0 0 22px; padding: 28px 0 16px; background: var(--page-bg);
 }
-.eyebrow { color: var(--accent); font-size: 12px; letter-spacing: .13em; font-weight: 700; margin: 0 0 8px; }
-.page-heading h1 { margin: 0; font-size: 30px; letter-spacing: -.02em; color: var(--text); }
-.subtitle { color: var(--muted); margin: 7px 0 0; }
+.eyebrow { color: var(--accent); letter-spacing: .13em; font-weight: 700; }
+.page-heading h1 { color: var(--text); letter-spacing: -.02em; }
+.subtitle { color: var(--muted); }
 
 /* 小节工具条 */
 .section-toolbar {
@@ -21,6 +21,3 @@
   margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--line);
   border-radius: 10px; background: var(--surface);
 }
-/* batch-title / select-all / batch-exit 的外层 spacing 与文字样式
-   已在 html 用工具类（mr-auto/fs-13/fw-650/mr-4/ml-auto）表达；
-   .select-all 保留作为内层 checkbox 的锚点（见 _panels.scss） */

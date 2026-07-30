@@ -1,8 +1,8 @@
 <section class="page-heading">
   <div>
-    <p class="eyebrow">DOCKER OPERATIONS</p>
-    <h1>任务</h1>
-    <p class="subtitle">查看容器更新、备份恢复、项目部署等异步任务的进度</p>
+    <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
+    <h1 class="m-0">任务</h1>
+    <p class="subtitle mt-7">查看容器更新、备份恢复、项目部署等异步任务的进度</p>
   </div>
   <div class="heading-actions d-flex items-center gap-8">
     <button class="btn btn-secondary" [disabled]="!doneCount() && !failedCount()" (click)="clearDone()"><dc-icon name="clean"></dc-icon>清除已完成</button>
@@ -11,25 +11,25 @@
 </section>
 
 <section class="stats stats-four compact-stats">
-  <div><strong>{{ list().length }}</strong><span>总任务</span></div>
-  <div class="amber"><strong>{{ activeCount() }}</strong><span>进行中</span></div>
-  <div class="green"><strong>{{ doneCount() }}</strong><span>已完成</span></div>
-  <div class="red"><strong>{{ failedCount() }}</strong><span>失败</span></div>
+  <div><strong class="d-block fs-20">{{ list().length }}</strong><span class="d-block mt-0 fs-12">总任务</span></div>
+  <div class="amber"><strong class="d-block fs-20">{{ activeCount() }}</strong><span class="d-block mt-0 fs-12">进行中</span></div>
+  <div class="green"><strong class="d-block fs-20">{{ doneCount() }}</strong><span class="d-block mt-0 fs-12">已完成</span></div>
+  <div class="red"><strong class="d-block fs-20">{{ failedCount() }}</strong><span class="d-block mt-0 fs-12">失败</span></div>
 </section>
 
 @if (list().length) {
-  <section class="task-list">
+  <section class="task-list d-flex flex-col gap-12 mb-24">
     @for (t of list(); track t.taskID) {
-      <article class="task-row" [class.done]="t.isDone && !t.failed" [class.failed]="t.failed">
+      <article class="task-row d-flex py-16 px-18" [class.done]="t.isDone && !t.failed" [class.failed]="t.failed">
         <div class="task-row-main">
-          <div class="task-row-head">
-            <b>{{ t.title }}</b>
-            <span class="task-state" [class.active]="!t.isDone" [class.ok]="t.isDone && !t.failed" [class.bad]="t.failed">{{ statusText(t) }}</span>
+          <div class="task-row-head d-flex items-center">
+            <b class="fs-16">{{ t.title }}</b>
+            <span class="task-state py-2 px-9 fs-12" [class.active]="!t.isDone" [class.ok]="t.isDone && !t.failed" [class.bad]="t.failed">{{ statusText(t) }}</span>
           </div>
-          <div class="task-bar"><i [style.width.%]="t.percentage" [class.bad]="t.failed"></i></div>
-          <small>{{ t.message }} · {{ t.percentage }}% · {{ time(t.updatedAt) }}</small>
+          <div class="task-bar mt-10"><i class="d-block" [style.width.%]="t.percentage" [class.bad]="t.failed"></i></div>
+          <small class="d-block mt-8 fs-12">{{ t.message }} · {{ t.percentage }}% · {{ time(t.updatedAt) }}</small>
         </div>
-        <div class="actions flex-none">
+        <div class="task-actions d-flex items-center justify-end gap-8 mt-auto pt-16">
           <button class="btn btn-secondary" (click)="view(t.taskID)"><dc-icon name="about"></dc-icon>详情</button>
           <button class="btn btn-link btn-danger-link" (click)="remove(t.taskID)"><dc-icon name="delete"></dc-icon>删除</button>
         </div>

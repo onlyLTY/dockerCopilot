@@ -3,16 +3,14 @@
 // _flex / _spacing / _typography / _color 中定义。
 
 /* 图标尺寸（供 dc-icon 的 --icon-size 变量使用） */
-.icon-xs { --icon-size: 12px; }
-.icon-sm { --icon-size: 14px; }
-.icon-md { --icon-size: 16px; }
-.icon-lg { --icon-size: 20px; }
-.icon-xl { --icon-size: 24px; }
-.icon-2xl { --icon-size: 32px; }
+$icon-sizes: 8, 10, 12, 14, 16, 20, 24, 32;
+
+@each $size in $icon-sizes {
+  .icon-#{$size} { --icon-size: #{$size}px; }
+}
 
 /* 圆角 */
 $radiuses: 0, 4, 6, 7, 8, 10, 12, 14, 18, 50;
-
 @each $r in $radiuses {
   .rounded-#{$r} { border-radius: #{$r}px !important; }
   @if $r == 50 {

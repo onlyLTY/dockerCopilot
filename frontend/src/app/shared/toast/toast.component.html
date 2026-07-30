@@ -1,8 +1,8 @@
-<div class="toast-stack">
-  @for (t of toast.toasts(); track t.id) {
-    <button class="toast" [class.success]="t.kind === 'success'" [class.error]="t.kind === 'error'" [class.info]="t.kind === 'info'" (click)="toast.dismiss(t.id)">
-      <span class="toast-mark">{{ t.kind === 'success' ? '✓' : t.kind === 'error' ? '✕' : 'ⓘ' }}</span>
-      <span class="toast-text"><strong>{{ t.title }}</strong><span>{{ t.message }}</span></span>
+<div class="toast-stack d-flex flex-col items-center gap-10">
+    @for (t of toast.toasts(); track t.id) {
+      <button class="toast d-inline-flex py-12 px-16 fs-14" [class.success]="t.kind === 'success'" [class.error]="t.kind === 'error'" [class.info]="t.kind === 'info'" (click)="toast.dismiss(t.id)">
+      <span class="toast-mark d-grid place-items-center fs-12">{{ t.kind === 'success' ? '✓' : t.kind === 'error' ? '✕' : 'ⓘ' }}</span>
+      <span class="toast-text d-flex flex-col gap-3"><strong class="fs-14">{{ t.title }}</strong><span>{{ t.message }}</span></span>
     </button>
   }
 </div>

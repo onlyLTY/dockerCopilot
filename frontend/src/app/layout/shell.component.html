@@ -12,7 +12,7 @@
         <a href="#/backups" title="备份" [class.active]="isActive('/backups')" (click)="navigate('/backups')"><dc-icon name="storage"></dc-icon><span>备份</span></a>
         <a href="#/icons" title="图标" [class.active]="isActive('/icons')" (click)="navigate('/icons')"><dc-icon name="icons"></dc-icon><span>图标</span></a>
         <a href="#/ports" title="端口" [class.active]="isActive('/ports')" (click)="navigate('/ports')"><dc-icon name="ports"></dc-icon><span>端口</span></a>
-        <a href="#/tasks" title="任务" [class.active]="isActive('/tasks')" (click)="navigate('/tasks')"><dc-icon name="tasks"></dc-icon><span>任务</span>@if (tasks.activeCount()) { <em class="nav-badge">{{ tasks.activeCount() }}</em> }</a>
+        <a href="#/tasks" title="任务" [class.active]="isActive('/tasks')" (click)="navigate('/tasks')"><dc-icon name="tasks"></dc-icon><span>任务</span>@if (tasks.activeCount()) { <em class="nav-badge ml-auto py-0 px-5 d-inline-grid place-items-center fs-12">{{ tasks.activeCount() }}</em> }</a>
         <a href="#/me" title="我的" [class.active]="isActive('/me')" (click)="navigate('/me')"><dc-icon name="about"></dc-icon><span>我的</span></a>
       </nav>
       <div class="sidebar-bottom">

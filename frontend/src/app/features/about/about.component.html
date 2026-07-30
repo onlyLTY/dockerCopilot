@@ -1,16 +1,16 @@
-<section class="about-hero panel">
-  <img class="brand-logo about-mark" src="assets/DockerCopilotlogo.png" alt="Docker Copilot">
-  <h1>Docker Copilot</h1>
-  <p>一个简洁、优雅且强大的 Docker 容器管理工具，帮助你轻松管理容器、镜像和项目。</p>
-  <div class="about-actions">
+<section class="about-hero panel py-60 px-24">
+  <img class="brand-logo about-mark mx-auto mb-20" src="assets/DockerCopilotlogo.png" alt="Docker Copilot">
+  <h1 class="m-0 fs-32">Docker Copilot</h1>
+  <p class="mx-auto mt-12">一个简洁、优雅且强大的 Docker 容器管理工具，帮助你轻松管理容器、镜像和项目。</p>
+  <div class="about-actions d-flex justify-center mt-24">
     <a class="btn btn-primary" href="https://github.com/onlyLTY/dockerCopilot" target="_blank" rel="noreferrer">GitHub</a>
     <a class="btn btn-secondary" href="https://github.com/onlyLTY/dockerCopilot/issues" target="_blank" rel="noreferrer">反馈问题</a>
   </div>
 </section>
 
 <section class="about-grid">
-  <article class="panel">
-    <h2>版本信息</h2>
+  <article class="panel p-24">
+    <h2 class="m-0 mb-16 fs-16">版本信息</h2>
     @if (version().version) {
       <p>当前版本 <strong>{{ version().version }}</strong></p>
     }
@@ -21,8 +21,8 @@
       <p class="muted">版本信息暂不可用</p>
     }
   </article>
-  <article class="panel">
-    <h2>关于项目</h2>
+  <article class="panel p-24">
+    <h2 class="m-0 mb-16 fs-16">关于项目</h2>
     <p>Docker Copilot 提供容器状态查看、镜像管理、Compose 项目编辑、备份恢复和端口检查能力。</p>
   </article>
 </section>

@@ -4,6 +4,7 @@
 .d-none { display: none !important; }
 .d-block { display: block !important; }
 .d-inline { display: inline !important; }
+.d-inline-block { display: inline-block !important; }
 .d-flex { display: flex !important; }
 .d-inline-flex { display: inline-flex !important; }
 .d-grid { display: grid !important; }
@@ -41,14 +42,6 @@
 /* grid 居中 */
 .place-items-center { place-items: center !important; }
 
-/* gap（与 spacing 共用档位） */
-$gaps: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32;
-
-@each $gap in $gaps {
-  .gap-#{$gap} { gap: #{$gap}px !important; }
-  .row-gap-#{$gap} { row-gap: #{$gap}px !important; }
-  .col-gap-#{$gap} { column-gap: #{$gap}px !important; }
-}
 
 /* 尺寸辅助 */
 .w-full { width: 100% !important; }

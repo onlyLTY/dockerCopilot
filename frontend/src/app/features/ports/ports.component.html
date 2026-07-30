@@ -1,8 +1,8 @@
 <section class="page-heading">
   <div>
-    <p class="eyebrow">DOCKER OPERATIONS</p>
-    <h1>端口</h1>
-    <p class="subtitle">查看所有容器使用的端口</p>
+    <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
+    <h1 class="m-0">端口</h1>
+    <p class="subtitle mt-7">查看所有容器使用的端口</p>
   </div>
   <button class="btn btn-primary" (click)="refresh()" title="刷新端口"><dc-icon name="refresh"></dc-icon>刷新</button>
 </section>
@@ -15,24 +15,24 @@
 }
 
 <section class="stats stats-two compact-stats">
-  <div><strong>{{ data().ports.length }}</strong><span>端口映射</span></div>
-  <div class="red"><strong>{{ data().conflicts.length }}</strong><span>端口冲突</span></div>
+  <div><strong class="d-block fs-20">{{ data().ports.length }}</strong><span class="d-block mt-0 fs-12">端口映射</span></div>
+  <div class="red"><strong class="d-block fs-20">{{ data().conflicts.length }}</strong><span class="d-block mt-0 fs-12">端口冲突</span></div>
 </section>
 
 @if (groups().length) {
-  <section class="resource-grid port-grid">
+  <section class="resource-grid port-grid gap-16 mb-24">
     @for (g of groups(); track g.containerName) {
-      <article class="resource-card port-card">
+      <article class="resource-card port-card p-18">
         <div class="resource-head">
           <img class="resource-icon" [src]="icon(g)" [alt]="g.containerName" (error)="fallback($event)">
           <div>
-            <b>{{ g.containerName }}</b>
-            <span>{{ g.project || '独立容器' }}</span>
+            <b class="d-block fs-16">{{ g.containerName }}</b>
+            <span class="d-block mt-5 fs-12">{{ g.project || '独立容器' }}</span>
           </div>
         </div>
-        <div class="port-values">
+        <div class="port-values mt-16 pt-14 d-flex flex-wrap justify-center gap-8">
           @for (p of g.ports; track $index) {
-            <span class="port-line">{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
+            <span class="port-line d-block py-5 px-10 fs-12">{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
           }
         </div>
       </article>

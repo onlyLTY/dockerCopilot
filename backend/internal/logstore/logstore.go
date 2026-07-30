@@ -17,6 +17,7 @@ const (
 	defaultLimit  = 100
 	maxLimit      = 500
 	maxTotalBytes = 1024 * 1024
+	logSeparator  = "--------------------------------"
 )
 
 type Entry struct {
@@ -119,18 +120,65 @@ func readFile(path string) ([]Entry, error) {
 		defer compressed.Close()
 		reader = compressed
 	}
+	return readEntries(reader)
+}
+
+func readEntries(reader io.Reader) ([]Entry, error) {
 	entries := make([]Entry, 0)
 	scanner := bufio.NewScanner(reader)
 	buffer := make([]byte, 64*1024)
 	scanner.Buffer(buffer, 256*1024)
+	var block []string
+	flush := func() {
+		if len(block) == 0 {
+			return
+		}
+		if entry, ok := parseFormattedBlock(block); ok {
+			entries = append(entries, entry)
+		} else {
+			for _, line := range block {
+				line = strings.TrimSpace(line)
+				if line != "" {
+					entries = append(entries, parseLine(line))
+				}
+			}
+		}
+		block = block[:0]
+	}
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
+		line := strings.TrimRight(scanner.Text(), "\r")
+		if strings.TrimSpace(line) == logSeparator {
+			flush()
 			continue
 		}
-		entries = append(entries, parseLine(line))
+		if strings.TrimSpace(line) == "" && len(block) == 0 {
+			continue
+		}
+		block = append(block, line)
 	}
+	flush()
 	return entries, scanner.Err()
+}
+
+func parseFormattedBlock(lines []string) (Entry, bool) {
+	if len(lines) < 1 {
+		return Entry{}, false
+	}
+	first := strings.TrimSpace(lines[0])
+	if !strings.HasPrefix(first, "【") {
+		return Entry{}, false
+	}
+	first = strings.TrimPrefix(first, "【")
+	endLevel := strings.Index(first, "】")
+	if endLevel <= 0 || endLevel+1 >= len(first) {
+		return Entry{}, false
+	}
+	level := normalizeLevel(first[:endLevel])
+	timestamp := strings.TrimSpace(first[endLevel+len("】"):])
+	if timestamp == "" {
+		return Entry{}, false
+	}
+	return Entry{Timestamp: timestamp, Level: level, Message: strings.Join(lines[1:], "\n")}, true
 }
 
 func parseLine(line string) Entry {

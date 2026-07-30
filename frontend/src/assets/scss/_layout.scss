@@ -35,7 +35,7 @@ nav a {
 }
 nav a dc-icon { --icon-size: 22px; color: var(--muted); }
 nav a:hover,
-nav a.active { background: rgba(8, 125, 183, .1); color: var(--accent); }
+nav a.active { background: var(--nav-active-bg); color: var(--accent); }
 nav a:hover dc-icon,
 nav a.active dc-icon { color: var(--accent); }
 
@@ -70,6 +70,11 @@ nav a.active dc-icon { color: var(--accent); }
 }
 .version-card-head span { color: var(--muted); font-size: 12px; }
 .version-card-head strong { color: var(--text); font-size: 16px; }
+
+
+
+
+
 
 /* ===== 内容区 / 顶栏 ===== */
 .content-wrap { margin-left: 260px; flex: 1; min-width: 0; height: 100vh; overflow-y: auto; }

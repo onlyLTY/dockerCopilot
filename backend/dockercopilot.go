@@ -12,6 +12,7 @@ import (
 
 	"github.com/onlyLTY/dockerCopilot/internal/config"
 	"github.com/onlyLTY/dockerCopilot/internal/handler"
+	"github.com/onlyLTY/dockerCopilot/internal/logwriter"
 	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
@@ -245,14 +246,11 @@ func SetupLog(logDir, level string) error {
 		return fmt.Errorf("failed to create log directory: %v", err)
 	}
 
-	logConf := logx.LogConf{
-		Path:     logDir,
-		Level:    logxConfigLevel(level),
-		KeepDays: 7,
-		Compress: true,
-		Mode:     "file",
+	writer, err := logwriter.New(logDir, 7, true)
+	if err != nil {
+		return err
 	}
-	logx.MustSetup(logConf)
+	logx.SetWriter(writer)
 	logx.AddWriter(logx.NewWriter(os.Stdout))
 	return nil
 }

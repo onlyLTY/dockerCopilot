@@ -7,10 +7,8 @@
 }
 .stats div { padding: 22px 20px; text-align: center; border-right: 1px solid var(--line); }
 .stats div:last-child { border-right: 0; }
-.stats strong,
-.stats span { display: block; }
-.stats strong { color: var(--accent); font-size: 30px; }
-.stats span { margin-top: 5px; color: var(--muted); font-size: 14px; }
+.stats strong { color: var(--accent); }
+.stats span { color: var(--muted); }
 .stats .green strong { color: var(--green); }
 .stats .amber strong { color: var(--amber); }
 .stats .violet strong { color: var(--violet); }
@@ -24,5 +22,3 @@
 /* 紧凑统计条：占位更小，数字与标签同排更省空间 */
 .compact-stats { margin-bottom: 20px; border-radius: 12px; }
 .compact-stats div { padding: 12px 16px; display: flex; align-items: baseline; justify-content: center; gap: 8px; }
-.compact-stats strong { font-size: 20px; }
-.compact-stats span { margin-top: 0; font-size: 12px; }

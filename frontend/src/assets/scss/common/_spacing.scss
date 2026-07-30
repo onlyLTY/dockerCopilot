@@ -3,7 +3,7 @@
 //      mx-16 = 左右外边距，my-16 = 上下外边距，p-16/p{t,r,b,l,x,y}-16 同理。
 // 档位覆盖项目里常用间距（0、2、4 直到 48）。
 
-$sizes: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 40, 48;
+$sizes: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 35, 38, 40, 48, 60;
 
 @each $size in $sizes {
   .m-#{$size} { margin: #{$size}px !important; }
@@ -21,10 +21,17 @@ $sizes: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 40, 48;
   .pl-#{$size} { padding-left: #{$size}px !important; }
   .px-#{$size} { padding-left: #{$size}px !important; padding-right: #{$size}px !important; }
   .py-#{$size} { padding-top: #{$size}px !important; padding-bottom: #{$size}px !important; }
+
+
+  .gap-#{$size} { gap: #{$size}px !important; }
+  .row-gap-#{$size} { row-gap: #{$size}px !important; }
+  .col-gap-#{$size} { column-gap: #{$size}px !important; }
 }
+
 
 // 便捷别名：m-auto / mx-auto 居中
 .m-auto { margin: auto !important; }
 .mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.mt-auto { margin-top: auto !important; }
 .ml-auto { margin-left: auto !important; }
 .mr-auto { margin-right: auto !important; }
