@@ -1,0 +1,48 @@
+:host {
+  display: block;
+}
+
+.page-heading {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 16px 0;
+  background: var(--page-bg);
+}
+
+.page-heading h1 {
+  color: var(--black);
+  letter-spacing: -.02em;
+}
+
+.subtitle {
+  color: var(--muted);
+}
+
+.heading-actions {
+  flex-wrap: wrap;
+  flex: none;
+}
+
+.heading-actions:empty {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .page-heading {
+    align-items: flex-start !important;
+    flex-direction: column;
+  }
+
+  .page-heading h1 {
+    font-size: 26px;
+  }
+
+  .heading-actions {
+    width: 100%;
+  }
+
+  .heading-actions button {
+    flex: 1;
+  }
+}

@@ -1,19 +1,14 @@
-<section class="page-heading d-flex items-end justify-between gap-20">
-  <div>
-    <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
-    <h1 class="m-0">任务</h1>
-    <p class="subtitle mt-7">查看容器更新、备份恢复、项目部署等异步任务的进度</p>
-  </div>
-  <div class="heading-actions d-flex items-center gap-8">
+<dc-page-heading title="任务" subtitle="查看容器更新、备份恢复、项目部署等异步任务的进度">
+  <div page-heading-actions>
     <button class="btn btn-secondary" [disabled]="!doneCount() && !failedCount()" (click)="clearDone()"><dc-icon name="clean"></dc-icon>清除已完成</button>
     <button class="btn btn-secondary" [disabled]="!list().length" (click)="clearAll()"><dc-icon name="delete"></dc-icon>清空全部</button>
   </div>
-</section>
+</dc-page-heading>
 
 <dc-stats [items]="stats()" [columns]="4"></dc-stats>
 
 @if (list().length) {
-  <section class="task-list d-flex flex-col gap-12 mb-24">
+  <section class="task-list page-scroll-area d-flex flex-col gap-12 mb-24">
     @for (t of list(); track t.taskID) {
       <article class="task-row d-flex items-center gap-16 py-16 px-18" [class.done]="t.isDone && !t.failed" [class.failed]="t.failed">
         <div class="task-row-main flex-1 min-w-0">

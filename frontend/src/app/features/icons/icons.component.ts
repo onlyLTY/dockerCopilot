@@ -6,11 +6,13 @@ import { IconService, IconMap } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
+import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
+import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 
 @Component({
   selector: 'dc-icons',
   standalone: true,
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, PageHeadingComponent, ResourceCardComponent],
   templateUrl: './icons.component.html',
 })
 export class IconsComponent {
@@ -22,6 +24,7 @@ export class IconsComponent {
   readonly selectionMode = signal(false); readonly selected = signal<Set<string>>(new Set()); readonly busy = signal(false);
   enterSelection() { this.selectionMode.set(true); }
   exitSelection() { this.selectionMode.set(false); this.selected.set(new Set()); }
+  toggleSelection() { this.selectionMode() ? this.exitSelection() : this.enterSelection(); }
   isSelected(name: string) { return this.selected().has(name); }
   toggleSelect(name: string) { const next = new Set(this.selected()); next.has(name) ? next.delete(name) : next.add(name); this.selected.set(next); }
   readonly allSelected = computed(() => this.filtered().length > 0 && this.filtered().every(item => this.selected().has(item[0])));

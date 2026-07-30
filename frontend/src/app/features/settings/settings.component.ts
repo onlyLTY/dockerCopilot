@@ -3,9 +3,10 @@ import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../core/settings.service';
 import { ToastService } from '../../core/toast.service';
 import { SectionToolbarComponent } from '../../shared/section-toolbar/section-toolbar.component';
+import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 
 /**
- * 设置页：提供定时任务配置（预设下拉）。
+  * 设置页：提供定时任务配置（预设下拉）。
  * - 更新检查频率：定时检查镜像是否有新版本
  * - 自动备份频率：定时创建容器备份（JSON + YAML）
  * 频率由后端持久化，保存后立即按新频率重新调度对应定时任务。
@@ -13,7 +14,7 @@ import { SectionToolbarComponent } from '../../shared/section-toolbar/section-to
 @Component({
   selector: 'dc-settings',
   standalone: true,
-  imports: [FormsModule, SectionToolbarComponent],
+  imports: [FormsModule, SectionToolbarComponent, PageHeadingComponent],
   templateUrl: './settings.component.html',
 })
 export class SettingsComponent {

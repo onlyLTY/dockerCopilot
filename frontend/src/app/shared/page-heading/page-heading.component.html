@@ -1,0 +1,11 @@
+<section class="page-heading d-flex items-end justify-between gap-20">
+  <div class="page-heading-copy min-w-0">
+    <h1 class="m-0">{{ title() }}</h1>
+    @if (subtitle()) {
+      <span class="subtitle mt-7">{{ subtitle() }}</span>
+    }
+  </div>
+  <div class="heading-actions d-flex items-center justify-end gap-8">
+    <ng-content select="[page-heading-actions]"></ng-content>
+  </div>
+</section>

@@ -6,11 +6,12 @@ import { PageStateComponent } from '../../shared/page-state/page-state.component
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
+import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 
 @Component({
   selector: 'dc-backups',
   standalone: true,
-  imports: [PageStateComponent, IconComponent, StatsComponent],
+  imports: [PageStateComponent, IconComponent, StatsComponent, PageHeadingComponent],
   templateUrl: './backups.component.html',
 })
 export class BackupsComponent {

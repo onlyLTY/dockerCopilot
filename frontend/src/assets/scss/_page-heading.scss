@@ -1,20 +1,31 @@
-// 页面标题区（吸顶）与页内小节工具条
-
-.page-heading {
-  position: sticky; top: 0; z-index: 20;
-  padding: 28px 0 28px; background: var(--page-bg);
-}
-.eyebrow { color: var(--blue); letter-spacing: .13em; font-weight: 700; }
-.page-heading h1 { color: var(--black); letter-spacing: -.02em; }
-.subtitle { color: var(--muted); }
+// 页内小节工具条与批量选择通用样式
 
 /* 小节工具条 */
 .section-toolbar {
-  min-height: 42px; margin: 0 0 16px;
+  min-height: 42px;
+  margin: 0 0 16px;
 }
 .section-toolbar h2 { margin: 0; color: var(--black); font-size: 18px; }
 .section-toolbar p { margin: 4px 0 0; font-size: 12px; }
-.batch-toolbar {
-  margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--line);
-  border-radius: 10px; background: var(--white);
+
+.heading-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.heading-select-all input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue);
+}
+.heading-selected { white-space: nowrap; }
+
+[page-heading-actions] {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
 }

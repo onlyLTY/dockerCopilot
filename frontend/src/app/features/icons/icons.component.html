@@ -1,37 +1,35 @@
-<section class="page-heading d-flex items-end justify-between gap-20">
-  <div>
-    <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
-    <h1 class="m-0">图标库</h1>
-    <p class="subtitle mt-7">管理镜像和容器的自定义图标 · 共 {{ filtered().length }} 个</p>
-  </div>
-  <div class="heading-actions d-flex items-center gap-8">
-    <button class="btn btn-secondary" (click)="enterSelection()"><dc-icon name="edit"></dc-icon>批量选择</button>
+<dc-page-heading title="图标库" [subtitle]="'管理镜像和容器的自定义图标 · 共 ' + filtered().length + ' 个'">
+  <div page-heading-actions>
+    @if (selectionMode()) {
+      <label class="select-all heading-select-all"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
+      <span class="heading-selected text-muted fs-12">已选 {{ selected().size }} 个</span>
+      <button class="btn text-red" [disabled]="!selected().size || busy()" (click)="bulkRemove()"><dc-icon name="delete"></dc-icon>批量删除</button>
+    }
+    <button class="btn btn-secondary" (click)="toggleSelection()"><dc-icon name="edit"></dc-icon>{{ selectionMode() ? '退出批量' : '批量选择' }}</button>
     <button class="btn btn-primary" (click)="openUpload()"><dc-icon name="upload"></dc-icon>上传图标</button>
   </div>
-</section>
+</dc-page-heading>
 
-@if (selectionMode()) {
-  <div class="batch-toolbar d-flex items-center gap-10">
-    <span class="batch-title mr-auto fs-13 fw-650">批量操作</span>
-    <label class="select-all mr-4"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
-    <span class="text-muted fs-12">已选 {{ selected().size }} 个</span>
-    <button class="btn text-red" [disabled]="!selected().size || busy()" (click)="bulkRemove()"><dc-icon name="delete"></dc-icon>批量删除</button>
-    <button class="btn btn-secondary batch-exit ml-auto" (click)="exitSelection()">完成</button>
-  </div>
-}
-
-<section>
+<section class="page-scroll-area">
   <div class="icon-grid d-grid gap-16">
     @for (item of filtered(); track item[0]) {
-      <article class="icon-card min-w-0" [class.selected]="selectionMode() && isSelected(item[0])">
-        @if (selectionMode()) { <label class="card-select d-grid place-items-center"><input type="checkbox" [checked]="isSelected(item[0])" (change)="toggleSelect(item[0])"></label> }
-        <img [src]="item[1]" [alt]="item[0]" (error)="fallback($event)">
-        <b>{{ item[0] }}</b>
-        <div class="icon-actions d-flex gap-8 justify-center">
-          <button class="btn btn-secondary" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
-          <button class="btn btn-danger" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
+      <dc-resource-card [selected]="selectionMode() && isSelected(item[0])">
+        <div resource-card-icon class="resource-icon-wrap">
+          <img class="resource-icon" [src]="item[1]" [alt]="item[0]" (error)="fallback($event)">
+          @if (selectionMode()) {
+            <label class="card-select d-grid place-items-center">
+              <input type="checkbox" [checked]="isSelected(item[0])" (change)="toggleSelect(item[0])">
+            </label>
+          }
         </div>
-      </article>
+        <div resource-card-title>
+          <b class="d-block fs-16 text-ellipsis">{{ item[0] }}</b>
+        </div>
+        <div resource-card-actions>
+          <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
+          <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
+        </div>
+      </dc-resource-card>
     }
     @if (!filtered().length) {
       <div class="empty text-muted">暂无自定义图标</div>
@@ -44,10 +42,9 @@
     <section class="modal min-w-0 d-grid modal-form modal-auto modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       <div class="modal-head d-flex justify-between gap-20">
         <div>
-          <p class="eyebrow m-0 mb-8 fs-12">ICON LIBRARY</p>
           <h2 class="m-0">{{ editing() ? '替换图标' : '上传图标' }}</h2>
         </div>
-        <button class="modal-close d-grid place-items-center" (click)="show.set(false)" aria-label="关闭">×</button>
+        <button class="modal-close d-grid place-items-center" (click)="show.set(false)" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
       </div>
       <div class="modal-body">
         <label class="form-field d-block mt-20 fs-12">镜像仓库名称<input class="d-block mt-8 py-12 px-12" [(ngModel)]="name" placeholder="例如 nginx 或 ghcr.io/company/app"></label>

@@ -1,20 +1,15 @@
-<section class="page-heading d-flex items-end justify-between gap-20">
-  <div>
-    <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
-    <h1 class="m-0">备份管理</h1>
-    <p class="subtitle mt-7">创建、恢复和删除容器备份</p>
-  </div>
-  <div class="heading-actions d-flex items-center gap-8">
+<dc-page-heading title="备份管理" subtitle="创建、恢复和删除容器备份">
+  <div page-heading-actions>
     <button class="btn btn-secondary" (click)="create('yaml')" title="创建 YAML 备份"><dc-icon name="save"></dc-icon>YAML</button>
     <button class="btn btn-secondary" (click)="create('json')" title="创建 JSON 备份"><dc-icon name="save"></dc-icon>JSON</button>
     <button class="btn btn-primary" (click)="refresh()" title="刷新备份"><dc-icon name="refresh"></dc-icon>刷新</button>
   </div>
-</section>
+</dc-page-heading>
 
 <dc-stats [items]="stats()" [columns]="3"></dc-stats>
 
 @if (files().length) {
-  <section class="backup-list">
+  <section class="backup-list page-scroll-area">
     @for (group of groups(); track group.date) {
       <section class="backup-group m-0 mb-16">
         <div class="backup-card-grid d-grid gap-16">
@@ -24,11 +19,11 @@
                 <div><span class="file-badge d-inline-block mr-8 py-4 px-7 fs-12">{{ type(file) }}</span><b>{{ date(file) }}</b></div>
                 <small class="d-block mt-6 fs-12 text-muted">{{ file }}</small>
               </div>
-              <div class="backup-actions d-flex justify-center gap-18 mt-18 pt-14">
+              <div class="d-flex justify-center border-t-1 gap-18 mt-18 pt-14">
                 @if (extension(file) === '.json') {
-                  <button class="btn text-blue py-6 px-12 fs-12" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
+                  <button class="btn text-blue border-1 py-6 px-12 fs-12" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
                 }
-                <button class="btn text-red py-6 px-12 fs-12" (click)="remove(file)"><dc-icon name="delete"></dc-icon>删除</button>
+                <button class="btn text-red border-1 py-6 px-12 fs-12" (click)="remove(file)"><dc-icon name="delete"></dc-icon>删除</button>
               </div>
             </article>
           }

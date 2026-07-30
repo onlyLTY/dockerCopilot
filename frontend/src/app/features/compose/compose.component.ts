@@ -5,18 +5,18 @@ import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
 import { ConfirmService } from '../../core/confirm.service';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
-import { SectionToolbarComponent } from '../../shared/section-toolbar/section-toolbar.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { IconService } from '../../core/icon.service';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
+import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 
 const defaultCompose = '';
 
 @Component({
   selector: 'dc-compose',
   standalone: true,
-  imports: [FormsModule, PageStateComponent, SectionToolbarComponent, IconComponent, ResourceCardComponent, StatsComponent],
+  imports: [FormsModule, PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent, PageHeadingComponent],
   templateUrl: './compose.component.html',
 })
 export class ComposeComponent {

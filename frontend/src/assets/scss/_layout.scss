@@ -71,8 +71,66 @@ nav a.active dc-icon { color: var(--blue); }
 
 
 /* ===== 内容区 / 顶栏 ===== */
-.content-wrap { margin-left: 260px; flex: 1; height: 100vh; overflow-y: auto; }
-.content-wrap main { max-width: 1550px; margin: 0 auto; padding: 0 46px 60px; }
+.content-wrap {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  margin-left: 260px;
+  flex: 1;
+  height: 100vh;
+  overflow: hidden;
+}
+.content-wrap main {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  max-width: 1550px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 40px 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) transparent;
+}
+.content-wrap main::-webkit-scrollbar { width: 8px; height: 8px; }
+.content-wrap main::-webkit-scrollbar-track { background: transparent; }
+.content-wrap main::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+}
+.content-wrap main::-webkit-scrollbar-thumb:hover {
+  background: var(--blue);
+  border-color: transparent;
+  background-clip: padding-box;
+}
+.page-scroll-area {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) transparent;
+}
+.page-scroll-area::-webkit-scrollbar { width: 8px; height: 8px; }
+.page-scroll-area::-webkit-scrollbar-track { background: transparent; }
+.page-scroll-area::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+}
+.page-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--blue);
+  border-color: transparent;
+  background-clip: padding-box;
+}
 .topbar {
   display: none; height: 56px; background: var(--white); border-bottom: 1px solid var(--line);
   padding: 0 22px;

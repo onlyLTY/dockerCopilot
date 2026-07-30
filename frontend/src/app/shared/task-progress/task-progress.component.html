@@ -3,11 +3,10 @@
     <section class="modal min-w-0 d-grid modal-content modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       <div class="modal-head d-flex justify-between gap-20">
         <div>
-          <p class="eyebrow m-0 mb-8 fs-12">TASK PROGRESS</p>
           <h2 class="m-0">{{ t.title }}</h2>
-          <p class="mt-6 fs-12">{{ t.message }}</p>
+          <span class="mt-6 fs-12">{{ t.message }}</span>
         </div>
-        <button class="modal-close d-grid place-items-center" (click)="tasks.closeView()" aria-label="关闭">×</button>
+        <button class="modal-close d-grid place-items-center" (click)="tasks.closeView()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
       </div>
 
       <div class="modal-body task-content d-flex flex-col">

@@ -7,11 +7,12 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
+import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 
 @Component({
   selector: 'dc-images',
   standalone: true,
-  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent],
+  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent, PageHeadingComponent],
   templateUrl: './images.component.html',
 })
 export class ImagesComponent {

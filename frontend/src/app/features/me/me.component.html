@@ -1,42 +1,45 @@
-<section class="page-heading d-flex items-end justify-between gap-20">
-  <div>
-    <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
-    <h1 class="m-0">我的</h1>
-    <p class="subtitle mt-7">项目档案、版本信息和应用设置</p>
-  </div>
-  <div class="heading-actions d-flex items-center gap-8">
+<dc-page-heading title="我的" subtitle="项目档案、版本信息和应用设置">
+  <div page-heading-actions>
     <button class="btn btn-secondary" (click)="openSettings()"><dc-icon name="settings"></dc-icon>设置</button>
     <button class="btn btn-secondary" (click)="openLogs()"><dc-icon name="tasks"></dc-icon>日志</button>
   </div>
-</section>
+</dc-page-heading>
 
 <dc-stats [items]="stats()" [columns]="4"></dc-stats>
 
 <section class="about-grid d-grid gap-20">
-  <article class="panel p-24">
-    <h2>项目信息</h2>
-    <p>Docker Copilot 提供容器、镜像、Compose 项目、备份和端口管理能力。</p>
-    <p>当前版本：{{ version().version || '读取中' }}</p>
-    @if (version().buildDate) { <p>构建日期：{{ version().buildDate }}</p> }
-    <div class="about-actions d-flex gap-10">
-      <a class="btn btn-primary" href="https://github.com/onlyLTY/dockerCopilot" target="_blank" rel="noreferrer">GitHub</a>
-      <a class="btn btn-secondary" href="https://github.com/onlyLTY/dockerCopilot/issues" target="_blank" rel="noreferrer">反馈问题</a>
-    </div>
+  <article class="panel p-16">
+    <span class="fs-24 mb-8 fw-600">项目信息</span>
+    <p>Docker Copilot 是一个主打便捷的docker容器管理工具，现在已经支持所有平台</p>
+    <ol class="feature-list">
+      <li class="feature-item">指定镜像/tag更新容器</li>
+      <li class="feature-item">启动、停止、重启、重命名容器</li>
+      <li class="feature-item">删除无 TAG/未使用镜像</li>
+      <li class="feature-item">更新/部署进度查看</li>
+      <li class="feature-item">备份/恢复容器设置</li>
+      <li class="feature-item">Compose 部署容器</li>
+      <li class="feature-item">Compose 文件查看</li>
+      <li class="feature-item">端口查看</li>
+    </ol>
+
+    <h3>反馈与建议</h3>
+      <p>在项目使用中遇到 bug 或想要提建议？欢迎在<a href="https://github.com/onlyLTY/dockerCopilot/issues" target="_blank" rel="noreferrer">GitHub Issues</a>提出，或发送邮件至<a href="onlylty@lty.wiki" target="_blank" rel="noreferrer">onlylty@lty.wiki</a>。期待您的反馈！</p>
   </article>
-  <article class="panel p-24">
-    <h2>支持项目</h2>
+
+  <article class="panel p-16">
+    <span class="fs-24 mb-8 fw-600">支持项目</span>
     <p class="text-muted">如果您用的愉快的话，可以请我喝一瓶快乐水吗？您的支持是我持续维护项目的动力！</p>
-    <div class="d-grid gap-16 mt-20" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
-      <div class="d-grid place-items-center gap-8 p-16 border-1 rounded-8">
+    <div class="support-grid d-grid gap-16 mt-20">
+      <div class="support-payment d-grid place-items-center gap-8 p-16 rounded-8">
         <div class="text-muted fs-12">微信支付</div>
-        <div class="d-grid place-items-center border-1 rounded-8" style="width: 140px; aspect-ratio: 1;">
-          <img src="assets/images/wechat.jpg" alt="微信二维码">
+        <div class="support-qr d-grid place-items-center border-1 rounded-8">
+          <img class="support-qr-image" src="assets/images/wechat.jpg" alt="微信二维码">
         </div>
       </div>
-      <div class="d-grid place-items-center gap-8 p-16 border-1 rounded-8">
+      <div class="support-payment d-grid place-items-center gap-8 p-16 rounded-8">
         <div class="text-muted fs-12">支付宝支付</div>
-        <div class="d-grid place-items-center border-1 rounded-8" style="width: 140px; aspect-ratio: 1;">
-          <img src="assets/images/alipay.jpg" alt="支付宝二维码">
+        <div class="support-qr d-grid place-items-center border-1 rounded-8">
+          <img class="support-qr-image" src="assets/images/alipay.jpg" alt="支付宝二维码">
         </div>
       </div>
     </div>
@@ -46,7 +49,12 @@
 @if (showSettings()) {
   <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeSettings()">
     <section class="modal min-w-0 d-grid modal-form modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="modal-head d-flex justify-between gap-20"><div><p class="eyebrow m-0 mb-8 fs-12">MY SETTINGS</p><h2 class="m-0">应用设置</h2><p class="mt-6 fs-12">调整后台任务、备份和日志输出。</p></div><button class="modal-close d-grid place-items-center" (click)="closeSettings()" aria-label="关闭">×</button></div>
+      <div class="modal-head d-flex justify-between gap-20">
+        <div>
+          <h2 class="m-0">应用设置</h2><p class="mt-6 fs-12">调整后台任务、备份和日志输出。</p>
+        </div>
+        <button class="modal-close d-grid place-items-center" (click)="closeSettings()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
+      </div>
       <div class="modal-body">
         <label class="form-field d-block mt-20 fs-12">更新检查频率<select class="d-block mt-8 py-12 px-12" [(ngModel)]="updateDraft">@for (opt of updateOptions(); track opt) {<option [value]="opt">{{ updateLabel(opt) }}</option>}</select></label>
         <label class="form-field d-block mt-20 fs-12">自动备份频率<select class="d-block mt-8 py-12 px-12" [(ngModel)]="backupDraft">@for (opt of backupOptions(); track opt) {<option [value]="opt">{{ backupLabel(opt) }}</option>}</select></label>
@@ -62,11 +70,10 @@
   <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeLogs()">
     <section class="modal min-w-0 d-grid modal-content modal-xll" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       <div class="modal-head d-flex justify-between gap-20"><div>
-        <p class="eyebrow m-0 mb-8 fs-12">APPLICATION LOGS</p>
         <h2 class="m-0">日志</h2>
-        <p class="mt-6 fs-12">最近运行记录</p>
+        <span class="mt-6 fs-12">最近运行记录</span>
       </div>
-      <button class="modal-close d-grid place-items-center" (click)="closeLogs()" aria-label="关闭">×</button></div>
+      <button class="modal-close d-grid place-items-center" (click)="closeLogs()" aria-label="关闭"><dc-icon name="close"></dc-icon></button></div>
       <div class="modal-body">
         @if (loadingLogs()) { <p class="text-muted">读取中…</p> }
         @if (logError()) { <p class="message error">{{ logError() }}</p> }

@@ -9,6 +9,7 @@ import { ApiResponse } from '../../core/compose.service';
 import { HttpClient } from '@angular/common/http';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
+import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 
 interface LogEntry { timestamp: string; level: string; message: string; }
 interface LogLevelData { level: string; options: string[]; }
@@ -16,7 +17,7 @@ interface LogLevelData { level: string; options: string[]; }
 @Component({
   selector: 'dc-me',
   standalone: true,
-  imports: [FormsModule, IconComponent, StatsComponent],
+  imports: [FormsModule, IconComponent, StatsComponent, PageHeadingComponent],
   templateUrl: './me.component.html',
 })
 export class MeComponent {

@@ -1,11 +1,8 @@
-<section class="page-heading d-flex items-end justify-between gap-20">
-  <div>
-    <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
-    <h1 class="m-0">端口</h1>
-    <p class="subtitle mt-7">查看所有容器使用的端口</p>
+<dc-page-heading title="端口" subtitle="查看所有容器使用的端口">
+  <div page-heading-actions>
+    <button class="btn btn-primary" (click)="refresh()" title="刷新端口"><dc-icon name="refresh"></dc-icon>刷新</button>
   </div>
-  <button class="btn btn-primary" (click)="refresh()" title="刷新端口"><dc-icon name="refresh"></dc-icon>刷新</button>
-</section>
+</dc-page-heading>
 
 @if (data().warnings.length) {
   <div class="alert warning-alert">⚠ {{ data().warnings.join('；') }}</div>
@@ -17,17 +14,19 @@
 <dc-stats [items]="stats()" [columns]="2"></dc-stats>
 
 @if (groups().length) {
-  <section class="resource-grid d-grid port-grid gap-16 mb-24">
+  <section class="resource-grid page-scroll-area d-grid port-grid gap-16 mb-24">
     @for (g of groups(); track g.containerName) {
       <dc-resource-card>
-        <div class="resource-head d-flex items-center gap-12">
+        <div resource-card-icon>
           <img class="resource-icon" [src]="icon(g)" [alt]="g.containerName" (error)="fallback($event)">
-          <div class="flex-1 min-w-0">
-            <b class="d-block fs-16">{{ g.containerName }}</b>
-            <span class="d-block mt-5 fs-12">{{ g.project || '独立容器' }}</span>
-          </div>
         </div>
-        <div class="port-values d-flex flex-wrap justify-center gap-8 mt-16 pt-14">
+        <div resource-card-title>
+          <b class="d-block fs-16 text-ellipsis">{{ g.containerName }}</b>
+        </div>
+        <div resource-card-info class="d-flex flex-col gap-4 fs-12 text-muted">
+          <span class="d-block text-ellipsis">{{ g.project || '独立容器' }}</span>
+        </div>
+        <div resource-card-content class="port-values d-flex flex-wrap justify-center gap-8 pt-14">
           @for (p of g.ports; track $index) {
             <span class="port-line d-block py-5 px-10 fs-12">{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
           }

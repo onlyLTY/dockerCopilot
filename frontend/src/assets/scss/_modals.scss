@@ -56,18 +56,25 @@
   border-bottom: 1px solid var(--line);
 }
 .modal-head h2 { color: var(--black); }
-.modal-head p:not(.eyebrow) { color: var(--muted); }
 .modal-close {
-  border: 0;
-  background: var(--page-bg);
-  color: var(--muted);
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 22px;
-  line-height: 1;
+  display: grid;
+  width: 36px;
+  height: 36px;
   flex: none;
+  place-items: center;
+  margin: -12px -12px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
 }
+.modal-close:hover,
+.modal-close:focus-visible {
+  background: transparent;
+  color: var(--blue);
+  outline: 0;
+}
+.modal-close dc-icon { --icon-size: 24px; }
 .modal-body {
   min-height: 0;
   padding: 2px 4px 4px 0;
@@ -115,9 +122,22 @@
   font: 14px/1.65 "SFMono-Regular", Consolas, monospace;
   outline: 0;
 }
-.editor-foot { color: var(--muted); }
+.editor-foot {
+  color: var(--muted);
+  align-items: center;
+}
 .editor-foot .message { flex: 1; color: var(--green); }
 .editor-foot .message.error { color: var(--red); }
+.pull-images-option {
+  flex: none;
+  cursor: pointer;
+}
+.pull-images-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue);
+}
+.editor-actions { flex: none; }
 .risk-box { flex: none; border-left: 3px solid var(--amber); background: var(--amber-soft); color: var(--amber); overflow: auto; }
 
 /* ===== 日志内容弹窗 ===== */
@@ -132,6 +152,39 @@
 .log-entry time { color: var(--muted); }
 .log-entry p { color: var(--black); white-space: pre-wrap; word-break: break-word; }
 
+/* ===== 支持项目二维码 ===== */
+.support-payment { min-width: 0; }
+.support-qr {
+  width: min(180px, 100%);
+  max-width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+}
+.support-qr-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 24px;
+  padding: 0;
+  list-style: none;
+}
+.feature-item {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--secondary-bg);
+  color: var(--black);
+  line-height: 1.5;
+}
+.support-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
 /* ===== 关于页 ===== */
 .about-hero { text-align: center; }
 .about-hero h1 { color: var(--black); }
@@ -143,7 +196,6 @@
 .about-grid .muted { color: var(--muted); }
 
 .dark-shell .secondary { background: var(--secondary-bg); color: var(--secondary-text); }
-.dark-shell .modal-close { background: var(--secondary-bg); }
 
 .dark-shell .form-field input,
 .dark-shell .form-field textarea { background: #1a2130; }

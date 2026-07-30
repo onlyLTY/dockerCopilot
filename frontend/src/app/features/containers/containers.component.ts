@@ -9,11 +9,12 @@ import { PageStateComponent } from '../../shared/page-state/page-state.component
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
+import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 
 @Component({
   selector: 'dc-containers',
   standalone: true,
-  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent],
+  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent, PageHeadingComponent],
   templateUrl: './containers.component.html',
 })
 export class ContainersComponent {
@@ -91,6 +92,7 @@ export class ContainersComponent {
 
   enterSelection() { this.selectionMode.set(true); }
   exitSelection() { this.selectionMode.set(false); this.selected.set(new Set()); }
+  toggleSelection() { this.selectionMode() ? this.exitSelection() : this.enterSelection(); }
 
   isSelected(id: string) { return this.selected().has(id); }
   toggleSelect(id: string) { const next = new Set(this.selected()); next.has(id) ? next.delete(id) : next.add(id); this.selected.set(next); }

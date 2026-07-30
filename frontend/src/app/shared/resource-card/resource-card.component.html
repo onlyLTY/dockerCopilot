@@ -1,3 +1,21 @@
-<article class="resource-card min-w-0 p-18" [class.selected]="selected()">
-  <ng-content></ng-content>
+<article class="resource-card" [class.selected]="selected()">
+  <div class="resource-card-main">
+    <div class="resource-card-icon">
+      <ng-content select="[resource-card-icon]"></ng-content>
+    </div>
+    <div class="resource-card-info">
+      <div class="resource-card-title">
+        <ng-content select="[resource-card-title]"></ng-content>
+      </div>
+      <div class="resource-card-meta">
+        <ng-content select="[resource-card-info]"></ng-content>
+      </div>
+    </div>
+  </div>
+  <div class="resource-card-content">
+    <ng-content select="[resource-card-content]"></ng-content>
+  </div>
+  <div class="resource-card-actions">
+    <ng-content select="[resource-card-actions]"></ng-content>
+  </div>
 </article>

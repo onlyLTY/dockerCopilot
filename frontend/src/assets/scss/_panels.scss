@@ -12,19 +12,40 @@
 }
 
 /* ===== 资源网格 / 卡片（容器、镜像、项目、端口共用） ===== */
-.resource-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.image-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.resource-head b,
-.resource-head span,
-.resource-head small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.resource-head b { color: var(--black); }
-.resource-head span,
-.resource-head small { color: var(--muted); }
-.resource-head small.running { color: var(--green); }
-.resource-icon { width: 48px; height: 48px; object-fit: contain; border-radius: 12px; flex: none; background: var(--blue-soft); }
-.resource-meta {
-  border-top: 1px solid var(--line);
+.resource-grid,
+.image-grid {
+  min-width: 0;
+  overflow-x: hidden;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
+.resource-icon {
+  display: block;
+  width: 48px;
+  max-width: 48px;
+  height: 48px;
+  max-height: 48px;
+  object-fit: contain;
+}
+.resource-icon-wrap { position: relative; }
+.resource-icon-wrap .card-select {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--white) 82%, transparent);
+}
+.resource-icon-wrap .card-select input { margin: 0; }
+.resource-card-title b,
+.resource-card-title span,
+.resource-card-title small,
+.resource-card-meta span,
+.resource-card-meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.resource-card-title b { color: var(--black); }
+.resource-card-meta span,
+.resource-card-meta small { color: var(--muted); }
 .update-badge {
   flex: none; border-radius: 20px; line-height: 1.6;
   background: var(--purple-soft); color: var(--purple); overflow: visible;
@@ -67,15 +88,6 @@
 
 /* ===== 图标库 ===== */
 .icon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.icon-card {
-  background: var(--white); border: 1px solid var(--line);
-  border-radius: 14px; padding: 20px; text-align: center;
-}
-.icon-card.selected { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue), 0 8px 20px var(--shadow); }
-.icon-card img { width: 82px; height: 82px; object-fit: contain; }
-.icon-card b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--black); }
-.icon-actions { justify-content: center; flex-wrap: wrap; }
-.icon-actions button { flex: none; }
 .empty { text-align: center; grid-column: 1 / -1; }
 
 /* ===== 备份 ===== */
@@ -93,12 +105,3 @@
   border-radius: 5px;
   background: var(--blue-soft); color: var(--blue);
 }
-.backup-card .backup-actions {
-  clear: both;
-  border-top: 1px solid var(--line);
-}
-.backup-card .backup-actions button {
-  flex: none; border: 0; border-radius: 8px; background: transparent; transition: background .15s, color .15s;
-}
-.backup-card .backup-actions .danger-link { color: var(--red); }
-.backup-card .backup-actions .danger-link:hover { background: color-mix(in srgb, var(--red) 10%, transparent); }

@@ -1,14 +1,9 @@
-<section class="page-heading d-flex items-end justify-between gap-20">
-  <div>
-    <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
-    <h1 class="m-0">项目</h1>
-    <p class="subtitle mt-7">管理 Compose 项目和配置文件</p>
-  </div>
-  <div class="heading-actions d-flex items-center gap-8">
+<dc-page-heading title="项目" subtitle="管理 Compose 项目和配置文件">
+  <div page-heading-actions>
     <button class="btn btn-secondary" (click)="refresh()" title="刷新项目"><dc-icon name="refresh"></dc-icon>刷新</button>
     <button class="btn btn-primary" (click)="newProject()" title="新建项目"><dc-icon name="add"></dc-icon>新建</button>
   </div>
-</section>
+</dc-page-heading>
 
 @if (messageType() === 'error' && data()?.projects?.length) {
   <div class="alert error-alert">ⓘ {{ message() }}</div>
@@ -16,25 +11,25 @@
 
 <dc-stats [items]="stats()" [columns]="4"></dc-stats>
 
-<dc-section-toolbar title="项目列表" [subtitle]="(data()?.summary?.total || 0) + ' 个项目'"></dc-section-toolbar>
-
 @if (data()?.projects?.length) {
-  <section class="resource-grid d-grid project-grid gap-16 mb-24">
+  <section class="resource-grid page-scroll-area d-grid project-grid gap-16 mb-24">
     @for (project of data()?.projects; track project.id) {
       <dc-resource-card>
-        <div class="resource-head d-flex items-center gap-12">
+        <div resource-card-icon>
           <img class="resource-icon" [src]="icon(project)" [alt]="project.name || '项目'" (error)="fallback($event)">
-          <div class="flex-1 min-w-0">
-            <b class="image-name d-flex items-center gap-8 min-w-0 fs-16">
-              <span class="text-ellipsis min-w-0">{{ project.name || '未解析项目' }}</span>
-              <small class="status-badge d-inline-block py-2 px-8 fs-10" [class.using]="project.status === 'using'" [class.stopped]="project.status === 'stopped'" [class.unused]="project.status === 'unused'" [class.unknown]="project.status === 'unknown'">{{ statusLabel(project.status) }}</small>
-            </b>
-            <span class="d-block mt-5 fs-12 text-muted">{{ project.root }}</span>
-            <small class="d-block mt-5 fs-12 text-muted">{{ project.containers.length }} 个容器 · {{ project.files.length }} 个文件 · {{ project.ports.length }} 个端口</small>
-          </div>
         </div>
-        <div class="d-flex gap-6 mt-14">
-          <button class="btn text-blue border-1 flex-1 py-8 px-7 fs-12" (click)="openEditor(project)"><dc-icon name="edit"></dc-icon>查看/编辑</button>
+        <div resource-card-title>
+          <b class="d-flex items-center gap-8 min-w-0 fs-16">
+            <span class="text-ellipsis min-w-0">{{ project.name || '未解析项目' }}</span>
+            <small class="status-badge d-inline-block py-2 px-8 fs-10" [class.using]="project.status === 'using'" [class.stopped]="project.status === 'stopped'" [class.unused]="project.status === 'unused'" [class.unknown]="project.status === 'unknown'">{{ statusLabel(project.status) }}</small>
+          </b>
+        </div>
+        <div resource-card-info class="d-flex flex-col gap-4 fs-12 text-muted">
+          <span class="d-block text-ellipsis">{{ project.root }}</span>
+          <small class="d-block">{{ project.containers.length }} 个容器 · {{ project.files.length }} 个文件 · {{ project.ports.length }} 个端口</small>
+        </div>
+        <div resource-card-actions class="d-flex gap-6">
+          <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="openEditor(project)"><dc-icon name="edit"></dc-icon>查看/编辑</button>
         </div>
       </dc-resource-card>
     }
@@ -49,35 +44,43 @@
       @if (editorProject(); as ep) {
         <div class="modal-head d-flex justify-between gap-20">
           <div>
-            <p class="eyebrow m-0 mb-8 fs-12">COMPOSE PROJECT</p>
             <h2 class="m-0">{{ ep.name || '项目' }}</h2>
-            <p class="mt-6 fs-12">{{ ep.root }}</p>
+            <span class="mt-6 fs-12">{{ ep.root }}</span>
           </div>
-          <button class="modal-close d-grid place-items-center" (click)="closeEditor()" aria-label="关闭">×</button>
+          <button class="modal-close d-grid place-items-center" (click)="closeEditor()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
         </div>
         <div class="modal-body compose-body d-flex flex-col">
           <div class="file-tabs d-flex gap-2">
-            @for (file of ep.files; track file.name) { <button class="file-tab py-9 px-14 fs-12" [class.btn-primary]="filename() === file.name" [class.btn-secondary]="filename() !== file.name" (click)="openFile(file.name)">{{ file.name }}</button> }
+            @for (file of ep.files; track file.name) {
+              <button class="file-tab py-9 px-14 fs-12" [class.btn-primary]="filename() === file.name" [class.btn-secondary]="filename() !== file.name" (click)="openFile(file.name)">
+                {{ file.name }}
+              </button>
+            }
           </div>
           <textarea class="code-editor bg-black text-white p-22 fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" spellcheck="false"></textarea>
         </div>
         <div class="editor-foot d-flex items-center gap-16 pt-14 fs-12">
+          <label class="pull-images-option d-flex items-center gap-6 text-muted text-nowrap"><input type="checkbox" [checked]="pullImages()" (change)="pullImages.set($any($event.target).checked)">重新拉取镜像</label>
           <span class="message flex-1 min-w-0">{{ message() }}</span>
-          <button class="btn btn-secondary" [disabled]="deployBusy()" (click)="validate()">格式校验</button>
-          <label class="d-flex items-center gap-6 text-muted text-nowrap"><input type="checkbox" [checked]="pullImages()" (change)="pullImages.set($any($event.target).checked)">重新拉取镜像</label>
-          <button class="btn btn-primary" [disabled]="deployBusy()" (click)="redeploy()">{{ deployBusy() ? '部署中…' : '重新部署' }}</button>
+          <div class="editor-actions d-flex items-center gap-8">
+            <button class="btn btn-secondary" [disabled]="deployBusy()" (click)="validate()">格式校验</button>
+            <button class="btn btn-primary" [disabled]="deployBusy()" (click)="redeploy()">{{ deployBusy() ? '部署中…' : '重新部署' }}</button>
+          </div>
         </div>
       } @else {
         <div class="modal-head d-flex justify-between gap-20">
           <div>
-            <p class="eyebrow m-0 mb-8 fs-12">NEW PROJECT</p>
             <h2 class="m-0">新建项目</h2>
           </div>
-          <button class="modal-close d-grid place-items-center" (click)="closeCreate()" aria-label="关闭">×</button>
+          <button class="modal-close d-grid place-items-center" (click)="closeCreate()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
         </div>
         <div class="modal-body compose-body d-flex flex-col">
           <label class="form-field d-block mt-20 fs-12">项目名称<input class="d-block mt-8 py-12 px-12" [(ngModel)]="projectName" placeholder="例如：my-app"></label>
-          <label class="form-field compose-config-field">Compose 配置<textarea class="code-editor bg-black text-white p-22 fs-14" [(ngModel)]="projectContent" spellcheck="false" placeholder="请写入compose文件内容"></textarea></label>
+          <label class="form-field compose-config-field mt-12">
+            <span class="mb-8">compose配置文件</span>
+            <textarea class="code-editor bg-black text-white p-22 fs-14" [(ngModel)]="projectContent" spellcheck="false" placeholder="请写入compose文件内容">
+            </textarea>
+          </label>
         </div>
         <div class="editor-foot d-flex items-center gap-16 pt-14 fs-12">
           <span class="message flex-1 min-w-0">{{ createValidated() ? '格式已通过，可创建或部署' : '' }}</span>

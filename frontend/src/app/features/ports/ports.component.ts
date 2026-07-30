@@ -6,6 +6,7 @@ import { PageStateComponent } from '../../shared/page-state/page-state.component
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
+import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 
 interface PortLine { hostPort: string; containerPort: string; protocol: string; }
 interface PortGroup { containerName: string; project: string; image: string; ports: PortLine[]; }
@@ -13,7 +14,7 @@ interface PortGroup { containerName: string; project: string; image: string; por
 @Component({
   selector: 'dc-ports',
   standalone: true,
-  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent],
+  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent, PageHeadingComponent],
   templateUrl: './ports.component.html',
 })
 export class PortsComponent {

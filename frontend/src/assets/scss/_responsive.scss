@@ -18,7 +18,7 @@
   .content-wrap { margin-left: 0; }
   .compact-shell .content-wrap { margin-left: 0; }
   .topbar { display: flex; }
-  .content-wrap main { padding: 0 22px 45px; }
+  .content-wrap main { padding: 0 20px 20px; }
   .resource-grid,
   .image-grid,
   .backup-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -31,8 +31,6 @@
 
 @media (max-width: 600px) {
   .topbar { padding: 0 18px; }
-  .page-heading { align-items: flex-start !important; flex-direction: column; }
-  .page-heading h1 { font-size: 26px; }
   .stats,
   .stats-four { grid-template-columns: repeat(2, 1fr); }
   .stats.stats-three { grid-template-columns: repeat(2, 1fr); }
@@ -40,9 +38,18 @@
   .image-grid,
   .backup-card-grid { grid-template-columns: 1fr; }
   .icon-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .heading-actions { width: 100%; }
-  .heading-actions button { flex: 1; }
+  .feature-list,
+  .support-grid { grid-template-columns: 1fr; }
+  .editor-foot { align-items: flex-start; }
+  .pull-images-option { order: 1; }
+  .editor-foot .message { flex-basis: 100%; order: 2; }
+  .editor-actions { width: 100%; order: 3; }
+  .editor-actions button { flex: 1; }
+  .heading-actions > [page-heading-actions] { justify-content: flex-start; width: 100%; }
+  .heading-actions > [page-heading-actions] > button,
+  .heading-actions > [page-heading-actions] > .btn { flex: 1; }
   .section-toolbar { align-items: flex-start !important; flex-direction: column; }
   .section-toolbar-actions { width: 100%; }
   .section-toolbar-actions button { flex: 1; }
+
 }
