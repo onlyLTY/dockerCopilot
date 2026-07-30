@@ -1,4 +1,4 @@
-<section class="page-heading">
+<section class="page-heading d-flex items-end justify-between gap-20">
   <div>
     <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
     <h1 class="m-0">设置</h1>
@@ -9,12 +9,12 @@
 <dc-section-toolbar title="定时任务" subtitle="配置后台自动执行的任务"></dc-section-toolbar>
 
 <section class="settings-card py-22 px-24 mb-24">
-  <div class="settings-item d-flex items-center justify-between">
-    <div class="settings-item-text">
+  <div class="settings-item d-flex items-center justify-between gap-20">
+    <div class="settings-item-text min-w-0">
       <b class="d-block fs-16">更新检查频率</b>
-      <span class="d-block mt-6 fs-12">定时检查所有容器的镜像是否有新版本。你也可以随时在容器页手动检查。</span>
+      <span class="d-block mt-6 fs-12 text-muted">定时检查所有容器的镜像是否有新版本。你也可以随时在容器页手动检查。</span>
     </div>
-    <div class="settings-item-control d-flex items-center">
+    <div class="settings-item-control d-flex items-center gap-10">
       <select class="py-9 px-12 fs-14" [(ngModel)]="updateDraft" [disabled]="loading() || updateSaving()">
         @for (opt of updateOptions(); track opt) {
           <option [value]="opt">{{ updateLabel(opt) }}</option>
@@ -23,14 +23,14 @@
       <button class="btn btn-primary" [disabled]="!updateDirty() || updateSaving()" (click)="saveUpdate()">{{ updateSaving() ? '保存中…' : '保存' }}</button>
     </div>
   </div>
-  <p class="settings-hint mt-16 pt-14 fs-12">当前：{{ updateLabel(updateInterval()) }}</p>
+  <p class="settings-hint mt-16 pt-14 fs-12 text-muted">当前：{{ updateLabel(updateInterval()) }}</p>
 
-  <div class="settings-item d-flex items-center justify-between">
-    <div class="settings-item-text">
+  <div class="settings-item d-flex items-center justify-between gap-20">
+    <div class="settings-item-text min-w-0">
       <b class="d-block fs-16">自动备份频率</b>
-      <span class="d-block mt-6 fs-12">定时创建容器备份（同时生成 JSON 和 YAML）。保留数量沿用备份页的保留设置。你也可以随时在备份页手动备份。</span>
+      <span class="d-block mt-6 fs-12 text-muted">定时创建容器备份（同时生成 JSON 和 YAML）。保留数量沿用备份页的保留设置。你也可以随时在备份页手动备份。</span>
     </div>
-    <div class="settings-item-control d-flex items-center">
+    <div class="settings-item-control d-flex items-center gap-10">
       <select class="py-9 px-12 fs-14" [(ngModel)]="backupDraft" [disabled]="loading() || backupSaving()">
         @for (opt of backupOptions(); track opt) {
           <option [value]="opt">{{ backupLabel(opt) }}</option>
@@ -39,5 +39,5 @@
       <button class="btn btn-primary" [disabled]="!backupDirty() || backupSaving()" (click)="saveBackup()">{{ backupSaving() ? '保存中…' : '保存' }}</button>
     </div>
   </div>
-  <p class="settings-hint mt-16 pt-14 fs-12">当前：{{ backupLabel(backupInterval()) }}</p>
+  <p class="settings-hint mt-16 pt-14 fs-12 text-muted">当前：{{ backupLabel(backupInterval()) }}</p>
 </section>

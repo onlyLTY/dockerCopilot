@@ -4,14 +4,12 @@
    读取中 / 空状态。始终横跨整行并居中（放在网格外层容器的最外层）。 */
 .page-state {
   grid-column: 1 / -1; width: 100%; min-height: 200px;
-  text-align: center; color: var(--muted);
 }
 .page-state-spinner {
   width: 30px; height: 30px; border-radius: 50%;
   border: 3px solid var(--line); border-top-color: var(--blue);
   animation: dc-spin 0.7s linear infinite;
 }
-.page-state-icon { color: var(--blue); }
 
 
 @keyframes dc-spin { to { transform: rotate(360deg); } }

@@ -1,13 +1,13 @@
 @if (task(); as t) {
-  <div class="modal-backdrop" (click)="close($event)">
-    <section class="modal modal-content modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="modal-head">
+  <div class="modal-backdrop d-grid place-items-center" (click)="close($event)">
+    <section class="modal min-w-0 d-grid modal-content modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-head d-flex justify-between gap-20">
         <div>
           <p class="eyebrow m-0 mb-8 fs-12">TASK PROGRESS</p>
           <h2 class="m-0">{{ t.title }}</h2>
           <p class="mt-6 fs-12">{{ t.message }}</p>
         </div>
-        <button class="modal-close" (click)="tasks.closeView()" aria-label="关闭">×</button>
+        <button class="modal-close d-grid place-items-center" (click)="tasks.closeView()" aria-label="关闭">×</button>
       </div>
 
       <div class="modal-body task-content d-flex flex-col">
@@ -19,7 +19,7 @@
             <span [class.failed]="t.failed">
               {{ t.failed ? '失败' : t.isDone ? '已完成' : '进行中' }} · {{ t.percentage }}%
             </span>
-            @if (!t.isDone) { <span class="muted">后台执行中，可关闭此窗口</span> }
+            @if (!t.isDone) { <span class="text-muted">后台执行中，可关闭此窗口</span> }
           </div>
           @if (t.detailMsg) {
             <pre class="task-detail mt-16 pt-12 pb-12 px-14">{{ t.detailMsg }}</pre>

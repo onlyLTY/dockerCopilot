@@ -3,6 +3,7 @@ import { TaskService } from '../../core/task.service';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
+import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 
 /**
  * 任务页：查看容器更新 / 备份恢复 / 部署等异步任务的列表与进度，
@@ -11,7 +12,7 @@ import { ConfirmService } from '../../core/confirm.service';
 @Component({
   selector: 'dc-tasks',
   standalone: true,
-  imports: [PageStateComponent, IconComponent],
+  imports: [PageStateComponent, IconComponent, StatsComponent],
   templateUrl: './tasks.component.html',
 })
 export class TasksComponent {
@@ -20,6 +21,12 @@ export class TasksComponent {
   readonly activeCount = this.tasks.activeCount;
   readonly doneCount = computed(() => this.list().filter(t => t.isDone && !t.failed).length);
   readonly failedCount = computed(() => this.list().filter(t => t.failed).length);
+  readonly stats = computed<readonly StatItem[]>(() => [
+    { value: this.list().length, label: '总任务' },
+    { value: this.activeCount(), label: '进行中', tone: 'amber' },
+    { value: this.doneCount(), label: '已完成', tone: 'green' },
+    { value: this.failedCount(), label: '失败', tone: 'red' },
+  ]);
 
   view(taskID: string) { this.tasks.view(taskID); }
   remove(taskID: string) { this.tasks.remove(taskID); }

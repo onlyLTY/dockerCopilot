@@ -62,7 +62,7 @@ func Config(ctx context.Context, dockerClient client.APIClient, projectDir strin
 // multi-service projects with depends_on ordering, and named networks/volumes.
 // NOT supported: build: (image must already exist or be pullable), secrets,
 // configs, profiles, and swarm multi-replica orchestration.
-func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration) (Result, error) {
+func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool) (Result, error) {
 	if projectDir == "" || len(files) == 0 {
 		return Result{}, fmt.Errorf("Compose 执行参数不完整")
 	}
@@ -117,7 +117,7 @@ func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 	}
 	for _, serviceName := range order {
 		svc := project.Services[serviceName]
-		if err := deployService(runCtx, dockerClient, project.Name, projectDir, serviceName, svc, defaultNetwork, networkNames, volumeNames, logf); err != nil {
+		if err := deployService(runCtx, dockerClient, project.Name, projectDir, serviceName, svc, defaultNetwork, networkNames, volumeNames, pullImages, logf); err != nil {
 			return Result{Output: sanitizeOutput(out.String())}, err
 		}
 	}
@@ -222,7 +222,7 @@ func ensureVolumes(ctx context.Context, cli client.APIClient, project *composeTy
 
 // deployService pulls the image if needed, translates the service, and creates
 // (or recreates when the config hash changed) and starts the container.
-func deployService(ctx context.Context, cli client.APIClient, projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string, logf func(string, ...interface{})) error {
+func deployService(ctx context.Context, cli client.APIClient, projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string, pullImages bool, logf func(string, ...interface{})) error {
 	t, err := translateService(projectName, root, serviceName, svc, defaultNetwork, networkNames, volumeNames)
 	if err != nil {
 		return fmt.Errorf("服务 %s 配置转换失败: %w", serviceName, err)
@@ -233,7 +233,7 @@ func deployService(ctx context.Context, cli client.APIClient, projectName, root,
 	if err != nil {
 		return err
 	}
-	if !present || strings.EqualFold(svc.PullPolicy, "always") {
+	if pullImages || !present || strings.EqualFold(svc.PullPolicy, "always") {
 		logf("拉取镜像 %s", svc.Image)
 		if err := pullImage(ctx, cli, svc.Image); err != nil {
 			return fmt.Errorf("服务 %s 拉取镜像失败: %w", serviceName, err)
@@ -248,7 +248,7 @@ func deployService(ctx context.Context, cli client.APIClient, projectName, root,
 	newHash := t.config.Labels[labelConfigHash]
 	if existing != nil {
 		oldHash := existing.Labels[labelConfigHash]
-		if oldHash == newHash && existing.State == "running" {
+		if !pullImages && oldHash == newHash && existing.State == "running" {
 			logf("服务 %s 配置未变化，跳过", serviceName)
 			return nil
 		}

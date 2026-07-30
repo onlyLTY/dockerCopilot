@@ -18,7 +18,7 @@
   cursor: pointer;
   transition: filter .15s, background .15s, color .15s, border-color .15s;
 
-  &:hover { filter: brightness(2.5) saturate(0.3); }
+  &:hover { filter: brightness(0.85); }
   &:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
 }
 

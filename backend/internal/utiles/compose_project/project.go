@@ -80,6 +80,7 @@ func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.Co
 			project.Warnings = append(project.Warnings, parseErr.Error())
 		} else {
 			project.Name = parsed.Name
+			project.Image = parsed.Image
 			for i := range project.Files {
 				project.Files[i].Valid = true
 			}
@@ -216,7 +217,24 @@ func loadProject(group projectFiles) (*composeProject, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &composeProject{Name: project.Name}, nil
+	return &composeProject{Name: project.Name, Image: firstServiceImage(project)}, nil
+}
+
+func firstServiceImage(project *composeTypes.Project) string {
+	if project == nil {
+		return ""
+	}
+	names := make([]string, 0, len(project.Services))
+	for name := range project.Services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if image := strings.TrimSpace(project.Services[name].Image); image != "" {
+			return image
+		}
+	}
+	return ""
 }
 
 // LoadProject loads the same normalized Compose model used by deployment and validation.
@@ -238,7 +256,10 @@ func LoadProject(ctx context.Context, root string, files []string) (*composeType
 	return composecli.ProjectFromOptions(ctx, options)
 }
 
-type composeProject struct{ Name string }
+type composeProject struct {
+	Name  string
+	Image string
+}
 
 func matchingContainers(ctx context.Context, svcCtx *svc.ServiceContext, projectName, root string, containers []dockerTypes.Container) []appTypes.ComposeContainer {
 	result := make([]appTypes.ComposeContainer, 0)

@@ -1,9 +1,9 @@
 @if (confirm.dialog(); as dialog) {
-  <div class="modal-backdrop confirm-backdrop" (click)="closeBackdrop($event)">
-    <section class="modal modal-confirm modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="modal-head">
+  <div class="modal-backdrop d-grid place-items-center confirm-backdrop" (click)="closeBackdrop($event)">
+    <section class="modal min-w-0 d-grid modal-confirm modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-head d-flex justify-between gap-20">
         <div><h2 class="m-0">{{ dialog.options.title }}</h2></div>
-        <button class="modal-close" (click)="confirm.close(false)" aria-label="关闭">×</button>
+        <button class="modal-close d-grid place-items-center" (click)="confirm.close(false)" aria-label="关闭">×</button>
       </div>
       <div class="modal-body">
         <p class="confirm-message my-22">{{ dialog.options.message }}</p>

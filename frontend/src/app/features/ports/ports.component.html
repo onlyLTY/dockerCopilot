@@ -1,4 +1,4 @@
-<section class="page-heading">
+<section class="page-heading d-flex items-end justify-between gap-20">
   <div>
     <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
     <h1 class="m-0">端口</h1>
@@ -14,28 +14,25 @@
   <div class="alert warning-alert">⚠ 发现 {{ data().conflicts.length }} 个端口冲突：{{ data().conflicts.join('、') }}</div>
 }
 
-<section class="stats stats-two compact-stats">
-  <div><strong class="d-block fs-20">{{ data().ports.length }}</strong><span class="d-block mt-0 fs-12">端口映射</span></div>
-  <div class="red"><strong class="d-block fs-20">{{ data().conflicts.length }}</strong><span class="d-block mt-0 fs-12">端口冲突</span></div>
-</section>
+<dc-stats [items]="stats()" [columns]="2"></dc-stats>
 
 @if (groups().length) {
-  <section class="resource-grid port-grid gap-16 mb-24">
+  <section class="resource-grid d-grid port-grid gap-16 mb-24">
     @for (g of groups(); track g.containerName) {
-      <article class="resource-card port-card p-18">
-        <div class="resource-head">
+      <dc-resource-card>
+        <div class="resource-head d-flex items-center gap-12">
           <img class="resource-icon" [src]="icon(g)" [alt]="g.containerName" (error)="fallback($event)">
-          <div>
+          <div class="flex-1 min-w-0">
             <b class="d-block fs-16">{{ g.containerName }}</b>
             <span class="d-block mt-5 fs-12">{{ g.project || '独立容器' }}</span>
           </div>
         </div>
-        <div class="port-values mt-16 pt-14 d-flex flex-wrap justify-center gap-8">
+        <div class="port-values d-flex flex-wrap justify-center gap-8 mt-16 pt-14">
           @for (p of g.ports; track $index) {
             <span class="port-line d-block py-5 px-10 fs-12">{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
           }
         </div>
-      </article>
+      </dc-resource-card>
     }
   </section>
 } @else {

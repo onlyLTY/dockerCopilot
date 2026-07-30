@@ -1,0 +1,11 @@
+.resource-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 8px 20px var(--shadow);
+}
+
+.resource-card.selected {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue), 0 8px 20px var(--shadow);
+}

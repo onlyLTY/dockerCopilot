@@ -1,4 +1,4 @@
-<section class="page-heading">
+<section class="page-heading d-flex items-end justify-between gap-20">
   <div>
     <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
     <h1 class="m-0">镜像管理</h1>
@@ -11,32 +11,35 @@
   </div>
 </section>
 
-<section class="stats stats-four compact-stats">
-  <div><strong class="d-block fs-20">{{ images().length }}</strong><span class="d-block mt-0 fs-12">总镜像</span></div>
-  <div class="green"><strong class="d-block fs-20">{{ usedCount() }}</strong><span class="d-block mt-0 fs-12">使用中</span></div>
-  <div class="amber"><strong class="d-block fs-20">{{ unusedCount() }}</strong><span class="d-block mt-0 fs-12">未使用</span></div>
-  <div class="red"><strong class="d-block fs-20">{{ untaggedCount() }}</strong><span class="d-block mt-0 fs-12">无 Tag</span></div>
-</section>
+<dc-stats [items]="stats()" [columns]="4"></dc-stats>
 
 @if (images().length) {
-  <section class="resource-grid image-grid gap-16 mb-24">
+  <section class="resource-grid d-grid image-grid gap-16 mb-24">
     @for (image of images(); track image.id) {
-      <article class="resource-card p-18">
-        <div class="resource-head">
+      <dc-resource-card>
+        <div class="resource-head d-flex items-center gap-12">
           <img class="resource-icon" [src]="icon(image)" [alt]="image.name" (error)="fallback($event)">
-          <div>
-            <b class="image-name d-flex items-center gap-8 fs-16"><span class="image-name-text">{{ image.name || 'None' }}</span><small class="status-badge d-inline-block py-2 px-8 fs-10" [class.used]="image.inUsed">{{ image.inUsed ? '使用中' : '未使用' }}</small></b>
-            <span class="image-tag-row d-flex items-center justify-between gap-10"><em>{{ image.tag || 'None' }}</em><i class="image-size">{{ image.size }}</i></span>
-            @if (image.createTime) { <small class="d-block mt-5 fs-12 text-muted">发布于 {{ image.createTime }}</small> }
+          <div class="flex-1 min-w-0">
+            <b class="image-name d-flex items-center gap-8 min-w-0 fs-16">
+              <span class="text-ellipsis min-w-0">{{ image.name || 'None' }}</span>
+              <small class="status-badge d-inline-block py-2 px-8 fs-10" [class.used]="image.inUsed">{{ image.inUsed ? '使用中' : '未使用' }}</small>
+            </b>
+            <span class="d-flex items-center justify-between text-nowrap text-muted overflow-hidden gap-10 min-w-0 fs-12 mt-4">
+              <span class="text-ellipsis min-w-0">{{ image.tag || 'None' }}</span>
+              <span class="flex-none">{{ image.size }}</span>
+            </span>
+            @if (image.createTime) {
+              <span class="d-block mt-4 fs-12 text-muted">发布于 {{ image.createTime }}</span>
+            }
           </div>
         </div>
-        <div class="resource-actions mt-14">
-          <button class="btn text-red py-8 px-7 fs-12" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
+        <div class="d-flex gap-6 mt-14">
+          <button class="btn text-red-soft border-1 flex-1 py-8 px-7 fs-12" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
           @if (!image.inUsed) {
-            <button class="btn text-red force py-8 px-7 fs-12" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
+            <button class="btn text-red border-1 flex-1 py-8 px-7 fs-12" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
           }
         </div>
-      </article>
+      </dc-resource-card>
     }
   </section>
 } @else {

@@ -5,6 +5,7 @@ type ComposeDeployReq struct {
 	Filename        string `json:"filename"`
 	ConfirmToken    string `json:"confirmToken"`
 	ConfirmWarnings bool   `json:"confirmWarnings"`
+	PullImages      bool   `json:"pullImages"`
 }
 
 type ComposeDeployPreviewReq struct {

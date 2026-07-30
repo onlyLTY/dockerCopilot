@@ -8,7 +8,7 @@ export interface ApiResponse<T> { code: number; msg: string; data: T; }
 export interface ComposePort { hostIP: string; hostPort: string; containerPort: string; protocol: string; published: boolean; }
 export interface ComposeContainer { id: string; name: string; service: string; state: string; ports: ComposePort[]; }
 export interface ComposeFile { name: string; size: number; modifiedAt: string; valid: boolean; version?: string; }
-export interface ComposeProject { id: string; name: string; root: string; files: ComposeFile[]; status: 'using' | 'stopped' | 'unused' | 'unknown'; containers: ComposeContainer[]; ports: ComposePort[]; warnings?: string[]; }
+export interface ComposeProject { id: string; name: string; image?: string; root: string; files: ComposeFile[]; status: 'using' | 'stopped' | 'unused' | 'unknown'; containers: ComposeContainer[]; ports: ComposePort[]; warnings?: string[]; }
 export interface ComposeSummary { total: number; using: number; stopped: number; unused: number; unknown: number; }
 export interface ProjectsData { summary: ComposeSummary; projects: ComposeProject[]; }
 export interface PortUsage { project: string; containerID: string; containerName: string; image?: string; state: string; hostIP: string; hostPort: string; containerPort: string; protocol: string; published: boolean; conflictKey?: string; }
@@ -45,8 +45,8 @@ export class ComposeService {
     return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/' + projectId + '/deploy/preview', { projectId, filename });
   }
   // 部署是异步任务：提交仅返回 taskID，真正完成后由 TaskService 轮询到 isDone 时联动刷新缓存
-  deploy(projectId: string, filename: string, confirmToken: string, confirmWarnings: boolean): Observable<ApiResponse<Record<string, unknown>>> {
-    return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/' + projectId + '/deploy', { projectId, filename, confirmToken, confirmWarnings });
+  deploy(projectId: string, filename: string, confirmToken: string, confirmWarnings: boolean, pullImages = false): Observable<ApiResponse<Record<string, unknown>>> {
+    return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/' + projectId + '/deploy', { projectId, filename, confirmToken, confirmWarnings, pullImages });
   }
   cleanupPreview(projectId: string): Observable<ApiResponse<Record<string, unknown>>> { return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/cleanup/preview', { projectId }); }
   cleanup(projectId: string, previewToken: string, deleteDir = false): Observable<ApiResponse<Record<string, unknown>>> { return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/cleanup', { projectId, previewToken, deleteDir, confirm: true }); }

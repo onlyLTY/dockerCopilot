@@ -1,12 +1,12 @@
-<div class="page-state d-flex flex-col items-center justify-center gap-12 py-48 px-20">
+<div class="page-state d-flex flex-col items-center justify-center text-muted gap-12 py-48 px-20">
   @if (loading()) {
     <span class="page-state-spinner" aria-hidden="true"></span>
     <span class="page-state-text">读取中…</span>
   } @else if (error()) {
-    <span class="page-state-icon" aria-hidden="true">⚠</span>
+    <span class="text-red" aria-hidden="true">⚠</span>
     <span class="page-state-text">{{ error() }}</span>
   } @else {
-    <span class="page-state-icon" aria-hidden="true">○</span>
+    <span class="text-blue" aria-hidden="true">○</span>
     <span class="page-state-text">{{ emptyText() }}</span>
   }
 </div>

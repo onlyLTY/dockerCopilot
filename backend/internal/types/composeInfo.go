@@ -30,6 +30,7 @@ type ComposeFile struct {
 type ComposeProject struct {
 	ID         string             `json:"id"`
 	Name       string             `json:"name"`
+	Image      string             `json:"image,omitempty"`
 	Root       string             `json:"root"`
 	Files      []ComposeFile      `json:"files"`
 	Status     string             `json:"status"`

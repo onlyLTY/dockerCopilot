@@ -1,4 +1,4 @@
-<section class="page-heading">
+<section class="page-heading d-flex items-end justify-between gap-20">
   <div>
     <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
     <h1 class="m-0">我的</h1>
@@ -10,54 +10,72 @@
   </div>
 </section>
 
-<section class="about-grid">
-  <article class="panel">
+<dc-stats [items]="stats()" [columns]="4"></dc-stats>
+
+<section class="about-grid d-grid gap-20">
+  <article class="panel p-24">
     <h2>项目信息</h2>
     <p>Docker Copilot 提供容器、镜像、Compose 项目、备份和端口管理能力。</p>
     <p>当前版本：{{ version().version || '读取中' }}</p>
     @if (version().buildDate) { <p>构建日期：{{ version().buildDate }}</p> }
-    <div class="about-actions">
+    <div class="about-actions d-flex gap-10">
       <a class="btn btn-primary" href="https://github.com/onlyLTY/dockerCopilot" target="_blank" rel="noreferrer">GitHub</a>
       <a class="btn btn-secondary" href="https://github.com/onlyLTY/dockerCopilot/issues" target="_blank" rel="noreferrer">反馈问题</a>
     </div>
   </article>
-  <article class="panel">
-    <h2>运行设置</h2>
-    <p>更新检查：{{ updateLabel(runtime().updateInterval) }}</p>
-    <p>自动备份：{{ backupLabel(runtime().backupInterval) }}</p>
-    <p>备份保留数量：{{ runtime().retention }}</p>
-    <p>日志级别：{{ runtime().logLevel }}</p>
+  <article class="panel p-24">
+    <h2>支持项目</h2>
+    <p class="text-muted">如果您用的愉快的话，可以请我喝一瓶快乐水吗？您的支持是我持续维护项目的动力！</p>
+    <div class="d-grid gap-16 mt-20" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+      <div class="d-grid place-items-center gap-8 p-16 border-1 rounded-8">
+        <div class="text-muted fs-12">微信支付</div>
+        <div class="d-grid place-items-center border-1 rounded-8" style="width: 140px; aspect-ratio: 1;">
+          <img src="assets/images/wechat.jpg" alt="微信二维码">
+        </div>
+      </div>
+      <div class="d-grid place-items-center gap-8 p-16 border-1 rounded-8">
+        <div class="text-muted fs-12">支付宝支付</div>
+        <div class="d-grid place-items-center border-1 rounded-8" style="width: 140px; aspect-ratio: 1;">
+          <img src="assets/images/alipay.jpg" alt="支付宝二维码">
+        </div>
+      </div>
+    </div>
   </article>
 </section>
 
 @if (showSettings()) {
-  <div class="modal-backdrop" (click)="$event.target === $event.currentTarget && closeSettings()">
-    <section class="modal modal-form modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="modal-head"><div><p class="eyebrow m-0 mb-8 fs-12">MY SETTINGS</p><h2 class="m-0">应用设置</h2><p class="mt-6 fs-12">调整后台任务、备份和日志输出。</p></div><button class="modal-close" (click)="closeSettings()" aria-label="关闭">×</button></div>
+  <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeSettings()">
+    <section class="modal min-w-0 d-grid modal-form modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-head d-flex justify-between gap-20"><div><p class="eyebrow m-0 mb-8 fs-12">MY SETTINGS</p><h2 class="m-0">应用设置</h2><p class="mt-6 fs-12">调整后台任务、备份和日志输出。</p></div><button class="modal-close d-grid place-items-center" (click)="closeSettings()" aria-label="关闭">×</button></div>
       <div class="modal-body">
         <label class="form-field d-block mt-20 fs-12">更新检查频率<select class="d-block mt-8 py-12 px-12" [(ngModel)]="updateDraft">@for (opt of updateOptions(); track opt) {<option [value]="opt">{{ updateLabel(opt) }}</option>}</select></label>
         <label class="form-field d-block mt-20 fs-12">自动备份频率<select class="d-block mt-8 py-12 px-12" [(ngModel)]="backupDraft">@for (opt of backupOptions(); track opt) {<option [value]="opt">{{ backupLabel(opt) }}</option>}</select></label>
         <label class="form-field d-block mt-20 fs-12">备份保留数量<input class="d-block mt-8 py-12 px-12" type="number" min="1" max="100" [(ngModel)]="retentionDraft"><span class="path-hint d-block mt-8 p-0 fs-12">JSON 和 YAML 分别保留最近的备份</span></label>
         <label class="form-field d-block mt-20 fs-12">日志级别<select class="d-block mt-8 py-12 px-12" [(ngModel)]="logDraft">@for (opt of logOptions(); track opt) {<option [value]="opt">{{ opt }}</option>}</select></label>
       </div>
-      <div class="modal-actions d-flex justify-end pt-18"><button class="btn btn-secondary" (click)="closeSettings()">取消</button><button class="btn btn-primary" [disabled]="saving()" (click)="saveSettings()">{{ saving() ? '保存中…' : '保存设置' }}</button></div>
+      <div class="modal-actions d-flex justify-end gap-10 pt-18"><button class="btn btn-secondary" (click)="closeSettings()">取消</button><button class="btn btn-primary" [disabled]="saving()" (click)="saveSettings()">{{ saving() ? '保存中…' : '保存设置' }}</button></div>
     </section>
   </div>
 }
 
 @if (showLogs()) {
-  <div class="modal-backdrop" (click)="$event.target === $event.currentTarget && closeLogs()">
-    <section class="modal modal-content modal-xll" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="modal-head"><div><p class="eyebrow m-0 mb-8 fs-12">APPLICATION LOGS</p><h2 class="m-0">日志</h2><p class="mt-6 fs-12">最近运行记录</p></div><button class="modal-close" (click)="closeLogs()" aria-label="关闭">×</button></div>
+  <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeLogs()">
+    <section class="modal min-w-0 d-grid modal-content modal-xll" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-head d-flex justify-between gap-20"><div>
+        <p class="eyebrow m-0 mb-8 fs-12">APPLICATION LOGS</p>
+        <h2 class="m-0">日志</h2>
+        <p class="mt-6 fs-12">最近运行记录</p>
+      </div>
+      <button class="modal-close d-grid place-items-center" (click)="closeLogs()" aria-label="关闭">×</button></div>
       <div class="modal-body">
-        @if (loadingLogs()) { <p class="muted">读取中…</p> }
+        @if (loadingLogs()) { <p class="text-muted">读取中…</p> }
         @if (logError()) { <p class="message error">{{ logError() }}</p> }
         @if (!loadingLogs() && !logError()) {
           <div class="log-list">
           @for (entry of logs(); track $index) {
-            <article class="log-entry py-14"><div class="log-meta"><span class="log-level" [class]="'level-' + entry.level">{{ entry.level.toUpperCase() }}</span><time class="d-block fs-12">{{ entry.timestamp }}</time></div><p class="m-0 mt-7 fs-12">{{ entry.message }}</p></article>
+            <article class="log-entry py-14"><div class="log-meta d-flex items-center gap-9"><span class="log-level" [class]="'level-' + entry.level">{{ entry.level.toUpperCase() }}</span><time class="d-block fs-12">{{ entry.timestamp }}</time></div><p class="m-0 mt-7 fs-12">{{ entry.message }}</p></article>
           }
-          @if (!logs().length) { <p class="muted">暂无日志</p> }
+          @if (!logs().length) { <p class="text-muted">暂无日志</p> }
           </div>
         }
       </div>

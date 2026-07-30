@@ -31,7 +31,7 @@
 
 @media (max-width: 600px) {
   .topbar { padding: 0 18px; }
-  .page-heading { align-items: flex-start; flex-direction: column; }
+  .page-heading { align-items: flex-start !important; flex-direction: column; }
   .page-heading h1 { font-size: 26px; }
   .stats,
   .stats-four { grid-template-columns: repeat(2, 1fr); }
@@ -40,10 +40,9 @@
   .image-grid,
   .backup-card-grid { grid-template-columns: 1fr; }
   .icon-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .panel-head { align-items: flex-start; flex-direction: column; }
   .heading-actions { width: 100%; }
   .heading-actions button { flex: 1; }
-  .section-toolbar { align-items: flex-start; flex-direction: column; }
+  .section-toolbar { align-items: flex-start !important; flex-direction: column; }
   .section-toolbar-actions { width: 100%; }
   .section-toolbar-actions button { flex: 1; }
 }

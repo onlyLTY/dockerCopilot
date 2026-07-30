@@ -1,6 +1,10 @@
 package svc
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/internal/config"
 	"github.com/onlyLTY/dockerCopilot/internal/module"
@@ -21,6 +25,7 @@ type ServiceContext struct {
 	HubImageInfo               *module.ImageUpdateData
 	IndexCheckMiddleware       rest.Middleware
 	ProgressStore              ProgressStoreType
+	progressPath               string
 	DockerClient               *client.Client
 	mu                         sync.Mutex
 	ComposeMu                  sync.Mutex
@@ -64,13 +69,82 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	if err != nil {
 		logx.Errorf("Unable to create docker client: %s", err)
 	}
-	return &ServiceContext{
+	progressPath := progressStorePath()
+	progressStore := loadProgressStore(progressPath)
+	interrupted := false
+	for taskID, progress := range progressStore {
+		if progress.IsDone {
+			continue
+		}
+		progress.Message = "服务重启导致任务中断"
+		progress.DetailMsg = "后端服务在任务完成前重启，任务未继续执行"
+		progress.IsDone = true
+		progressStore[taskID] = progress
+		interrupted = true
+	}
+	ctx := &ServiceContext{
 		Config:             c,
 		HubImageInfo:       module.NewImageCheck(),
-		ProgressStore:      make(ProgressStoreType),
+		ProgressStore:      progressStore,
+		progressPath:       progressPath,
 		ComposeTokens:      make(map[string]ComposeToken),
 		DockerClient:       cli,
 		updatingContainers: make(map[string]string),
+	}
+	if interrupted {
+		ctx.persistProgress()
+	}
+	return ctx
+}
+
+func progressStorePath() string {
+	if path := os.Getenv("TASK_PROGRESS_PATH"); path != "" {
+		return path
+	}
+	return "/data/config/taskProgress.json"
+}
+
+func loadProgressStore(path string) ProgressStoreType {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return make(ProgressStoreType)
+	}
+	var store ProgressStoreType
+	if err := json.Unmarshal(content, &store); err != nil || store == nil {
+		return make(ProgressStoreType)
+	}
+	return store
+}
+
+func (ctx *ServiceContext) persistProgress() {
+	content, err := json.MarshalIndent(ctx.ProgressStore, "", "  ")
+	if err != nil {
+		logx.Errorf("无法序列化任务进度: %v", err)
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(ctx.progressPath), 0755); err != nil {
+		logx.Errorf("无法创建任务进度目录: %v", err)
+		return
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(ctx.progressPath), ".taskProgress-*.tmp")
+	if err != nil {
+		logx.Errorf("无法创建任务进度临时文件: %v", err)
+		return
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err := tmp.Chmod(0644); err == nil {
+		_, err = tmp.Write(content)
+	}
+	if closeErr := tmp.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		logx.Errorf("无法写入任务进度: %v", err)
+		return
+	}
+	if err := os.Rename(tmpName, ctx.progressPath); err != nil {
+		logx.Errorf("无法保存任务进度: %v", err)
 	}
 }
 
@@ -78,6 +152,7 @@ func (ctx *ServiceContext) UpdateProgress(taskID string, progress TaskProgress) 
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
 	ctx.ProgressStore[taskID] = progress
+	ctx.persistProgress()
 }
 
 func (ctx *ServiceContext) GetProgress(taskID string) (TaskProgress, bool) {

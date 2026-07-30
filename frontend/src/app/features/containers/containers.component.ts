@@ -7,11 +7,13 @@ import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
+import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 
 @Component({
   selector: 'dc-containers',
   standalone: true,
-  imports: [PageStateComponent, IconComponent],
+  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent],
   templateUrl: './containers.component.html',
 })
 export class ContainersComponent {
@@ -27,6 +29,12 @@ export class ContainersComponent {
   readonly checking = signal(false);
   readonly activeUpdateIds = signal<Set<string>>(new Set());
   readonly runningCount = computed(() => this.containers().filter(x => this.isRunning(x)).length); readonly updateCount = computed(() => this.containers().filter(x => x.haveUpdate).length);
+  readonly stats = computed<readonly StatItem[]>(() => [
+    { value: this.containers().length, label: '总容器' },
+    { value: this.runningCount(), label: '运行中', tone: 'green' },
+    { value: this.containers().length - this.runningCount(), label: '已停止', tone: 'red' },
+    { value: this.updateCount(), label: '有更新', tone: 'amber' },
+  ]);
   readonly selectedCount = computed(() => this.selected().size);
   readonly allSelected = computed(() => this.containers().length > 0 && this.selected().size === this.containers().length);
   readonly hasActiveUpdates = computed(() => this.activeUpdateIds().size > 0);

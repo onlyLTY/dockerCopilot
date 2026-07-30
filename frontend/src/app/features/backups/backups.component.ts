@@ -5,11 +5,12 @@ import { TaskService } from '../../core/task.service';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
+import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 
 @Component({
   selector: 'dc-backups',
   standalone: true,
-  imports: [PageStateComponent, IconComponent],
+  imports: [PageStateComponent, IconComponent, StatsComponent],
   templateUrl: './backups.component.html',
 })
 export class BackupsComponent {
@@ -19,6 +20,11 @@ export class BackupsComponent {
   readonly error = this.service.cache.error;
   readonly jsonCount = computed(() => this.files().filter(x => this.extension(x) === '.json').length);
   readonly yamlCount = computed(() => this.files().filter(x => ['.yaml', '.yml'].includes(this.extension(x))).length);
+  readonly stats = computed<readonly StatItem[]>(() => [
+    { value: this.files().length, label: '总备份数' },
+    { value: this.jsonCount(), label: 'JSON 备份', tone: 'blue' },
+    { value: this.yamlCount(), label: 'YAML 备份', tone: 'violet' },
+  ]);
   readonly groups = computed(() => { const map = new Map<string, string[]>(); this.files().forEach(x => { const d = this.date(x); if (!map.has(d)) map.set(d, []); map.get(d)!.push(x); }); return Array.from(map, ([date, files]) => ({ date, files })); });
   constructor() { this.service.ensureLoaded(); }
   refresh() { this.service.refresh(); }

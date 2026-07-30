@@ -1,26 +1,25 @@
 // 应用外壳、侧边栏、导航、顶栏、内容区
 
-.app-shell { height: 100vh; overflow: hidden; display: flex; background: var(--page-bg); }
+.app-shell { height: 100vh; overflow: hidden; background: var(--page-bg); }
 
 /* ===== 侧边栏 ===== */
 .sidebar {
   position: fixed; inset: 0 auto 0 0; width: 260px; height: 100vh;
   background: var(--white); border-right: 1px solid var(--line);
-  padding: 12px 12px; display: flex; flex-direction: column; z-index: 10; overflow: hidden;
+  padding: 12px 12px; z-index: 10; overflow: hidden;
 }
 
 .brand { flex: none;
-  display: flex; align-items: center; gap: 12px;
   padding: 0 8px 12px; border-bottom: 1px solid var(--line);
 }
 .brand.centered { justify-content: center; border: 0; padding: 0; }
 .brand-logo { width: 48px; height: 48px; border-radius: 14px; object-fit: contain; flex: none; }
-.brand strong { display: block; font-size: 16px; color: var(--black); white-space: nowrap; }
-.brand span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+.brand strong { font-size: 16px; color: var(--black); white-space: nowrap; }
+.brand span { font-size: 12px; margin-top: 4px; white-space: nowrap; }
 
 /* ===== 导航菜单 ===== */
 nav {
-  display: grid; gap: 6px; margin-top: 12px;
+  margin-top: 12px;
   flex: 1; min-height: 0; overflow-y: auto; align-content: start;
   scrollbar-width: thin; scrollbar-color: var(--line) transparent;
 }
@@ -29,7 +28,6 @@ nav::-webkit-scrollbar-track { background: transparent; }
 nav::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
 nav::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 nav a {
-  display: flex; align-items: center; gap: 12px;
   color: var(--muted); text-decoration: none;
   padding: 12px 14px; border-radius: 10px; font-size: 14px;
 }
@@ -42,11 +40,10 @@ nav a.active dc-icon { color: var(--blue); }
 /* ===== 侧边栏底部 ===== */
 .sidebar-bottom { flex: none; margin-top: auto; padding-top: 8px; }
 .sidebar-actions {
-  display: flex; align-items: center; gap: 6px;
   padding: 4px; margin-bottom: 14px;
 }
 .sidebar-actions button {
-  display: grid; place-items: center; width: 44px; height: 44px;
+  width: 44px; height: 44px;
   border: 0; border-radius: 10px; background: transparent; color: var(--muted);
 }
 .sidebar-actions button:hover,
@@ -64,10 +61,8 @@ nav a.active dc-icon { color: var(--blue); }
   overflow: hidden; background: var(--white);
 }
 .version-card-head {
-  display: flex; justify-content: space-between; align-items: center;
   padding: 14px 16px;
 }
-.version-card-head span { color: var(--muted); font-size: 12px; }
 .version-card-head strong { color: var(--black); font-size: 16px; }
 
 
@@ -76,13 +71,13 @@ nav a.active dc-icon { color: var(--blue); }
 
 
 /* ===== 内容区 / 顶栏 ===== */
-.content-wrap { margin-left: 260px; flex: 1; min-width: 0; height: 100vh; overflow-y: auto; }
+.content-wrap { margin-left: 260px; flex: 1; height: 100vh; overflow-y: auto; }
 .content-wrap main { max-width: 1550px; margin: 0 auto; padding: 0 46px 60px; }
 .topbar {
   display: none; height: 56px; background: var(--white); border-bottom: 1px solid var(--line);
-  align-items: center; gap: 16px; padding: 0 22px;
+  padding: 0 22px;
 }
-.mobile-logout { margin-left: auto; border: 0; background: transparent; color: var(--red); display: inline-flex; align-items: center; justify-content: center; }
+.mobile-logout { margin-left: auto; border: 0; background: transparent; color: var(--red); }
 .sidebar-overlay { display: none; }
 
 /* ===== 折叠态 ===== */
@@ -95,7 +90,7 @@ nav a.active dc-icon { color: var(--blue); }
 /* 折叠态隐藏导航滚动条，避免占用本就很窄的侧边栏宽度并挤出横向滚动条 */
 .compact-shell nav { scrollbar-width: none; }
 .compact-shell nav::-webkit-scrollbar { width: 0; }
-.compact-shell .sidebar-actions { flex-direction: column; align-items: center; gap: 8px; padding: 0; }
+.compact-shell .sidebar-actions { flex-direction: column; align-items: center !important; gap: 8px !important; padding: 0; }
 .compact-shell .sidebar-actions .sidebar-logout { margin-left: 0; }
 .compact-shell .version-card { display: none; }
 

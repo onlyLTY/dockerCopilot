@@ -2,11 +2,7 @@
 
 /* ===== 弹窗分类 ===== */
 .modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  display: grid;
-  place-items: center;
+  position: fixed; inset: 0; z-index: 30;
   padding: 22px;
   overflow: hidden;
   background: var(--overlay);
@@ -15,7 +11,6 @@
 .modal {
   width: min(720px, 90vw);
   max-width: 90vw;
-  min-width: 0;
   min-height: 0;
   background: var(--white);
   border-radius: 14px;
@@ -27,7 +22,6 @@
 .modal-confirm {
   height: auto;
   max-height: 85vh;
-  display: grid;
   grid-template-rows: auto auto auto;
   overflow: hidden;
 }
@@ -35,7 +29,6 @@
 .modal-form {
   height: min(760px, 85vh);
   max-height: 85vh;
-  display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
 }
@@ -43,7 +36,6 @@
 .modal-content {
   height: min(760px, 85vh);
   max-height: 85vh;
-  display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
@@ -54,16 +46,12 @@
 /* 短内容表单弹窗（如图标上传）按内容自适应高度，避免出现大片空白 */
 .modal-form.modal-auto { height: auto; }
 
-.modal-s { width: min(360px, 90vw); }
 .modal-m { width: min(520px, 90vw); }
-.modal-l { width: min(720px, 90vw); }
 .modal-xl { width: min(960px, 90vw); }
 .modal-xll { width: min(1200px, 90vw); }
 
 .modal-head {
-  display: flex;
   justify-content: space-between;
-  gap: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--line);
 }
@@ -78,8 +66,6 @@
   height: 32px;
   font-size: 22px;
   line-height: 1;
-  display: grid;
-  place-items: center;
   flex: none;
 }
 .modal-body {
@@ -97,8 +83,6 @@
 
 /* ===== 确认弹窗 ===== */
 .confirm-message { color: var(--black); line-height: 1.7; white-space: pre-wrap; }
-.danger-button { border: 0; border-radius: 8px; padding: 12px 16px; font-weight: 650; font-size: 14px; background: var(--red); color: var(--white); }
-.danger-button:hover { filter: brightness(.94); }
 
 /* ===== 表单字段 ===== */
 .form-field { color: var(--muted); font-weight: 650; }
@@ -111,21 +95,15 @@
 .form-field textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--focus); }
 .path-hint { color: var(--muted); }
 .form-hint { color: var(--muted); line-height: 1.5; }
-.setting-control { display: flex; align-items: center; gap: 8px; }
-.setting-control input { width: 80px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); color: var(--black); }
-.setting-control span { color: var(--muted); font-size: 12px; }
-select.form-select,
-.form-field select { display: block; width: 100%; border: 1px solid var(--line); border-radius: 7px; background: var(--white); color: var(--black); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 18px; }
+.form-field select { width: 100%; border: 1px solid var(--line); border-radius: 7px; background: var(--white); color: var(--black); }
+.modal-actions { padding-top: 18px; }
 .message.error { color: var(--red); }
 
 /* ===== Compose 编辑器 ===== */
-.compose-body { display: flex; min-height: 0; flex-direction: column; overflow: hidden !important; }
-.file-tabs { display: flex; flex: none; gap: 2px; padding: 10px 0 0; overflow-x: auto; }
+.compose-body { min-height: 0; overflow: hidden !important; }
+.file-tabs { flex: none; padding: 10px 0 0; overflow-x: auto; }
 .file-tabs button { border: 0; background: var(--page-bg); color: var(--muted); white-space: nowrap; }
-.file-tabs button.active { color: var(--blue); background: var(--white); border-top: 2px solid var(--blue); }
 .code-editor {
-  display: block;
   width: 100%;
   height: min(480px, 58vh);
   min-height: 260px;
@@ -137,8 +115,8 @@ select.form-select,
   font: 14px/1.65 "SFMono-Regular", Consolas, monospace;
   outline: 0;
 }
-.editor-foot { display: flex; align-items: center; gap: 16px; color: var(--muted); }
-.editor-foot .message { flex: 1; min-width: 0; color: var(--green); }
+.editor-foot { color: var(--muted); }
+.editor-foot .message { flex: 1; color: var(--green); }
 .editor-foot .message.error { color: var(--red); }
 .risk-box { flex: none; border-left: 3px solid var(--amber); background: var(--amber-soft); color: var(--amber); overflow: auto; }
 
@@ -146,7 +124,6 @@ select.form-select,
 .log-list { min-height: 0; height: 100%; overflow-y: auto; }
 .log-entry { border-bottom: 1px solid var(--line); }
 .log-entry:last-child { border-bottom: 0; }
-.log-meta { display: flex; align-items: center; gap: 9px; }
 .log-level { min-width: 46px; font-weight: 750; letter-spacing: .04em; }
 .log-level.level-debug { color: var(--muted); }
 .log-level.level-info { color: var(--blue); }
@@ -159,26 +136,25 @@ select.form-select,
 .about-hero { text-align: center; }
 .about-hero h1 { color: var(--black); }
 .about-hero > p { max-width: 600px; color: var(--muted); line-height: 1.7; }
-.about-actions { display: flex; gap: 10px; }
 .about-actions a { text-decoration: none; }
-.about-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+.about-grid { grid-template-columns: 1fr 1fr; }
 .about-grid h2 { color: var(--black); }
 .about-grid p { color: var(--muted); line-height: 1.7; }
 .about-grid .muted { color: var(--muted); }
 
 .dark-shell .secondary { background: var(--secondary-bg); color: var(--secondary-text); }
 .dark-shell .modal-close { background: var(--secondary-bg); }
-.dark-shell .resource-actions button { background: transparent; }
+
 .dark-shell .form-field input,
 .dark-shell .form-field textarea { background: #1a2130; }
 
 @media (max-width: 600px) {
   .modal-backdrop { padding: 16px; }
   .modal { width: 90vw; padding: 20px; }
-  .modal-head { gap: 12px; padding-bottom: 14px; }
+  .modal-head { gap: 12px !important; padding-bottom: 14px; }
   .modal-head h2 { font-size: 18px; }
-  .modal-actions { gap: 8px; }
-  .editor-foot { flex-wrap: wrap; gap: 8px; }
+  .modal-actions { gap: 8px !important; }
+  .editor-foot { flex-wrap: wrap; gap: 8px !important; }
   .editor-foot .message { flex-basis: 100%; }
   .code-editor { height: min(420px, 52vh); min-height: 220px; padding: 14px; }
 }

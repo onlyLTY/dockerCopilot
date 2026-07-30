@@ -7,17 +7,20 @@ import { ConfirmService } from '../../core/confirm.service';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { SectionToolbarComponent } from '../../shared/section-toolbar/section-toolbar.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { IconService } from '../../core/icon.service';
+import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
+import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 
 const defaultCompose = '';
 
 @Component({
   selector: 'dc-compose',
   standalone: true,
-  imports: [FormsModule, PageStateComponent, SectionToolbarComponent, IconComponent],
+  imports: [FormsModule, PageStateComponent, SectionToolbarComponent, IconComponent, ResourceCardComponent, StatsComponent],
   templateUrl: './compose.component.html',
 })
 export class ComposeComponent {
-  private readonly service = inject(ComposeService); private readonly toast = inject(ToastService); private readonly tasks = inject(TaskService); private readonly confirm = inject(ConfirmService);
+  private readonly service = inject(ComposeService); private readonly icons = inject(IconService); private readonly toast = inject(ToastService); private readonly tasks = inject(TaskService); private readonly confirm = inject(ConfirmService);
   // 项目数据、加载态来自服务常驻缓存
   readonly data = computed<ProjectsData | undefined>(() => {
     const value = this.service.cache.data();
@@ -28,46 +31,71 @@ export class ComposeComponent {
     };
   });
   readonly loading = this.service.cache.loading;
+  readonly iconMap = computed(() => this.icons.cache.data() || {});
+  readonly stats = computed<readonly StatItem[]>(() => {
+    const summary = this.data()?.summary;
+    return [
+      { value: summary?.total || 0, label: '项目总数' },
+      { value: summary?.using || 0, label: '使用中', tone: 'green' },
+      { value: summary?.stopped || 0, label: '已停止', tone: 'amber' },
+      { value: summary?.unused || 0, label: '未使用', tone: 'violet' },
+    ];
+  });
   readonly selectionMode = signal(false); readonly selected = signal<Set<string>>(new Set()); readonly cleanupBusy = signal(false);
-  readonly editorProject = signal<ComposeProject | undefined>(undefined); readonly filename = signal(''); readonly content = signal(''); readonly version = signal(''); readonly message = signal(''); readonly messageType = signal(''); readonly preview = signal<Record<string, any> | undefined>(undefined); readonly risks = signal<any[]>([]); readonly showCreate = signal(false); readonly creating = signal(false); projectName = ''; projectContent = defaultCompose; readonly createError = signal(''); readonly confirmDeploy = signal(false); readonly deployBusy = signal(false); readonly createPreview = signal<Record<string, any> | undefined>(undefined); readonly createValidated = signal(false);
+  readonly editorProject = signal<ComposeProject | undefined>(undefined); readonly filename = signal(''); readonly content = signal(''); readonly version = signal(''); readonly message = signal(''); readonly messageType = signal(''); readonly pullImages = signal(false); readonly preview = signal<Record<string, any> | undefined>(undefined); readonly risks = signal<any[]>([]); readonly showCreate = signal(false); readonly creating = signal(false); projectName = ''; projectContent = defaultCompose; readonly createError = signal(''); readonly confirmDeploy = signal(false); readonly deployBusy = signal(false); readonly createPreview = signal<Record<string, any> | undefined>(undefined); readonly createValidated = signal(false);
   readonly composeDialog = computed(() => this.editorProject() ? 'edit' : this.showCreate() ? 'create' : 'closed');
-  constructor() { this.service.ensureLoaded(); }
+  constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
   refresh() { this.service.refresh(); }
-  openEditor(p: ComposeProject) { const normalized = { ...p, files: Array.isArray(p.files) ? p.files : [], containers: Array.isArray(p.containers) ? p.containers : [], ports: Array.isArray(p.ports) ? p.ports : [] }; this.editorProject.set(normalized); this.preview.set(undefined); this.message.set(''); this.messageType.set(''); const f = normalized.files.find(x => x.name === 'compose.yaml') || normalized.files[0]; if (f) this.openFile(f.name); }
+  openEditor(p: ComposeProject) { const normalized = { ...p, files: Array.isArray(p.files) ? p.files : [], containers: Array.isArray(p.containers) ? p.containers : [], ports: Array.isArray(p.ports) ? p.ports : [] }; this.editorProject.set(normalized); this.preview.set(undefined); this.pullImages.set(false); this.message.set(''); this.messageType.set(''); const f = normalized.files.find(x => x.name === 'compose.yaml') || normalized.files[0]; if (f) this.openFile(f.name); }
   openFile(n: string) { const ep = this.editorProject(); if (!ep) return; this.filename.set(n); this.service.file(ep.id, n).subscribe({ next: r => r.code === 200 ? (this.content.set(r.data.content), this.version.set(r.data.version), this.message.set('')) : this.showError(r.msg, '读取文件'), error: e => this.showError(e.error?.msg || '读取文件失败', '读取文件') }); }
   save() { const ep = this.editorProject(); if (!ep) return; this.service.update(ep.id, this.filename(), this.content(), this.version()).subscribe({ next: r => r.code === 200 ? (this.version.set(r.data.version), this.message.set('已保存')) : this.showError(r.msg, '保存文件'), error: e => this.showError(e.error?.msg || '保存失败', '保存文件') }); }
-  validate() { const ep = this.editorProject(); if (!ep) return; this.service.validate(ep.id, this.filename(), this.content()).subscribe({ next: r => r.code === 200 ? (this.message.set('校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务'), this.messageType.set('')) : this.showError(r.msg, '校验'), error: e => this.showError(e.error?.msg || '校验失败', '校验') }); }
-  previewDeploy() {
+  validate() {
     const ep = this.editorProject(); if (!ep) return;
-    this.service.update(ep.id, this.filename(), this.content(), this.version()).subscribe({
-      next: saved => {
-        if (saved.code !== 200) { this.showError(saved.msg, '部署预览'); return; }
-        this.version.set(saved.data.version);
-        this.service.deployPreview(ep.id, this.filename()).subscribe({
-          next: r => r.code === 200 ? (this.preview.set(r.data), this.risks.set((r.data['risks'] as any[]) || []), this.message.set('预览已生成')) : this.showError(r.msg, '部署预览'),
-          error: e => this.showError(e.error?.msg || '预览失败', '部署预览'),
-        });
-      },
-      error: e => this.showError(e.error?.msg || '保存失败，无法生成预览', '部署预览'),
+    this.service.validate(ep.id, this.filename(), this.content()).subscribe({
+      next: r => r.code === 200 ? (this.message.set('校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务'), this.messageType.set('')) : this.showError(r.msg, '校验'),
+      error: e => this.showError(e.error?.msg || '校验失败', '校验'),
     });
   }
-  deploy() {
-    const ep = this.editorProject(); const pv = this.preview(); if (!ep || !pv) return;
-    this.confirmDeployment(ep, this.filename(), pv);
+  redeploy() {
+    const ep = this.editorProject();
+    if (!ep || this.deployBusy()) return;
+    this.deployBusy.set(true);
+    this.message.set('正在保存并校验配置…');
+    this.service.update(ep.id, this.filename(), this.content(), this.version()).subscribe({
+      next: saved => {
+        if (saved.code !== 200) { this.deployBusy.set(false); this.showError(saved.msg, '重新部署'); return; }
+        this.version.set(saved.data.version);
+        this.service.validate(ep.id, this.filename(), this.content()).subscribe({
+          next: validated => {
+            if (validated.code !== 200) { this.deployBusy.set(false); this.showError(validated.msg, '重新部署'); return; }
+            this.service.deployPreview(ep.id, this.filename()).subscribe({
+              next: preview => {
+                this.deployBusy.set(false);
+                if (preview.code !== 200) { this.showError(preview.msg, '重新部署'); return; }
+                this.askDeployment(ep, this.filename(), preview.data, this.pullImages());
+              },
+              error: e => { this.deployBusy.set(false); this.showError(e.error?.msg || '部署检查失败', '重新部署'); },
+            });
+          },
+          error: e => { this.deployBusy.set(false); this.showError(e.error?.msg || '格式校验失败', '重新部署'); },
+        });
+      },
+      error: e => { this.deployBusy.set(false); this.showError(e.error?.msg || '保存失败', '重新部署'); },
+    });
   }
-  private askDeployment(project: ComposeProject, filename: string, preview: Record<string, any>) {
+  private askDeployment(project: ComposeProject, filename: string, preview: Record<string, any>, pullImages = false) {
     const risks = Array.isArray(preview['risks']) ? preview['risks'] as any[] : [];
     this.confirm.open({
       title: '确认部署',
-      message: `即将部署项目 ${project.name || project.id}。${risks.length ? `检测到 ${risks.length} 项风险，确认后继续。` : ''}`,
+      message: `即将部署项目 ${project.name || project.id}。${risks.length ? `检测到 ${risks.length} 项风险，确认后继续。` : ''}${pullImages ? '将重新拉取项目镜像。' : ''}`,
       confirmText: '确定部署',
-    }).then(ok => { if (ok) this.confirmDeployment(project, filename, preview); });
+    }).then(ok => { if (ok) this.confirmDeployment(project, filename, preview, pullImages); });
   }
-  private confirmDeployment(project: ComposeProject, filename: string, preview: Record<string, any>) {
+  private confirmDeployment(project: ComposeProject, filename: string, preview: Record<string, any>, pullImages = false) {
     if (this.deployBusy()) return;
     this.deployBusy.set(true);
     const risks = Array.isArray(preview['risks']) ? preview['risks'] as any[] : [];
-    this.service.deploy(project.id, filename, String(preview['confirmToken']), risks.length > 0).subscribe({
+    this.service.deploy(project.id, filename, String(preview['confirmToken']), risks.length > 0, pullImages).subscribe({
       next: r => {
         this.deployBusy.set(false);
         if (r.code !== 200) { this.showError(r.msg, '部署'); return; }
@@ -149,4 +177,6 @@ export class ComposeComponent {
   }
   private showError(detail: string, operation = '操作'): void { this.notifyComposeError(operation, detail); }
   statusLabel(s: string) { return ({ using: '使用中', stopped: '已停止', unused: '未使用', unknown: '未知' } as Record<string, string>)[s] || s; }
+  icon(project: ComposeProject) { return this.icons.resolve(project.image || '', this.iconMap()); }
+  fallback(event: Event) { (event.target as HTMLImageElement).src = this.icons.actionIcon('images'); }
 }

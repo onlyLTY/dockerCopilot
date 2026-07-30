@@ -115,7 +115,7 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 		}
 		logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=config success", req.ProjectID, req.Filename, taskID)
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "正在部署（compose up）", DetailMsg: "", IsDone: false})
-		result, err := composeRunner.Up(bg, svcCtx.DockerClient, root, files, timeout)
+		result, err := composeRunner.Up(bg, svcCtx.DockerClient, root, files, timeout, req.PullImages)
 		if err != nil {
 			logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=up failed=%v output=%q", req.ProjectID, req.Filename, taskID, err, result.Output)
 			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "部署失败", DetailMsg: composeErrMsg("Compose 部署失败", err, result.Output), IsDone: true})

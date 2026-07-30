@@ -2,8 +2,7 @@
 
 .page-heading {
   position: sticky; top: 0; z-index: 20;
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
-  margin: 0 0 22px; padding: 28px 0 16px; background: var(--page-bg);
+  padding: 28px 0 28px; background: var(--page-bg);
 }
 .eyebrow { color: var(--blue); letter-spacing: .13em; font-weight: 700; }
 .page-heading h1 { color: var(--black); letter-spacing: -.02em; }
@@ -11,13 +10,11 @@
 
 /* 小节工具条 */
 .section-toolbar {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; min-height: 42px; margin: 0 0 16px;
+  min-height: 42px; margin: 0 0 16px;
 }
 .section-toolbar h2 { margin: 0; color: var(--black); font-size: 18px; }
-.section-toolbar p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.section-toolbar p { margin: 4px 0 0; font-size: 12px; }
 .batch-toolbar {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--line);
   border-radius: 10px; background: var(--white);
 }

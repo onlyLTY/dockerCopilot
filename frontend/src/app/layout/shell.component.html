@@ -1,38 +1,38 @@
-<div class="app-shell" [class.public-shell]="!auth.isAuthenticated()" [class.compact-shell]="ui.compact()" [class.dark-shell]="ui.theme() === 'dark'">
+<div class="app-shell d-flex" [class.public-shell]="!auth.isAuthenticated()" [class.compact-shell]="ui.compact()" [class.dark-shell]="ui.theme() === 'dark'">
   @if (auth.isAuthenticated()) {
-    <aside class="sidebar" [class.open]="open">
-      <div class="brand">
+    <aside class="sidebar d-flex flex-col" [class.open]="open">
+      <div class="brand d-flex items-center gap-12">
         <img class="brand-logo" src="assets/DockerCopilotlogo.png" alt="Docker Copilot">
-        <div><strong>Docker Copilot</strong><span>容器管理平台</span></div>
+        <div><strong class="d-block">Docker Copilot</strong><span class="d-block text-muted">容器管理平台</span></div>
       </div>
-      <nav>
-        <a href="#/containers" title="容器" [class.active]="isActive('/containers')" (click)="navigate('/containers')"><dc-icon class="icon-22" name="containers"></dc-icon><span>容器</span></a>
-        <a href="#/images" title="镜像" [class.active]="isActive('/images')" (click)="navigate('/images')"><dc-icon class="icon-22" name="images"></dc-icon><span>镜像</span></a>
-        <a href="#/compose" title="项目" [class.active]="isActive('/compose')" (click)="navigate('/compose')"><dc-icon class="icon-22" name="compose"></dc-icon><span>项目</span></a>
-        <a href="#/backups" title="备份" [class.active]="isActive('/backups')" (click)="navigate('/backups')"><dc-icon class="icon-22" name="storage"></dc-icon><span>备份</span></a>
-        <a href="#/icons" title="图标" [class.active]="isActive('/icons')" (click)="navigate('/icons')"><dc-icon class="icon-22" name="icons"></dc-icon><span>图标</span></a>
-        <a href="#/ports" title="端口" [class.active]="isActive('/ports')" (click)="navigate('/ports')"><dc-icon class="icon-22" name="ports"></dc-icon><span>端口</span></a>
-        <a href="#/tasks" title="任务" [class.active]="isActive('/tasks')" (click)="navigate('/tasks')"><dc-icon class="icon-22" name="tasks"></dc-icon><span>任务</span>@if (tasks.activeCount()) { <em class="nav-badge ml-auto py-0 px-5 d-inline-grid place-items-center fs-12">{{ tasks.activeCount() }}</em> }</a>
-        <a href="#/me" title="我的" [class.active]="isActive('/me')" (click)="navigate('/me')"><dc-icon class="icon-22" name="about"></dc-icon><span>我的</span></a>
+      <nav class="d-grid gap-6">
+        <a class="d-flex items-center gap-12" href="#/containers" title="容器" [class.active]="isActive('/containers')" (click)="navigate('/containers')"><dc-icon class="icon-22" name="containers"></dc-icon><span>容器</span></a>
+        <a class="d-flex items-center gap-12" href="#/images" title="镜像" [class.active]="isActive('/images')" (click)="navigate('/images')"><dc-icon class="icon-22" name="images"></dc-icon><span>镜像</span></a>
+        <a class="d-flex items-center gap-12" href="#/compose" title="项目" [class.active]="isActive('/compose')" (click)="navigate('/compose')"><dc-icon class="icon-22" name="compose"></dc-icon><span>项目</span></a>
+        <a class="d-flex items-center gap-12" href="#/backups" title="备份" [class.active]="isActive('/backups')" (click)="navigate('/backups')"><dc-icon class="icon-22" name="storage"></dc-icon><span>备份</span></a>
+        <a class="d-flex items-center gap-12" href="#/icons" title="图标" [class.active]="isActive('/icons')" (click)="navigate('/icons')"><dc-icon class="icon-22" name="icons"></dc-icon><span>图标</span></a>
+        <a class="d-flex items-center gap-12" href="#/ports" title="端口" [class.active]="isActive('/ports')" (click)="navigate('/ports')"><dc-icon class="icon-22" name="ports"></dc-icon><span>端口</span></a>
+        <a class="d-flex items-center gap-12" href="#/tasks" title="任务" [class.active]="isActive('/tasks')" (click)="navigate('/tasks')"><dc-icon class="icon-22" name="tasks"></dc-icon><span>任务</span>@if (tasks.activeCount()) { <em class="nav-badge ml-auto py-0 px-5 d-inline-grid place-items-center fs-12">{{ tasks.activeCount() }}</em> }</a>
+        <a class="d-flex items-center gap-12" href="#/me" title="我的" [class.active]="isActive('/me')" (click)="navigate('/me')"><dc-icon class="icon-22" name="about"></dc-icon><span>我的</span></a>
       </nav>
       <div class="sidebar-bottom">
-        <div class="sidebar-actions">
-          <button class="theme-button" [class.selected]="ui.theme() === 'dark'" (click)="ui.toggleTheme()" [attr.title]="ui.theme() === 'dark' ? '切换浅色主题' : '切换深色主题'" [attr.aria-label]="ui.theme() === 'dark' ? '切换浅色主题' : '切换深色主题'"><dc-icon class="icon-22" name="theme"></dc-icon></button>
-          <button class="display-button" [class.selected]="ui.compact()" (click)="ui.toggleCompact()" title="切换显示" aria-label="切换显示"><dc-icon class="icon-22" name="display"></dc-icon></button>
-          <button class="sidebar-logout" (click)="logout()" title="退出" aria-label="退出"><dc-icon class="icon-22" name="logout"></dc-icon></button>
+        <div class="sidebar-actions d-flex items-center gap-6">
+          <button class="theme-button d-grid place-items-center" [class.selected]="ui.theme() === 'dark'" (click)="ui.toggleTheme()" [attr.title]="ui.theme() === 'dark' ? '切换浅色主题' : '切换深色主题'" [attr.aria-label]="ui.theme() === 'dark' ? '切换浅色主题' : '切换深色主题'"><dc-icon class="icon-22" name="theme"></dc-icon></button>
+          <button class="display-button d-grid place-items-center" [class.selected]="ui.compact()" (click)="ui.toggleCompact()" title="切换显示" aria-label="切换显示"><dc-icon class="icon-22" name="display"></dc-icon></button>
+          <button class="sidebar-logout d-grid place-items-center" (click)="logout()" title="退出" aria-label="退出"><dc-icon class="icon-22" name="logout"></dc-icon></button>
         </div>
-        <div class="version-card"><div class="version-card-head"><span>版本信息</span><strong>{{ version().version || '读取中' }}</strong></div></div>
+        <div class="version-card"><div class="version-card-head d-flex items-center justify-between"><span class="text-muted">版本信息</span><strong>{{ version().version || '读取中' }}</strong></div></div>
       </div>
     </aside>
   }
   @if (open && auth.isAuthenticated()) {
     <button class="sidebar-overlay" (click)="closeMenu()" aria-label="关闭菜单"></button>
   }
-  <div class="content-wrap">
+  <div class="content-wrap flex-1 min-w-0">
     @if (auth.isAuthenticated()) {
-      <header class="topbar">
+      <header class="topbar items-center gap-16">
         <button class="btn" (click)="open = !open" aria-label="打开菜单" title="打开菜单"><dc-icon class="icon-20" name="menu"></dc-icon></button>
-        <button class="mobile-logout" (click)="logout()" title="退出" aria-label="退出"><dc-icon class="icon-20" name="logout"></dc-icon></button>
+        <button class="mobile-logout d-inline-flex items-center justify-center" (click)="logout()" title="退出" aria-label="退出"><dc-icon class="icon-20" name="logout"></dc-icon></button>
       </header>
     }
     <main><ng-content /></main>

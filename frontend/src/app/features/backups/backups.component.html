@@ -1,4 +1,4 @@
-<section class="page-heading">
+<section class="page-heading d-flex items-end justify-between gap-20">
   <div>
     <p class="eyebrow m-0 mb-8 fs-12">DOCKER OPERATIONS</p>
     <h1 class="m-0">备份管理</h1>
@@ -11,24 +11,20 @@
   </div>
 </section>
 
-<section class="stats stats-three compact-stats">
-  <div><strong class="d-block fs-20">{{ files().length }}</strong><span class="d-block mt-0 fs-12">总备份数</span></div>
-  <div class="blue"><strong class="d-block fs-20">{{ jsonCount() }}</strong><span class="d-block mt-0 fs-12">JSON 备份</span></div>
-  <div class="violet"><strong class="d-block fs-20">{{ yamlCount() }}</strong><span class="d-block mt-0 fs-12">YAML 备份</span></div>
-</section>
+<dc-stats [items]="stats()" [columns]="3"></dc-stats>
 
 @if (files().length) {
   <section class="backup-list">
     @for (group of groups(); track group.date) {
       <section class="backup-group m-0 mb-16">
-        <div class="backup-card-grid gap-16">
+        <div class="backup-card-grid d-grid gap-16">
           @for (file of group.files; track file) {
             <article class="backup-card p-18">
               <div class="backup-card-body">
                 <div><span class="file-badge d-inline-block mr-8 py-4 px-7 fs-12">{{ type(file) }}</span><b>{{ date(file) }}</b></div>
-                <small class="d-block mt-6 fs-12">{{ file }}</small>
+                <small class="d-block mt-6 fs-12 text-muted">{{ file }}</small>
               </div>
-              <div class="backup-actions mt-18 pt-14 d-flex justify-center gap-18">
+              <div class="backup-actions d-flex justify-center gap-18 mt-18 pt-14">
                 @if (extension(file) === '.json') {
                   <button class="btn text-blue py-6 px-12 fs-12" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
                 }

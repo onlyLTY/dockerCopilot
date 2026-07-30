@@ -1,0 +1,8 @@
+<section class="stats d-grid compact-stats" [class.stats-two]="columns() === 2" [class.stats-three]="columns() === 3" [class.stats-four]="columns() === 4">
+  @for (item of items(); track item.label) {
+    <div class="d-flex items-baseline justify-center gap-8" [class.green]="item.tone === 'green'" [class.amber]="item.tone === 'amber'" [class.violet]="item.tone === 'violet'" [class.red]="item.tone === 'red'" [class.blue]="item.tone === 'blue'">
+      <strong class="d-block fs-20">{{ item.value }}</strong>
+      <span class="d-block mt-0 fs-12 text-muted">{{ item.label }}</span>
+    </div>
+  }
+</section>

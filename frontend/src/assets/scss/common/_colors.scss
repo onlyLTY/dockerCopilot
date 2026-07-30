@@ -26,6 +26,10 @@ $colors: (
   amber: #c99515,
   amber-dark: #e4b35f,
   amber-soft: #fff5e2,
+  port-detail: #172033,
+  port-detail-dark: #edf2f8,
+  port-detail-bg: #dcecff,
+  port-detail-bg-dark: #273b52,
   focus: #138bc21a,
   focus-dark: #5eb9e81a,
   secondary-bg: #edf2f7,
@@ -64,6 +68,5 @@ $colors: (
     .text-#{"" + $name} { color: var(--#{"" + $name}) !important; }
     .bg-#{"" + $name} { background: var(--#{"" + $name}) !important; }
     .border-#{"" + $name} { border-color: var(--#{"" + $name}) !important; }
-    .icon-cloor-#{"" + $name} { color: var(--#{"" + $name}) !important; }
   }
 }

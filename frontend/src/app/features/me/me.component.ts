@@ -8,6 +8,7 @@ import { ToastService } from '../../core/toast.service';
 import { ApiResponse } from '../../core/compose.service';
 import { HttpClient } from '@angular/common/http';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 
 interface LogEntry { timestamp: string; level: string; message: string; }
 interface LogLevelData { level: string; options: string[]; }
@@ -15,7 +16,7 @@ interface LogLevelData { level: string; options: string[]; }
 @Component({
   selector: 'dc-me',
   standalone: true,
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, StatsComponent],
   templateUrl: './me.component.html',
 })
 export class MeComponent {
@@ -36,6 +37,12 @@ export class MeComponent {
   readonly updateOptions = signal<string[]>([]);
   readonly backupOptions = signal<string[]>([]);
   readonly logOptions = signal<string[]>(['debug', 'info', 'warn', 'error']);
+  readonly stats = computed<readonly StatItem[]>(() => [
+    { value: this.updateLabel(this.runtime().updateInterval), label: '更新检查', tone: 'blue' },
+    { value: this.backupLabel(this.runtime().backupInterval), label: '自动备份', tone: 'green' },
+    { value: this.runtime().retention, label: '备份保留', tone: 'violet' },
+    { value: this.runtime().logLevel, label: '日志级别', tone: 'amber' },
+  ]);
   get updateInterval() { return this.runtime().updateInterval; }
   get backupInterval() { return this.runtime().backupInterval; }
   get logLevel() { return this.runtime().logLevel; }

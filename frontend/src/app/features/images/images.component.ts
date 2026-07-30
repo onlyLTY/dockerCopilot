@@ -5,11 +5,13 @@ import { ToastService } from '../../core/toast.service';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
+import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
+import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 
 @Component({
   selector: 'dc-images',
   standalone: true,
-  imports: [PageStateComponent, IconComponent],
+  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent],
   templateUrl: './images.component.html',
 })
 export class ImagesComponent {
@@ -21,6 +23,12 @@ export class ImagesComponent {
   readonly iconMap = computed(() => this.icons.cache.data() || {});
   readonly cleaning = signal<boolean>(false);
   readonly usedCount = computed(() => this.images().filter(x => x.inUsed).length); readonly untaggedCount = computed(() => this.images().filter(x => this.isUntagged(x)).length); readonly unusedCount = computed(() => this.images().filter(x => !x.inUsed).length);
+  readonly stats = computed<readonly StatItem[]>(() => [
+    { value: this.images().length, label: '总镜像' },
+    { value: this.usedCount(), label: '使用中', tone: 'green' },
+    { value: this.unusedCount(), label: '未使用', tone: 'amber' },
+    { value: this.untaggedCount(), label: '无 Tag', tone: 'red' },
+  ]);
   constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
   refresh() { this.service.refresh(); }
   isUntagged(x: ImageRow) { return !x.tag || ['<none>', 'none'].includes(x.tag.toLowerCase()); }

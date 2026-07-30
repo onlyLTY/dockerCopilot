@@ -4,6 +4,8 @@ import { PortUsage } from '../../core/compose.service';
 import { IconService } from '../../core/icon.service';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
+import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 
 interface PortLine { hostPort: string; containerPort: string; protocol: string; }
 interface PortGroup { containerName: string; project: string; image: string; ports: PortLine[]; }
@@ -11,7 +13,7 @@ interface PortGroup { containerName: string; project: string; image: string; por
 @Component({
   selector: 'dc-ports',
   standalone: true,
-  imports: [PageStateComponent, IconComponent],
+  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent],
   templateUrl: './ports.component.html',
 })
 export class PortsComponent {
@@ -21,6 +23,10 @@ export class PortsComponent {
   readonly loading = this.service.cache.loading;
   readonly error = this.service.cache.error;
   readonly iconMap = computed(() => this.icons.cache.data() || {});
+  readonly stats = computed<readonly StatItem[]>(() => [
+    { value: this.data().ports.length, label: '端口映射' },
+    { value: this.data().conflicts.length, label: '端口冲突', tone: 'red' },
+  ]);
   // 按容器聚合：一个容器一张卡片，仅展示端口
   readonly groups = computed<PortGroup[]>(() => {
     const map = new Map<string, PortGroup>();
