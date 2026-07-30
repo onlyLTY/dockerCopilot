@@ -46,6 +46,33 @@ func TestSettingsUseOneFileAndPreserveFields(t *testing.T) {
 	}
 }
 
+func TestContainerUpdateIgnorePersistence(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("APP_SETTINGS_PATH", filepath.Join(dir, "appSettings.json"))
+
+	if err := SetContainerUpdateIgnored("db", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetContainerUpdateIgnored("db", true); err != nil {
+		t.Fatal(err)
+	}
+	if !IsContainerUpdateIgnored("db") {
+		t.Fatal("container update ignore was not persisted")
+	}
+	if err := RenameContainerUpdateIgnore("db", "database"); err != nil {
+		t.Fatal(err)
+	}
+	if IsContainerUpdateIgnored("db") || !IsContainerUpdateIgnored("database") {
+		t.Fatal("container update ignore was not migrated")
+	}
+	if err := SetContainerUpdateIgnored("database", false); err != nil {
+		t.Fatal(err)
+	}
+	if IsContainerUpdateIgnored("database") {
+		t.Fatal("container update ignore was not removed")
+	}
+}
+
 func TestRetentionValidation(t *testing.T) {
 	if ValidRetention(0) || ValidRetention(101) {
 		t.Fatal("out-of-range retention accepted")

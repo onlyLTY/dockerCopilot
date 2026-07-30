@@ -16,7 +16,7 @@ button { cursor: pointer; }
 
 
 /* dc-icon 尺寸工具类 */
-$icon-sizes: 8, 10, 12, 14, 16, 20, 22, 24, 32;
+$icon-sizes: 8, 10, 12, 14, 16, 20, 22, 24, 32, 36, 40, 48;
 
 @each $size in $icon-sizes {
   .icon-#{$size} { --icon-size: #{$size}px; }

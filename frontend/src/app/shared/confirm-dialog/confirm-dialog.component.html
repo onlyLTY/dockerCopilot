@@ -9,8 +9,8 @@
         <p class="confirm-message my-22">{{ dialog.options.message }}</p>
       </div>
       <div class="modal-actions d-flex justify-end pt-18">
-        <button class="btn btn-secondary" (click)="confirm.close(false)">{{ dialog.options.cancelText || '取消' }}</button>
-        <button class="btn btn-primary py-12 px-16" [class.btn-danger]="dialog.options.danger" (click)="confirm.close(true)">{{ dialog.options.confirmText || '确定' }}</button>
+        <button class="btn text-secondary-text bg-secondary-bg" (click)="confirm.close(false)">{{ dialog.options.cancelText || '取消' }}</button>
+        <button class="btn text-white bg-blue py-12 px-16" [class.text-white bg-red]="dialog.options.danger" (click)="confirm.close(true)">{{ dialog.options.confirmText || '确定' }}</button>
       </div>
     </section>
   </div>

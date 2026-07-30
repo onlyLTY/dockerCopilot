@@ -5,6 +5,7 @@ import { ContainerService, ContainerRow } from '../../core/container.service';
 import { IconService } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
+import { ConfirmService } from '../../core/confirm.service';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
@@ -18,7 +19,7 @@ import { PageHeadingComponent } from '../../shared/page-heading/page-heading.com
   templateUrl: './containers.component.html',
 })
 export class ContainersComponent {
-  private readonly service = inject(ContainerService); private readonly icons = inject(IconService); private readonly toast = inject(ToastService); private readonly tasks = inject(TaskService);
+  private readonly service = inject(ContainerService); private readonly icons = inject(IconService); private readonly toast = inject(ToastService); private readonly tasks = inject(TaskService); private readonly confirm = inject(ConfirmService);
   // 数据、加载态、错误态均来自服务里的常驻缓存，页面切换不再重复请求
   readonly containers = computed(() => this.service.cache.data() || []);
   readonly loading = this.service.cache.loading;
@@ -29,16 +30,31 @@ export class ContainersComponent {
   readonly busy = signal(false);
   readonly checking = signal(false);
   readonly activeUpdateIds = signal<Set<string>>(new Set());
-  readonly runningCount = computed(() => this.containers().filter(x => this.isRunning(x)).length); readonly updateCount = computed(() => this.containers().filter(x => x.haveUpdate).length);
+  readonly updateIgnoreBusyIds = signal<Set<string>>(new Set());
+  readonly filter = signal('all');
+  readonly runningCount = computed(() => this.containers().filter(x => this.isRunning(x)).length);
+  readonly updateCount = computed(() => this.containers().filter(x => x.haveUpdate).length);
+  readonly ignoredUpdateCount = computed(() => this.containers().filter(x => x.updateIgnored).length);
+  readonly filteredContainers = computed(() => this.containers().filter(x => {
+    switch (this.filter()) {
+      case 'running': return this.isRunning(x);
+      case 'stopped': return !this.isRunning(x);
+      case 'update': return x.haveUpdate;
+      case 'ignored': return x.updateIgnored;
+      default: return true;
+    }
+  }));
   readonly stats = computed<readonly StatItem[]>(() => [
-    { value: this.containers().length, label: '总容器' },
-    { value: this.runningCount(), label: '运行中', tone: 'green' },
-    { value: this.containers().length - this.runningCount(), label: '已停止', tone: 'red' },
-    { value: this.updateCount(), label: '有更新', tone: 'amber' },
+    { key: 'all', value: this.containers().length, label: '总容器' },
+    { key: 'running', value: this.runningCount(), label: '运行中', tone: 'green' },
+    { key: 'stopped', value: this.containers().length - this.runningCount(), label: '已停止', tone: 'red' },
+    { key: 'update', value: this.updateCount(), label: '有更新', tone: 'amber' },
+    { key: 'ignored', value: this.ignoredUpdateCount(), label: '已忽略更新', tone: 'violet' },
   ]);
   readonly selectedCount = computed(() => this.selected().size);
-  readonly allSelected = computed(() => this.containers().length > 0 && this.selected().size === this.containers().length);
+  readonly allSelected = computed(() => this.filteredContainers().length > 0 && this.filteredContainers().every(x => this.selected().has(x.id)));
   readonly hasActiveUpdates = computed(() => this.activeUpdateIds().size > 0);
+  readonly availableUpdateCount = computed(() => this.containers().filter(x => x.haveUpdate && !this.activeUpdateIds().has(x.id)).length);
   constructor() {
     this.service.ensureLoaded();
     this.icons.ensureLoaded();
@@ -50,6 +66,7 @@ export class ContainersComponent {
     });
   }
   refresh(): void { this.service.refresh(); }
+  selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); this.selected.set(new Set()); }
   // 手动检查更新：异步任务，登记进度；完成后刷新容器列表以更新“有更新”标识
   checkUpdate(): void {
     if (this.checking()) return;
@@ -96,7 +113,7 @@ export class ContainersComponent {
 
   isSelected(id: string) { return this.selected().has(id); }
   toggleSelect(id: string) { const next = new Set(this.selected()); next.has(id) ? next.delete(id) : next.add(id); this.selected.set(next); }
-  toggleAll() { this.selected.set(this.allSelected() ? new Set() : new Set(this.containers().map(x => x.id))); }
+  toggleAll() { const visible = this.filteredContainers(); const current = this.selected(); const allVisible = visible.length > 0 && visible.every(x => current.has(x.id)); this.selected.set(allVisible ? new Set([...current].filter(id => !visible.some(x => x.id === id))) : new Set([...current, ...visible.map(x => x.id)])); }
 
   // ===== 单个操作 =====
   private run(x: ContainerRow, fn: (id: string) => any, label: string, async = false) {
@@ -132,9 +149,22 @@ export class ContainersComponent {
     });
   }
 
-  // ===== 批量操作 =====
+  ignoreUpdate(x: ContainerRow) { this.setUpdateIgnored(x, true); }
+  restoreUpdate(x: ContainerRow) { this.setUpdateIgnored(x, false); }
+  private setUpdateIgnored(x: ContainerRow, ignored: boolean): void {
+    if (this.updateIgnoreBusyIds().has(x.id)) return;
+    const next = new Set(this.updateIgnoreBusyIds()); next.add(x.id); this.updateIgnoreBusyIds.set(next);
+    const request = ignored ? this.service.ignoreUpdate(x.id) : this.service.restoreUpdate(x.id);
+    request.subscribe({
+      next: r => {
+        this.updateIgnoreBusyIds.update(ids => { const copy = new Set(ids); copy.delete(x.id); return copy; });
+        if (r.code !== 200) this.toast.error(`${x.name} ${ignored ? '忽略' : '恢复'}更新失败：${r.msg || '未知错误'}`);
+      },
+      error: e => { this.updateIgnoreBusyIds.update(ids => { const copy = new Set(ids); copy.delete(x.id); return copy; }); this.toast.error(`${x.name} ${ignored ? '忽略' : '恢复'}更新失败：${e.error?.msg || e.message || '请求错误'}`); },
+    });
+  }
   private bulk(fn: (id: string) => any, label: string, async = false) {
-    const targets = this.containers().filter(x => this.selected().has(x.id));
+    const targets = this.filteredContainers().filter(x => this.selected().has(x.id));
     if (!targets.length || this.busy()) return;
     this.busy.set(true);
     forkJoin(targets.map(x => fn(x.id).pipe(
@@ -151,8 +181,14 @@ export class ContainersComponent {
   bulkStart() { this.bulk(id => this.service.start(id), '启动'); }
   bulkStop() { this.bulk(id => this.service.stop(id), '停止'); }
   // 批量更新使用固定并发窗口，避免一次性启动大量 Docker 重建任务
-  bulkUpdate() {
-    const targets = this.containers().filter(x => this.selected().has(x.id) && !this.activeUpdateIds().has(x.id));
+  bulkUpdate() { this.submitUpdates(this.filteredContainers().filter(x => this.selected().has(x.id) && !this.activeUpdateIds().has(x.id))); }
+  async updateAll() {
+    const targets = this.containers().filter(x => x.haveUpdate && !this.activeUpdateIds().has(x.id));
+    if (!targets.length || this.busy()) { if (!targets.length) this.toast.info('当前没有可更新的容器'); return; }
+    if (!(await this.confirm.open({ title: '一键更新容器', message: `将更新 ${targets.length} 个容器，并在更新过程中短暂停止服务。确定继续吗？`, confirmText: '确认更新' }))) return;
+    this.submitUpdates(targets);
+  }
+  private submitUpdates(targets: ContainerRow[]): void {
     if (!targets.length || this.busy()) return;
     this.busy.set(true);
     targets.forEach(x => this.markUpdateActive(x.id));
@@ -164,10 +200,7 @@ export class ContainersComponent {
       toArray(),
     ).subscribe(results => {
       this.busy.set(false);
-      results.forEach(r => {
-        if (r.ok && r.taskID) this.tasks.track(String(r.taskID), '更新 ' + r.container.name, true, r.container.id);
-        else this.markUpdateInactive(r.container.id);
-      });
+      results.forEach(r => { if (r.ok && r.taskID) this.tasks.track(String(r.taskID), '更新 ' + r.container.name, true, r.container.id); else this.markUpdateInactive(r.container.id); });
       const ok = results.filter(r => r.ok).length; const fail = results.length - ok;
       if (fail === 0) this.toast.info(`已提交 ${ok} 个容器的更新任务`);
       else { const first = results.find(r => !r.ok); this.toast.error(`更新提交 ${ok} 个，失败 ${fail} 个${first ? '：' + first.msg : ''}`); }

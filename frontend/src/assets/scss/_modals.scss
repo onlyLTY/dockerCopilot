@@ -47,7 +47,8 @@
 .modal-form.modal-auto { height: auto; }
 
 .modal-m { width: min(520px, 90vw); }
-.modal-xl { width: min(960px, 90vw); }
+.modal-l { width: min(900px, 90vw); }
+.modal-xl { width: min(1080px, 90vw); }
 .modal-xll { width: min(1200px, 90vw); }
 
 .modal-head {
@@ -186,14 +187,7 @@
 .support-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 /* ===== 关于页 ===== */
-.about-hero { text-align: center; }
-.about-hero h1 { color: var(--black); }
-.about-hero > p { max-width: 600px; color: var(--muted); line-height: 1.7; }
-.about-actions a { text-decoration: none; }
 .about-grid { grid-template-columns: 1fr 1fr; }
-.about-grid h2 { color: var(--black); }
-.about-grid p { color: var(--muted); line-height: 1.7; }
-.about-grid .muted { color: var(--muted); }
 
 .dark-shell .secondary { background: var(--secondary-bg); color: var(--secondary-text); }
 

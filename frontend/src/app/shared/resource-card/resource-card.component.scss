@@ -26,13 +26,14 @@
   min-width: 0;
   grid-template-columns: 48px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
   padding: 0px 0px 6px 0px;
   border-bottom: 1px solid var(--line) !important;
 }
 
-.resource-card-icon {
+:host ::ng-deep [resource-card-icon] {
   display: grid;
+  grid-column: 1;
+  grid-row: 1 / span 2;
   width: 48px;
   min-width: 48px;
   height: 48px;
@@ -41,68 +42,63 @@
   place-items: center;
 }
 
-.resource-card-info {
+:host ::ng-deep [resource-card-title] {
   display: flex;
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
-  min-height: 48px;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-}
-
-.resource-card-title,
-.resource-card-meta {
-  min-width: 0;
-}
-
-.resource-card-title {
-  display: flex;
   min-height: 24px;
   align-items: center;
 }
 
-.resource-card-meta {
+:host ::ng-deep [resource-card-info] {
   display: flex;
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
   max-height: 36px;
   flex-direction: column;
   justify-content: center;
-  overflow: hidden;
   gap: 4px;
+  overflow: hidden;
 }
 
-.resource-card-title > *,
-.resource-card-meta > * {
+:host ::ng-deep [resource-card-title] > *,
+:host ::ng-deep [resource-card-info] > * {
   min-width: 0;
 }
 
-.resource-card-content:not(:empty) {
+:host ::ng-deep [resource-card-content]:not(:empty) {
   margin-top: 14px;
 }
 
-.resource-card-content:empty,
-.resource-card-actions:empty {
+:host ::ng-deep [resource-card-content]:empty {
   display: none;
 }
 
-.resource-card-actions:not(:empty) {
+:host ::ng-deep [resource-card-actions]:empty {
+  display: none;
+}
+
+:host ::ng-deep [resource-card-actions]:not(:empty) {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: 8px !important;
   margin-top: auto;
   padding-top: 14px;
 }
 
-.resource-card-actions > * {
+:host ::ng-deep [resource-card-actions] > * {
+  flex: 1 1 80px;
   width: auto;
-  min-width: 0;
+  min-width: 80px;
+  white-space: nowrap;
 }
 
-.resource-card-actions button {
-  transition: background .15s, border-color .15s, color .15s, filter .15s;
-}
-
-.resource-card-actions button:hover,
-.resource-card-actions button:focus-visible {
+:host ::ng-deep [resource-card-actions] button:hover,
+:host ::ng-deep [resource-card-actions] button:focus-visible {
   background: var(--focus);
   border-color: currentColor;
   filter: none;

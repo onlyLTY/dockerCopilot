@@ -31,8 +31,8 @@
   <div class="content-wrap flex-1 min-w-0">
     @if (auth.isAuthenticated()) {
       <header class="topbar items-center gap-16">
-        <button class="btn" (click)="open = !open" aria-label="打开菜单" title="打开菜单"><dc-icon class="icon-20" name="menu"></dc-icon></button>
-        <button class="mobile-logout d-inline-flex items-center justify-center" (click)="logout()" title="退出" aria-label="退出"><dc-icon class="icon-20" name="logout"></dc-icon></button>
+        <button class="btn btn-icon" (click)="open = !open" aria-label="打开菜单" title="打开菜单"><dc-icon class="icon-36" name="menu"></dc-icon></button>
+        <button class="mobile-logout d-inline-flex items-center justify-center" (click)="logout()" title="退出" aria-label="退出"><dc-icon class="icon-36" name="logout"></dc-icon></button>
       </header>
     }
     <main><ng-content /></main>

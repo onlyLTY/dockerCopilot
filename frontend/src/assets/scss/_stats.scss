@@ -5,8 +5,19 @@
   background: var(--white); border: 1px solid var(--line); border-radius: 18px;
   overflow: hidden; box-shadow: 0 12px 24px var(--shadow); margin-bottom: 28px;
 }
-.stats div { padding: 22px 20px; text-align: center; border-right: 1px solid var(--line); }
-.stats div:last-child { border-right: 0; }
+.stats div, .stats button { padding: 22px 20px; text-align: center; border-right: 1px solid var(--line); }
+.stats div:last-child, .stats button:last-child { border-right: 0; }
+.stats button { appearance: none; background: transparent; border-top: 0; border-bottom: 0; border-left: 0; color: inherit; font: inherit; cursor: pointer; }
+.stats button:hover,
+.stats button:focus-visible,
+.stats button.active {
+  background: var(--blue-soft);
+}
+.stats button.active {
+  color: var(--blue);
+  box-shadow: inset 0 -3px 0 var(--blue);
+}
+.stats button:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .stats strong { color: var(--blue); }
 .stats .green strong { color: var(--green); }
 .stats .amber strong { color: var(--amber); }
@@ -15,9 +26,10 @@
 .stats .blue strong { color: var(--blue); }
 
 .stats-four { grid-template-columns: repeat(4, 1fr); }
+.stats-five { grid-template-columns: repeat(5, 1fr); }
 .stats-three { grid-template-columns: repeat(3, 1fr); }
 .stats-two { grid-template-columns: repeat(2, 1fr); }
 
 /* 紧凑统计条：占位更小，数字与标签同排更省空间 */
 .compact-stats { margin-bottom: 20px; border-radius: 12px; }
-.compact-stats div { padding: 12px 16px; }
+.compact-stats div, .compact-stats button { padding: 12px 16px; }

@@ -1,7 +1,7 @@
 <dc-page-heading title="我的" subtitle="项目档案、版本信息和应用设置">
   <div page-heading-actions>
-    <button class="btn btn-secondary" (click)="openSettings()"><dc-icon name="settings"></dc-icon>设置</button>
-    <button class="btn btn-secondary" (click)="openLogs()"><dc-icon name="tasks"></dc-icon>日志</button>
+    <button class="btn text-secondary-text bg-secondary-bg" (click)="openSettings()"><dc-icon name="settings"></dc-icon>设置</button>
+    <button class="btn text-secondary-text bg-secondary-bg" (click)="openLogs()"><dc-icon name="tasks"></dc-icon>日志</button>
   </div>
 </dc-page-heading>
 
@@ -9,8 +9,8 @@
 
 <section class="about-grid d-grid gap-20">
   <article class="panel p-16">
-    <span class="fs-24 mb-8 fw-600">项目信息</span>
-    <p>Docker Copilot 是一个主打便捷的docker容器管理工具，现在已经支持所有平台</p>
+    <h3>项目信息</h3>
+    <span class="text-muted fs-14 my-6">Docker Copilot是一个便捷的docker容器管理工具，现已支持所有平台</span>
     <ol class="feature-list">
       <li class="feature-item">指定镜像/tag更新容器</li>
       <li class="feature-item">启动、停止、重启、重命名容器</li>
@@ -23,12 +23,12 @@
     </ol>
 
     <h3>反馈与建议</h3>
-      <p>在项目使用中遇到 bug 或想要提建议？欢迎在<a href="https://github.com/onlyLTY/dockerCopilot/issues" target="_blank" rel="noreferrer">GitHub Issues</a>提出，或发送邮件至<a href="onlylty@lty.wiki" target="_blank" rel="noreferrer">onlylty@lty.wiki</a>。期待您的反馈！</p>
+      <span class="text-muted fs-14 my-6">在项目使用中遇到 bug 或想要提建议？欢迎在<a href="https://github.com/onlyLTY/dockerCopilot/issues" target="_blank" rel="noreferrer">GitHub Issues</a>提出，或发送邮件至<a href="onlylty@lty.wiki" target="_blank" rel="noreferrer">onlylty@lty.wiki</a>。期待您的反馈！</span>
   </article>
 
   <article class="panel p-16">
-    <span class="fs-24 mb-8 fw-600">支持项目</span>
-    <p class="text-muted">如果您用的愉快的话，可以请我喝一瓶快乐水吗？您的支持是我持续维护项目的动力！</p>
+    <h3>支持项目</h3>
+    <span class="text-muted fs-14 my-6">如果您用的愉快的话，可以请我喝一瓶快乐水吗？您的支持是我持续维护项目的动力！</span>
     <div class="support-grid d-grid gap-16 mt-20">
       <div class="support-payment d-grid place-items-center gap-8 p-16 rounded-8">
         <div class="text-muted fs-12">微信支付</div>
@@ -61,14 +61,14 @@
         <label class="form-field d-block mt-20 fs-12">备份保留数量<input class="d-block mt-8 py-12 px-12" type="number" min="1" max="100" [(ngModel)]="retentionDraft"><span class="path-hint d-block mt-8 p-0 fs-12">JSON 和 YAML 分别保留最近的备份</span></label>
         <label class="form-field d-block mt-20 fs-12">日志级别<select class="d-block mt-8 py-12 px-12" [(ngModel)]="logDraft">@for (opt of logOptions(); track opt) {<option [value]="opt">{{ opt }}</option>}</select></label>
       </div>
-      <div class="modal-actions d-flex justify-end gap-10 pt-18"><button class="btn btn-secondary" (click)="closeSettings()">取消</button><button class="btn btn-primary" [disabled]="saving()" (click)="saveSettings()">{{ saving() ? '保存中…' : '保存设置' }}</button></div>
+      <div class="modal-actions d-flex justify-end gap-10 pt-18"><button class="btn text-secondary-text bg-secondary-bg" (click)="closeSettings()">取消</button><button class="btn text-white bg-blue" [disabled]="saving()" (click)="saveSettings()">{{ saving() ? '保存中…' : '保存设置' }}</button></div>
     </section>
   </div>
 }
 
 @if (showLogs()) {
   <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeLogs()">
-    <section class="modal min-w-0 d-grid modal-content modal-xll" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <section class="modal min-w-0 d-grid modal-content modal-xl" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       <div class="modal-head d-flex justify-between gap-20"><div>
         <h2 class="m-0">日志</h2>
         <span class="mt-6 fs-12">最近运行记录</span>

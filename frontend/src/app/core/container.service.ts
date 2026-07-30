@@ -5,7 +5,7 @@ import { ApiResponse } from './compose.service';
 import { CacheStore, CacheView } from './cache-store';
 import { CacheBus } from './cache-bus';
 
-export interface ContainerRow { id: string; name: string; status: string; usingImage: string; createTime: string; runningTime: string; haveUpdate: boolean; }
+export interface ContainerRow { id: string; name: string; status: string; usingImage: string; createTime: string; runningTime: string; haveUpdate: boolean; updateIgnored: boolean; }
 
 @Injectable({ providedIn: 'root' })
 export class ContainerService {
@@ -29,6 +29,8 @@ export class ContainerService {
   stop(id: string) { return this.done(this.http.post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/stop', {})); }
   restart(id: string) { return this.done(this.http.post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/restart', {})); }
   update(id: string, imageNameAndTag = '', containerName = '') { return this.http.post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/update', { imageNameAndTag, containerName }); }
+  ignoreUpdate(id: string) { return this.http.post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/update-ignore', {}).pipe(tap(r => { if (r.code === 200) this.store.refresh(); })); }
+  restoreUpdate(id: string) { return this.http.delete<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/update-ignore').pipe(tap(r => { if (r.code === 200) this.store.refresh(); })); }
 
   /** 操作成功后：刷新容器自身缓存，并让端口/镜像缓存失效（起停会影响端口占用与镜像使用状态） */
   private done(obs: Observable<ApiResponse<unknown>>): Observable<ApiResponse<unknown>> {

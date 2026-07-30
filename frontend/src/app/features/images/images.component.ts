@@ -23,15 +23,18 @@ export class ImagesComponent {
   readonly error = this.service.cache.error;
   readonly iconMap = computed(() => this.icons.cache.data() || {});
   readonly cleaning = signal<boolean>(false);
+  readonly filter = signal('all');
+  readonly filteredImages = computed(() => this.images().filter(x => this.filter() === 'all' || (this.filter() === 'used' ? x.inUsed : this.filter() === 'unused' ? !x.inUsed : this.isUntagged(x))));
   readonly usedCount = computed(() => this.images().filter(x => x.inUsed).length); readonly untaggedCount = computed(() => this.images().filter(x => this.isUntagged(x)).length); readonly unusedCount = computed(() => this.images().filter(x => !x.inUsed).length);
   readonly stats = computed<readonly StatItem[]>(() => [
-    { value: this.images().length, label: '总镜像' },
-    { value: this.usedCount(), label: '使用中', tone: 'green' },
-    { value: this.unusedCount(), label: '未使用', tone: 'amber' },
-    { value: this.untaggedCount(), label: '无 Tag', tone: 'red' },
+    { key: 'all', value: this.images().length, label: '总镜像' },
+    { key: 'used', value: this.usedCount(), label: '使用中', tone: 'green' },
+    { key: 'unused', value: this.unusedCount(), label: '未使用', tone: 'amber' },
+    { key: 'untagged', value: this.untaggedCount(), label: '无 Tag', tone: 'red' },
   ]);
   constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
   refresh() { this.service.refresh(); }
+  selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); }
   isUntagged(x: ImageRow) { return !x.tag || ['<none>', 'none'].includes(x.tag.toLowerCase()); }
   async cleanup(kind: 'untagged' | 'unused') { const count = kind === 'untagged' ? this.untaggedCount() : this.unusedCount(); const label = kind === 'untagged' ? '无 Tag' : '未使用'; if (!count || !(await this.confirm.open({ title: `清理${label}镜像`, message: `确定清理 ${count} 个${label}镜像吗？`, confirmText: '确认清理', danger: true }))) return; this.cleaning.set(true); this.service.cleanup(kind).subscribe({ next: r => { this.cleaning.set(false); if (r.code === 200) { this.toast.success(`已清理 ${r.data?.deleted ?? ''} 个${label}镜像`); } else this.toast.error(`清理失败：${r.msg || '未知错误'}`); }, error: e => { this.cleaning.set(false); this.toast.error(`清理失败：${e.error?.msg || e.message || '请求错误'}`); } }); }
   icon(x: ImageRow) { return this.icons.resolve(x.name, this.iconMap()); } fallback(e: Event) { (e.target as HTMLImageElement).src = this.icons.actionIcon('images'); }

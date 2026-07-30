@@ -1,6 +1,6 @@
 <dc-page-heading title="端口" subtitle="查看所有容器使用的端口">
   <div page-heading-actions>
-    <button class="btn btn-primary" (click)="refresh()" title="刷新端口"><dc-icon name="refresh"></dc-icon>刷新</button>
+    <button class="btn text-white bg-blue" (click)="refresh()" title="刷新端口"><dc-icon name="refresh"></dc-icon>刷新</button>
   </div>
 </dc-page-heading>
 
@@ -11,24 +11,22 @@
   <div class="alert warning-alert">⚠ 发现 {{ data().conflicts.length }} 个端口冲突：{{ data().conflicts.join('、') }}</div>
 }
 
-<dc-stats [items]="stats()" [columns]="2"></dc-stats>
+<dc-stats [items]="stats()" [columns]="2" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
 
 @if (groups().length) {
-  <section class="resource-grid page-scroll-area d-grid port-grid gap-16 mb-24">
+  <section class="responsive-card-grid resource-grid page-scroll-area d-grid port-grid gap-16 mb-24">
     @for (g of groups(); track g.containerName) {
       <dc-resource-card>
         <div resource-card-icon>
           <img class="resource-icon" [src]="icon(g)" [alt]="g.containerName" (error)="fallback($event)">
         </div>
-        <div resource-card-title>
-          <b class="d-block fs-16 text-ellipsis">{{ g.containerName }}</b>
-        </div>
-        <div resource-card-info class="d-flex flex-col gap-4 fs-12 text-muted">
+        <b resource-card-title class="d-block fs-16 text-ellipsis">{{ g.containerName }}</b>
+        <div resource-card-info class="fs-12 text-muted">
           <span class="d-block text-ellipsis">{{ g.project || '独立容器' }}</span>
         </div>
-        <div resource-card-content class="port-values d-flex flex-wrap justify-center gap-8 pt-14">
+        <div resource-card-content class="d-flex flex-wrap justify-center text-center gap-8">
           @for (p of g.ports; track $index) {
-            <span class="port-line d-block py-5 px-10 fs-12">{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
+            <span class="d-block text-port-detail rounded-7 py-5 px-10 fs-12">{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
           }
         </div>
       </dc-resource-card>

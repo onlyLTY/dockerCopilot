@@ -14,7 +14,7 @@
           <option [value]="opt">{{ updateLabel(opt) }}</option>
         }
       </select>
-      <button class="btn btn-primary" [disabled]="!updateDirty() || updateSaving()" (click)="saveUpdate()">{{ updateSaving() ? '保存中…' : '保存' }}</button>
+      <button class="btn text-white bg-blue" [disabled]="!updateDirty() || updateSaving()" (click)="saveUpdate()">{{ updateSaving() ? '保存中…' : '保存' }}</button>
     </div>
   </div>
   <p class="settings-hint mt-16 pt-14 fs-12 text-muted">当前：{{ updateLabel(updateInterval()) }}</p>
@@ -30,7 +30,7 @@
           <option [value]="opt">{{ backupLabel(opt) }}</option>
         }
       </select>
-      <button class="btn btn-primary" [disabled]="!backupDirty() || backupSaving()" (click)="saveBackup()">{{ backupSaving() ? '保存中…' : '保存' }}</button>
+      <button class="btn text-white bg-blue" [disabled]="!backupDirty() || backupSaving()" (click)="saveBackup()">{{ backupSaving() ? '保存中…' : '保存' }}</button>
     </div>
   </div>
   <p class="settings-hint mt-16 pt-14 fs-12 text-muted">当前：{{ backupLabel(backupInterval()) }}</p>

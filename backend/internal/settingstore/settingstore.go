@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -49,10 +50,11 @@ var settingsMu sync.Mutex
 
 // Settings 应用级设置，持久化到 /data/config/appSettings.json
 type Settings struct {
-	UpdateCheckInterval string `json:"updateCheckInterval"`
-	AutoBackupInterval  string `json:"autoBackupInterval"`
-	LogLevel            string `json:"logLevel"`
-	Retention           int    `json:"retention"`
+	UpdateCheckInterval     string   `json:"updateCheckInterval"`
+	AutoBackupInterval      string   `json:"autoBackupInterval"`
+	LogLevel                string   `json:"logLevel"`
+	Retention               int      `json:"retention"`
+	IgnoredContainerUpdates []string `json:"ignoredContainerUpdates,omitempty"`
 }
 
 // SettingsPath 设置文件路径。可用 APP_SETTINGS_PATH 覆盖，便于测试。
@@ -90,6 +92,7 @@ func load() Settings {
 	if stored.Retention >= minRetention && stored.Retention <= maxRetention {
 		s.Retention = stored.Retention
 	}
+	s.IgnoredContainerUpdates = normalizeIgnoredContainers(stored.IgnoredContainerUpdates)
 	return s
 }
 
@@ -114,7 +117,97 @@ func update(fn func(*Settings) error) error {
 	return save(s)
 }
 
-// ===== 更新检查频率 =====
+// ===== 容器更新忽略 =====
+
+func normalizeIgnoredContainers(items []string) []string {
+	seen := make(map[string]struct{}, len(items))
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		item = filepath.Base(strings.TrimSpace(item))
+		if item == "" || item == "." {
+			continue
+		}
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		result = append(result, item)
+	}
+	return result
+}
+
+// IsContainerUpdateIgnored 判断指定容器名称是否永久忽略更新提示。
+func IsContainerUpdateIgnored(name string) bool {
+	name = filepath.Base(strings.TrimSpace(name))
+	if name == "." || name == "" {
+		return false
+	}
+	for _, ignored := range load().IgnoredContainerUpdates {
+		if ignored == name {
+			return true
+		}
+	}
+	return false
+}
+
+// SetContainerUpdateIgnored 设置或取消指定容器名称的更新忽略状态。
+func SetContainerUpdateIgnored(name string, ignored bool) error {
+	name = filepath.Base(strings.TrimSpace(name))
+	if name == "." || name == "" {
+		return fmt.Errorf("容器名称不能为空")
+	}
+	return update(func(s *Settings) error {
+		items := normalizeIgnoredContainers(s.IgnoredContainerUpdates)
+		found := false
+		for _, item := range items {
+			if item == name {
+				found = true
+				break
+			}
+		}
+		if ignored {
+			if !found {
+				items = append(items, name)
+			}
+			s.IgnoredContainerUpdates = items
+			return nil
+		}
+		filtered := make([]string, 0, len(items))
+		for _, item := range items {
+			if item != name {
+				filtered = append(filtered, item)
+			}
+		}
+		s.IgnoredContainerUpdates = filtered
+		return nil
+	})
+}
+
+// RenameContainerUpdateIgnore 将容器重命名后的忽略状态迁移到新名称。
+func RenameContainerUpdateIgnore(oldName, newName string) error {
+	oldName = filepath.Base(strings.TrimSpace(oldName))
+	newName = filepath.Base(strings.TrimSpace(newName))
+	if oldName == "" || oldName == "." || newName == "" || newName == "." || oldName == newName {
+		return nil
+	}
+	return update(func(s *Settings) error {
+		items := normalizeIgnoredContainers(s.IgnoredContainerUpdates)
+		found := false
+		filtered := make([]string, 0, len(items)+1)
+		for _, item := range items {
+			if item == oldName {
+				found = true
+				continue
+			}
+			filtered = append(filtered, item)
+		}
+		if found {
+			filtered = append(filtered, newName)
+		}
+		s.IgnoredContainerUpdates = normalizeIgnoredContainers(filtered)
+		return nil
+	})
+}
 
 // UpdateCheckOptions 返回可选的更新检查频率（供前端下拉展示）。
 func UpdateCheckOptions() []string {

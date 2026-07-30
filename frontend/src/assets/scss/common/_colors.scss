@@ -63,10 +63,7 @@ $colors: (
 }
 
 @each $name, $color in $colors {
-  $name-string: "#{$name}";
-  @if string.slice($name-string, -5) != "-dark" {
-    .text-#{"" + $name} { color: var(--#{"" + $name}) !important; }
-    .bg-#{"" + $name} { background: var(--#{"" + $name}) !important; }
-    .border-#{"" + $name} { border-color: var(--#{"" + $name}) !important; }
-  }
+  .text-#{$name} { color: var(--#{$name}) !important; }
+  .bg-#{$name} { background: var(--#{$name}) !important; }
+  .border-#{$name} { border-color: var(--#{$name}) !important; }
 }

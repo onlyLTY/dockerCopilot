@@ -121,6 +121,17 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: container.UpdateHandler(serverCtx),
 			},
 			{
+				Method:  http.MethodPost,
+				Path:    "/container/:id/update-ignore",
+				Handler: container.UpdateIgnoreHandler(serverCtx, true),
+			},
+			{
+				Method:  http.MethodDelete,
+				Path:    "/container/:id/update-ignore",
+				Handler: container.UpdateIgnoreHandler(serverCtx, false),
+			},
+
+			{
 				Method:  http.MethodGet,
 				Path:    "/container/backup",
 				Handler: container.BackupHandler(serverCtx),

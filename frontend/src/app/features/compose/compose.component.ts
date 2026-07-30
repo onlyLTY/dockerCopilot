@@ -32,13 +32,16 @@ export class ComposeComponent {
   });
   readonly loading = this.service.cache.loading;
   readonly iconMap = computed(() => this.icons.cache.data() || {});
+  readonly filter = signal('all');
+  readonly filteredProjects = computed(() => (this.data()?.projects || []).filter(p => this.filter() === 'all' || p.status === this.filter()));
   readonly stats = computed<readonly StatItem[]>(() => {
     const summary = this.data()?.summary;
     return [
-      { value: summary?.total || 0, label: '项目总数' },
-      { value: summary?.using || 0, label: '使用中', tone: 'green' },
-      { value: summary?.stopped || 0, label: '已停止', tone: 'amber' },
-      { value: summary?.unused || 0, label: '未使用', tone: 'violet' },
+      { key: 'all', value: summary?.total || 0, label: '项目总数' },
+      { key: 'using', value: summary?.using || 0, label: '使用中', tone: 'green' },
+      { key: 'stopped', value: summary?.stopped || 0, label: '已停止', tone: 'amber' },
+      { key: 'unused', value: summary?.unused || 0, label: '未使用', tone: 'violet' },
+      { key: 'unknown', value: summary?.unknown || 0, label: '未知', tone: 'red' },
     ];
   });
   readonly selectionMode = signal(false); readonly selected = signal<Set<string>>(new Set()); readonly cleanupBusy = signal(false);
@@ -46,6 +49,7 @@ export class ComposeComponent {
   readonly composeDialog = computed(() => this.editorProject() ? 'edit' : this.showCreate() ? 'create' : 'closed');
   constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
   refresh() { this.service.refresh(); }
+  selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); this.selected.set(new Set()); }
   openEditor(p: ComposeProject) { const normalized = { ...p, files: Array.isArray(p.files) ? p.files : [], containers: Array.isArray(p.containers) ? p.containers : [], ports: Array.isArray(p.ports) ? p.ports : [] }; this.editorProject.set(normalized); this.preview.set(undefined); this.pullImages.set(false); this.message.set(''); this.messageType.set(''); const f = normalized.files.find(x => x.name === 'compose.yaml') || normalized.files[0]; if (f) this.openFile(f.name); }
   openFile(n: string) { const ep = this.editorProject(); if (!ep) return; this.filename.set(n); this.service.file(ep.id, n).subscribe({ next: r => r.code === 200 ? (this.content.set(r.data.content), this.version.set(r.data.version), this.message.set('')) : this.showError(r.msg, '读取文件'), error: e => this.showError(e.error?.msg || '读取文件失败', '读取文件') }); }
   save() { const ep = this.editorProject(); if (!ep) return; this.service.update(ep.id, this.filename(), this.content(), this.version()).subscribe({ next: r => r.code === 200 ? (this.version.set(r.data.version), this.message.set('已保存')) : this.showError(r.msg, '保存文件'), error: e => this.showError(e.error?.msg || '保存失败', '保存文件') }); }

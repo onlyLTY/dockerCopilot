@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { TaskService } from '../../core/task.service';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -22,13 +22,16 @@ export class TasksComponent {
   readonly activeCount = this.tasks.activeCount;
   readonly doneCount = computed(() => this.list().filter(t => t.isDone && !t.failed).length);
   readonly failedCount = computed(() => this.list().filter(t => t.failed).length);
+  readonly filter = signal('all');
+  readonly filteredTasks = computed(() => this.list().filter(t => this.filter() === 'all' || (this.filter() === 'active' ? !t.isDone : this.filter() === 'done' ? t.isDone && !t.failed : t.failed)));
   readonly stats = computed<readonly StatItem[]>(() => [
-    { value: this.list().length, label: '总任务' },
-    { value: this.activeCount(), label: '进行中', tone: 'amber' },
-    { value: this.doneCount(), label: '已完成', tone: 'green' },
-    { value: this.failedCount(), label: '失败', tone: 'red' },
+    { key: 'all', value: this.list().length, label: '总任务' },
+    { key: 'active', value: this.activeCount(), label: '进行中', tone: 'amber' },
+    { key: 'done', value: this.doneCount(), label: '已完成', tone: 'green' },
+    { key: 'failed', value: this.failedCount(), label: '失败', tone: 'red' },
   ]);
 
+  selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); }
   view(taskID: string) { this.tasks.view(taskID); }
   remove(taskID: string) { this.tasks.remove(taskID); }
   clearDone() { this.tasks.clearDone(); }

@@ -12,10 +12,15 @@
 }
 
 /* ===== 资源网格 / 卡片（容器、镜像、项目、端口共用） ===== */
+.responsive-card-grid,
 .resource-grid,
-.image-grid {
+.image-grid,
+.icon-grid,
+.backup-card-grid {
   min-width: 0;
   overflow-x: hidden;
+}
+.responsive-card-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .resource-icon {
@@ -25,6 +30,7 @@
   height: 48px;
   max-height: 48px;
   object-fit: contain;
+  margin-right: 6px;
 }
 .resource-icon-wrap { position: relative; }
 .resource-icon-wrap .card-select {
@@ -34,18 +40,18 @@
   background: color-mix(in srgb, var(--white) 82%, transparent);
 }
 .resource-icon-wrap .card-select input { margin: 0; }
-.resource-card-title b,
-.resource-card-title span,
-.resource-card-title small,
-.resource-card-meta span,
-.resource-card-meta small {
+[resource-card-title],
+[resource-card-title] span,
+[resource-card-title] small,
+[resource-card-info] span,
+[resource-card-info] small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.resource-card-title b { color: var(--black); }
-.resource-card-meta span,
-.resource-card-meta small { color: var(--muted); }
+[resource-card-title] { color: var(--black); }
+[resource-card-info] span,
+[resource-card-info] small { color: var(--muted); }
 .update-badge {
   flex: none; border-radius: 20px; line-height: 1.6;
   background: var(--purple-soft); color: var(--purple); overflow: visible;
@@ -73,25 +79,10 @@
 .status-badge.unused { background: var(--purple-soft); color: var(--purple); }
 .status-badge.unknown { background: var(--red-soft); color: var(--red); }
 
-/* ===== 端口卡 ===== */
-.port-values {
-  border-top: 1px solid var(--line);
-  flex-wrap: wrap; justify-content: center;
-  text-align: center;
-}
-.port-values .port-line {
-  border-radius: 7px;
-  background: var(--port-detail-bg);
-  color: var(--port-detail);
-  text-align: center;
-}
-
 /* ===== 图标库 ===== */
-.icon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .empty { text-align: center; grid-column: 1 / -1; }
 
 /* ===== 备份 ===== */
-.backup-card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .backup-card {
   background: var(--white); border: 1px solid var(--line); border-radius: 14px;
   box-shadow: 0 8px 20px var(--shadow);
@@ -100,8 +91,4 @@
 .backup-card-body b { color: var(--black); }
 .backup-card-body small {
   color: var(--muted); white-space: normal; overflow-wrap: anywhere; word-break: break-word;
-}
-.file-badge {
-  border-radius: 5px;
-  background: var(--blue-soft); color: var(--blue);
 }

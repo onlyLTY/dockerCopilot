@@ -2,53 +2,44 @@
   <div page-heading-actions>
     @if (selectionMode()) {
       <label class="select-all heading-select-all"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
-      <span class="heading-selected text-muted fs-12">已选 {{ selectedCount() }} 个</span>
-      <button class="btn btn-secondary gap-8 text-green" [disabled]="!selectedCount() || busy()" (click)="bulkStart()"><dc-icon name="start"></dc-icon>批量启动</button>
-      <button class="btn btn-secondary gap-8 text-red" [disabled]="!selectedCount() || busy()" (click)="bulkStop()"><dc-icon name="stop"></dc-icon>批量停止</button>
-      <button class="btn btn-secondary gap-8 text-purple" [disabled]="!selectedCount() || busy() || hasActiveUpdates()" (click)="bulkUpdate()"><dc-icon name="update"></dc-icon>批量更新</button>
+      <span class="heading-selected text-muted fs-10">已选{{ selectedCount() }}</span>
+      <button class="btn text-secondary-text bg-secondary-bg gap-8 text-green" [disabled]="!selectedCount() || busy()" (click)="bulkStart()" title="批量启动容器"><dc-icon name="start"></dc-icon>启动</button>
+      <button class="btn text-secondary-text bg-secondary-bg gap-8 text-red" [disabled]="!selectedCount() || busy()" (click)="bulkStop()" title="批量停止容器"><dc-icon name="stop"></dc-icon>停止</button>
+      <button class="btn text-secondary-text bg-secondary-bg gap-8 text-purple" [disabled]="!selectedCount() || busy() || hasActiveUpdates()" (click)="bulkUpdate()" title="批量更新容器"><dc-icon name="update"></dc-icon>批量更新</button>
     }
-    <button class="btn btn-secondary gap-8" (click)="toggleSelection()" title="批量选择容器"><dc-icon name="edit"></dc-icon>{{ selectionMode() ? '退出批量' : '批量选择' }}</button>
-    <button class="btn btn-secondary gap-8" [disabled]="checking()" (click)="checkUpdate()" title="检查所有容器是否有镜像更新"><dc-icon name="update"></dc-icon>{{ checking() ? '检查中…' : '检查更新' }}</button>
-    <button class="btn btn-primary gap-8" (click)="refresh()" title="刷新容器"><dc-icon name="refresh"></dc-icon>刷新</button>
+    <button class="btn text-secondary-text bg-secondary-bg gap-8" (click)="toggleSelection()" title="批量选择容器"><dc-icon name="edit"></dc-icon>{{ selectionMode() ? '退出批量' : '批量选择' }}</button>
+
+    <button class="btn text-secondary-text bg-secondary-bg gap-8 text-purple" [disabled]="!availableUpdateCount() || busy() || hasActiveUpdates()" (click)="updateAll()" title="更新所有有新版本且未忽略的容器"><dc-icon name="update"></dc-icon>一键更新 ({{ availableUpdateCount() }})</button>
+    <button class="btn text-secondary-text bg-secondary-bg gap-8" [disabled]="checking()" (click)="checkUpdate()" title="检查所有容器是否有镜像更新"><dc-icon name="update"></dc-icon>{{ checking() ? '检查中…' : '检查更新' }}</button>
+    <button class="btn text-white bg-blue gap-8" (click)="refresh()" title="刷新容器"><dc-icon name="refresh"></dc-icon>刷新</button>
   </div>
 </dc-page-heading>
 
-<dc-stats [items]="stats()" [columns]="4"></dc-stats>
+<dc-stats [items]="stats()" [columns]="5" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
 
-@if (containers().length) {
-  <section class="resource-grid page-scroll-area d-grid dense-grid gap-16 mb-24">
-    @for (item of containers(); track item.id) {
+@if (filteredContainers().length) {
+  <section class="responsive-card-grid resource-grid page-scroll-area d-grid dense-grid gap-16 mb-24">
+    @for (item of filteredContainers(); track item.id) {
       <dc-resource-card [selected]="selectionMode() && isSelected(item.id)">
         <div resource-card-icon class="resource-icon-wrap">
           <img class="resource-icon" [src]="icon(item)" [alt]="item.name" (error)="fallback($event)">
-          @if (selectionMode()) {
-            <label class="card-select d-grid place-items-center"><input type="checkbox" [checked]="isSelected(item.id)" (change)="toggleSelect(item.id)"></label>
-          }
+          @if (selectionMode()) { <label class="card-select d-grid place-items-center"><input type="checkbox" [checked]="isSelected(item.id)" (change)="toggleSelect(item.id)"></label> }
         </div>
-        <div resource-card-title>
-          <b class="d-flex items-center gap-8 min-w-0 fs-16">
-            <span class="text-ellipsis min-w-0">{{ item.name }}</span>
-            @if (item.haveUpdate) {
-              <small class="update-badge d-inline-block py-2 px-8 fs-10" title="有新版本可更新">可更新</small>
-            }
-          </b>
-        </div>
-        <div resource-card-info class="d-flex flex-col gap-4 fs-12 text-muted">
-          <span class="d-block text-ellipsis">{{ item.usingImage }}</span>
-          <small class="d-block" [class.text-green]="isRunning(item)">{{ statusText(item) }}</small>
-        </div>
-        <div resource-card-actions class="d-flex gap-6">
-          @if (isRunning(item)) {
-            <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="stop(item)"><dc-icon name="stop"></dc-icon>停止</button>
-          } @else {
-            <button class="btn text-green border-1 py-8 px-7 fs-12" (click)="start(item)"><dc-icon name="start"></dc-icon>启动</button>
-          }
+        <b resource-card-title class="d-flex items-center gap-8 min-w-0 fs-16">
+          <span class="text-ellipsis min-w-0">{{ item.name }}</span>
+          @if (item.haveUpdate) { <small class="update-badge d-inline-block py-2 px-8 fs-10" title="有新版本可更新">可更新</small> }
+          @if (item.updateIgnored) { <small class="status-badge d-inline-block py-2 px-8 fs-10">已忽略</small> }
+        </b>
+        <div resource-card-info class="fs-12 text-muted"><span class="d-block text-ellipsis">{{ item.usingImage }}</span><small class="d-block" [class.text-green]="isRunning(item)">{{ statusText(item) }}</small></div>
+        <div resource-card-actions>
+          @if (isRunning(item)) { <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="stop(item)"><dc-icon name="stop"></dc-icon>停止</button> } @else { <button class="btn text-green border-1 py-8 px-7 fs-12" (click)="start(item)"><dc-icon name="start"></dc-icon>启动</button> }
           <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="restart(item)"><dc-icon name="restart"></dc-icon>重启</button>
           <button class="btn text-purple border-1 py-8 px-7 fs-12" [class.has-update]="item.haveUpdate" [disabled]="activeUpdateIds().has(item.id)" (click)="update(item)"><dc-icon name="update"></dc-icon>{{ activeUpdateIds().has(item.id) ? '更新中' : '更新' }}</button>
+          @if (item.updateIgnored) { <button class="btn text-blue border-1 py-8 px-7 fs-12" [disabled]="updateIgnoreBusyIds().has(item.id)" (click)="restoreUpdate(item)"><dc-icon name="update"></dc-icon>{{ updateIgnoreBusyIds().has(item.id) ? '处理中' : '恢复检测' }}</button> } @else { <button class="btn text-muted border-1 py-8 px-7 fs-12" [disabled]="updateIgnoreBusyIds().has(item.id)" (click)="ignoreUpdate(item)"><dc-icon name="close"></dc-icon>{{ updateIgnoreBusyIds().has(item.id) ? '处理中' : '忽略更新' }}</button> }
         </div>
       </dc-resource-card>
     }
   </section>
 } @else {
-  <dc-page-state [loading]="loading()" [error]="error()" emptyText="暂无容器"></dc-page-state>
+  <dc-page-state [loading]="loading()" [error]="error()" emptyText="暂无匹配容器"></dc-page-state>
 }

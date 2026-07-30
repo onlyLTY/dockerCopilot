@@ -5,13 +5,13 @@
       <span class="heading-selected text-muted fs-12">已选 {{ selected().size }} 个</span>
       <button class="btn text-red" [disabled]="!selected().size || busy()" (click)="bulkRemove()"><dc-icon name="delete"></dc-icon>批量删除</button>
     }
-    <button class="btn btn-secondary" (click)="toggleSelection()"><dc-icon name="edit"></dc-icon>{{ selectionMode() ? '退出批量' : '批量选择' }}</button>
-    <button class="btn btn-primary" (click)="openUpload()"><dc-icon name="upload"></dc-icon>上传图标</button>
+    <button class="btn text-secondary-text bg-secondary-bg" (click)="toggleSelection()"><dc-icon name="edit"></dc-icon>{{ selectionMode() ? '退出批量' : '批量选择' }}</button>
+    <button class="btn text-white bg-blue" (click)="openUpload()"><dc-icon name="upload"></dc-icon>上传图标</button>
   </div>
 </dc-page-heading>
 
 <section class="page-scroll-area">
-  <div class="icon-grid d-grid gap-16">
+  <div class="responsive-card-grid icon-grid d-grid gap-16">
     @for (item of filtered(); track item[0]) {
       <dc-resource-card [selected]="selectionMode() && isSelected(item[0])">
         <div resource-card-icon class="resource-icon-wrap">
@@ -22,9 +22,7 @@
             </label>
           }
         </div>
-        <div resource-card-title>
-          <b class="d-block fs-16 text-ellipsis">{{ item[0] }}</b>
-        </div>
+          <b resource-card-title class="d-block fs-16 text-ellipsis">{{ item[0] }}</b>
         <div resource-card-actions>
           <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
           <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
@@ -55,8 +53,8 @@
         }
       </div>
       <div class="modal-actions d-flex justify-end gap-10 pt-18">
-        <button class="btn btn-secondary" (click)="show.set(false)">取消</button>
-        <button class="btn btn-primary" [disabled]="!file() || !name.trim() || uploading()" (click)="upload()">{{ uploading() ? '上传中…' : '保存图标' }}</button>
+        <button class="btn text-secondary-text bg-secondary-bg" (click)="show.set(false)">取消</button>
+        <button class="btn text-white bg-blue" [disabled]="!file() || !name.trim() || uploading()" (click)="upload()">{{ uploading() ? '上传中…' : '保存图标' }}</button>
       </div>
     </section>
   </div>
