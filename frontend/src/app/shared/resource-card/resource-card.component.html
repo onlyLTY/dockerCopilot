@@ -1,8 +1,10 @@
 <article class="resource-card" [class.selected]="selected()">
   <div class="resource-card-main">
     <ng-content select="[resource-card-icon]"></ng-content>
-    <ng-content select="[resource-card-title]"></ng-content>
-    <ng-content select="[resource-card-info]"></ng-content>
+    <div class="resource-card-copy">
+      <ng-content select="[resource-card-title]"></ng-content>
+      <ng-content select="[resource-card-info]"></ng-content>
+    </div>
   </div>
   <ng-content select="[resource-card-content]"></ng-content>
   <ng-content select="[resource-card-actions]"></ng-content>

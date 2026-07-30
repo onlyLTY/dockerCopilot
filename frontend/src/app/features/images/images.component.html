@@ -15,13 +15,13 @@
         <div resource-card-icon>
           <img class="resource-icon" [src]="icon(image)" [alt]="image.name" (error)="fallback($event)">
         </div>
-          <b resource-card-title class="d-flex items-center gap-8 min-w-0 fs-16">
-            <span class="text-ellipsis min-w-0">{{ image.name || 'None' }}</span>
-            <small class="status-badge d-inline-block py-2 px-8 fs-10" [class.used]="image.inUsed">{{ image.inUsed ? '使用中' : '未使用' }}</small>
-          </b>
+        <div resource-card-title class="fs-16">
+          <span class="text-ellipsis min-w-0">{{ image.name || 'None' }}</span>
+          <small class="status-badge py-2 px-8 fs-10" [class.used]="image.inUsed" [class.unused]="!image.inUsed">{{ image.inUsed ? '使用中' : '未使用' }}</small>
+        </div>
         <div resource-card-info class="fs-12 text-muted">
-          <span class="d-flex items-center justify-between text-nowrap overflow-hidden gap-10 min-w-0">
-            <span class="text-ellipsis min-w-0">{{ image.tag || 'None' }}</span>
+          <span class="d-flex items-center gap-10 text-nowrap overflow-hidden min-w-0">
+            <span class="text-ellipsis min-w-0 fs-13">{{ image.tag || 'None' }}</span>
             <span class="flex-none">{{ image.size }}</span>
           </span>
           @if (image.createTime) {
@@ -29,9 +29,9 @@
           }
         </div>
         <div resource-card-actions>
-          <button class="btn text-red-dark border-1 py-8 px-7 fs-12" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
+          <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
           @if (!image.inUsed) {
-            <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
+            <button class="btn text-white bg-critical py-8 px-7 fs-12" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
           }
         </div>
       </dc-resource-card>

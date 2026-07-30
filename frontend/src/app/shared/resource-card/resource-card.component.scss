@@ -26,14 +26,14 @@
   min-width: 0;
   grid-template-columns: 48px minmax(0, 1fr);
   align-items: center;
-  padding: 0px 0px 6px 0px;
+  column-gap: 6px;
+  padding: 0 0 6px;
   border-bottom: 1px solid var(--line) !important;
 }
 
 :host ::ng-deep [resource-card-icon] {
   display: grid;
   grid-column: 1;
-  grid-row: 1 / span 2;
   width: 48px;
   min-width: 48px;
   height: 48px;
@@ -42,21 +42,27 @@
   place-items: center;
 }
 
+:host ::ng-deep .resource-card-copy {
+  display: flex;
+  min-width: 0;
+  min-height: 48px;
+  grid-column: 2;
+  flex-direction: column;
+  justify-content: center;
+}
+
 :host ::ng-deep [resource-card-title] {
   display: flex;
-  grid-column: 2;
-  grid-row: 1;
   min-width: 0;
   min-height: 24px;
   align-items: center;
+  gap: 8px;
+  font-weight: 700;
 }
 
 :host ::ng-deep [resource-card-info] {
   display: flex;
-  grid-column: 2;
-  grid-row: 2;
   min-width: 0;
-  min-height: 0;
   max-height: 36px;
   flex-direction: column;
   justify-content: center;

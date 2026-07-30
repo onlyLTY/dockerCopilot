@@ -58,6 +58,7 @@
 }
 .modal-head h2 { color: var(--black); }
 .modal-close {
+  position: relative;
   display: grid;
   width: 36px;
   height: 36px;
@@ -75,7 +76,18 @@
   color: var(--blue);
   outline: 0;
 }
-.modal-close dc-icon { --icon-size: 24px; }
+.modal-close dc-icon { display: none; }
+.modal-close::before,
+.modal-close::after {
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  content: '';
+  transform: rotate(45deg);
+}
+.modal-close::after { transform: rotate(-45deg); }
 .modal-body {
   min-height: 0;
   padding: 2px 4px 4px 0;
@@ -111,17 +123,41 @@
 .compose-body { min-height: 0; overflow: hidden !important; }
 .file-tabs { flex: none; padding: 10px 0 0; overflow-x: auto; }
 .file-tabs button { border: 0; background: var(--page-bg); color: var(--muted); white-space: nowrap; }
-.code-editor {
-  width: 100%;
-  height: min(480px, 58vh);
-  min-height: 260px;
+.code-editor-wrap {
+  position: relative;
   flex: 1 1 auto;
-  border: 0;
-  resize: none;
-  overflow-y: auto;
-  padding: 22px;
+  display: flex;
+  min-height: 260px;
+  height: min(480px, 58vh);
+}
+.code-gutter {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 44px; flex: none;
+  overflow: hidden;
+  text-align: right;
+  color: var(--muted);
+  padding: 22px 8px 22px 0;
   font: 14px/1.65 "SFMono-Regular", Consolas, monospace;
-  outline: 0;
+  pointer-events: none; user-select: none;
+  z-index: 1; opacity: .55; box-sizing: border-box;
+}
+.code-gutter span { display: block; }
+.code-editor-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 22px; color: var(--muted);
+  white-space: pre-wrap; z-index: 2;
+  background: rgba(0, 0, 0, .85);
+}
+.code-editor-error { color: var(--red); }
+.code-editor {
+  width: 100%; height: 100%;
+  flex: 1 1 auto;
+  border: 0; resize: none; overflow-y: auto;
+  padding: 22px 22px 22px 52px;
+  font: 14px/1.65 "SFMono-Regular", Consolas, monospace;
+  outline: 0; position: relative; z-index: 0;
 }
 .editor-foot {
   color: var(--muted);

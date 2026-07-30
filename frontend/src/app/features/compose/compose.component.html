@@ -5,7 +5,7 @@
   </div>
 </dc-page-heading>
 
-@if (messageType() === 'error' && data()?.projects?.length) {
+@if (messageType() === 'error' && (message() || '').trim()) {
   <div class="alert error-alert">ⓘ {{ message() }}</div>
 }
 
@@ -18,10 +18,10 @@
         <div resource-card-icon>
           <img class="resource-icon" [src]="icon(project)" [alt]="project.name || '项目'" (error)="fallback($event)">
         </div>
-          <b resource-card-title class="d-flex items-center gap-8 min-w-0 fs-16">
-            <span class="text-ellipsis min-w-0">{{ project.name || '未解析项目' }}</span>
-            <small class="status-badge d-inline-block py-2 px-8 fs-10" [class.using]="project.status === 'using'" [class.stopped]="project.status === 'stopped'" [class.unused]="project.status === 'unused'" [class.unknown]="project.status === 'unknown'">{{ statusLabel(project.status) }}</small>
-          </b>
+        <div resource-card-title>
+          <span class="text-ellipsis min-w-0">{{ project.name || '未解析项目' }}</span>
+          <small class="status-badge py-2 px-8 fs-10" [class.using]="project.status === 'using'" [class.stopped]="project.status === 'stopped'" [class.unused]="project.status === 'unused'" [class.unknown]="project.status === 'unknown'">{{ statusLabel(project.status) }}</small>
+        </div>
         <div resource-card-info class="fs-12 text-muted">
           <span class="d-block text-ellipsis">{{ project.root }}</span>
           <small class="d-block">{{ project.containers.length }} 个容器 · {{ project.files.length }} 个文件 · {{ project.ports.length }} 个端口</small>
@@ -47,22 +47,30 @@
           </div>
           <button class="modal-close d-grid place-items-center" (click)="closeEditor()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
         </div>
-        <div class="modal-body compose-body d-flex flex-col">
+          <div class="modal-body compose-body d-flex flex-col">
           <div class="file-tabs d-flex gap-2">
             @for (file of ep.files; track file.name) {
-              <button class="file-tab py-9 px-14 fs-12" [class.text-white bg-blue]="filename() === file.name" [class.text-secondary-text bg-secondary-bg]="filename() !== file.name" (click)="openFile(file.name)">
+              <button class="file-tab py-9 px-14 fs-12" [class.text-white]="filename() === file.name" [class.bg-blue]="filename() === file.name" [class.text-secondary-text]="filename() !== file.name" [class.bg-secondary-bg]="filename() !== file.name" (click)="openFile(file.name)">
                 {{ file.name }}
               </button>
             }
           </div>
-          <textarea class="code-editor bg-black text-white p-22 fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" spellcheck="false"></textarea>
+          <div class="code-editor-wrap" [class.is-loading]="fileLoading()">
+            <div class="code-gutter bg-black" aria-hidden="true" [innerHTML]="lineNumbers()"></div>
+            <textarea class="code-editor bg-black text-white p-22 fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" (scroll)="onEditorScroll($event)" spellcheck="false"></textarea>
+            @if (fileLoading()) {
+              <div class="code-editor-overlay" role="status">正在读取 {{ filename() }}…</div>
+            } @else if (fileError()) {
+              <div class="code-editor-overlay code-editor-error" role="alert">{{ fileError() }}</div>
+            }
+          </div>
         </div>
         <div class="editor-foot d-flex items-center gap-16 pt-14 mt-14 fs-12">
           <label class="pull-images-option d-flex items-center gap-6 text-muted text-nowrap"><input type="checkbox" [checked]="pullImages()" (change)="pullImages.set($any($event.target).checked)">重新拉取镜像</label>
           <span class="message flex-1 min-w-0">{{ message() }}</span>
           <div class="editor-actions d-flex items-center gap-8">
-            <button class="btn text-secondary-text bg-secondary-bg" [disabled]="deployBusy()" (click)="validate()">格式校验</button>
-            <button class="btn text-white bg-blue" [disabled]="deployBusy()" (click)="redeploy()">{{ deployBusy() ? '部署中…' : '重新部署' }}</button>
+            <button class="btn text-secondary-text bg-secondary-bg" [disabled]="deployBusy() || fileLoading() || !!fileError()" (click)="validate()">格式校验</button>
+            <button class="btn text-white bg-blue" [disabled]="deployBusy() || fileLoading() || !!fileError()" (click)="redeploy()">{{ deployBusy() ? '部署中…' : '重新部署' }}</button>
           </div>
         </div>
       } @else {
@@ -74,13 +82,14 @@
         </div>
         <div class="modal-body compose-body d-flex flex-col">
           <label class="form-field d-block mt-20 fs-12">项目名称<input class="d-block mt-8 py-12 px-12" [(ngModel)]="projectName" placeholder="例如：my-app"></label>
-          <label class="form-field compose-config-field mt-12">
-            <textarea class="code-editor bg-black text-white p-12 fs-14" [(ngModel)]="projectContent" spellcheck="false" placeholder="请写入compose文件内容">
+          <label class="form-field compose-config-field mt-12 code-editor-wrap" [class.is-loading]="creating()">
+            <div class="code-gutter bg-black" aria-hidden="true" [innerHTML]="createLineNumbers()"></div>
+            <textarea class="code-editor bg-black text-white p-12 fs-14" [(ngModel)]="projectContent" (scroll)="onCreateScroll($event)" spellcheck="false" placeholder="请写入compose文件内容">
             </textarea>
           </label>
         </div>
         <div class="editor-foot d-flex items-center gap-16 pt-14 mt-14 fs-12">
-          <span class="message flex-1 min-w-0">{{ createValidated() ? '格式已通过，可创建或部署' : '' }}</span>
+          <span class="message flex-1 min-w-0 text-ellipsis" [class.text-red]="createErrorType() === 'error'" [class.text-green]="createErrorType() === 'success'">{{ createValidated() && !createError() ? '格式已通过，可创建或部署' : createError() }}</span>
           <button class="btn text-secondary-text bg-secondary-bg" (click)="validateCreate()">格式校验</button>
           <button class="btn text-secondary-text bg-secondary-bg" [disabled]="creating()" (click)="deployNewProject()">创建并部署</button>
           <button class="btn text-white bg-blue" [disabled]="creating()" (click)="createProject()">{{ creating() ? '创建中…' : '创建项目' }}</button>

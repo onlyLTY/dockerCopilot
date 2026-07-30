@@ -25,11 +25,11 @@
           <img class="resource-icon" [src]="icon(item)" [alt]="item.name" (error)="fallback($event)">
           @if (selectionMode()) { <label class="card-select d-grid place-items-center"><input type="checkbox" [checked]="isSelected(item.id)" (change)="toggleSelect(item.id)"></label> }
         </div>
-        <b resource-card-title class="d-flex items-center gap-8 min-w-0 fs-16">
+        <div resource-card-title>
           <span class="text-ellipsis min-w-0">{{ item.name }}</span>
           @if (item.haveUpdate) { <small class="update-badge d-inline-block py-2 px-8 fs-10" title="有新版本可更新">可更新</small> }
-          @if (item.updateIgnored) { <small class="status-badge d-inline-block py-2 px-8 fs-10">已忽略</small> }
-        </b>
+          @if (item.updateIgnored) { <small class="status-badge ignored py-2 px-8 fs-10">已忽略</small> }
+        </div>
         <div resource-card-info class="fs-12 text-muted"><span class="d-block text-ellipsis">{{ item.usingImage }}</span><small class="d-block" [class.text-green]="isRunning(item)">{{ statusText(item) }}</small></div>
         <div resource-card-actions>
           @if (isRunning(item)) { <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="stop(item)"><dc-icon name="stop"></dc-icon>停止</button> } @else { <button class="btn text-green border-1 py-8 px-7 fs-12" (click)="start(item)"><dc-icon name="start"></dc-icon>启动</button> }

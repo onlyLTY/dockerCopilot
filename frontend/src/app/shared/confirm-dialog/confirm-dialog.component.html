@@ -10,7 +10,7 @@
       </div>
       <div class="modal-actions d-flex justify-end pt-18">
         <button class="btn text-secondary-text bg-secondary-bg" (click)="confirm.close(false)">{{ dialog.options.cancelText || '取消' }}</button>
-        <button class="btn text-white bg-blue py-12 px-16" [class.text-white bg-red]="dialog.options.danger" (click)="confirm.close(true)">{{ dialog.options.confirmText || '确定' }}</button>
+        <button class="btn text-white py-12 px-16" [class.bg-blue]="!dialog.options.danger && !dialog.options.critical" [class.bg-red]="dialog.options.danger && !dialog.options.critical" [class.bg-critical]="dialog.options.critical" (click)="confirm.close(true)">{{ dialog.options.confirmText || '确定' }}</button>
       </div>
     </section>
   </div>

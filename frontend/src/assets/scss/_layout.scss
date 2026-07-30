@@ -4,18 +4,14 @@
 
 /* ===== 侧边栏 ===== */
 .sidebar {
-  position: fixed; inset: 0 auto 0 0; width: 260px; height: 100vh;
+  position: fixed; inset: 0 auto 0 0; width: 240px; height: 100vh;
   background: var(--white); border-right: 1px solid var(--line);
   padding: 12px 12px; z-index: 30; overflow: hidden;
 }
 
-.brand { flex: none;
-  padding: 0 8px 12px; border-bottom: 1px solid var(--line);
-}
 .brand.centered { justify-content: center; border: 0; padding: 0; }
 .brand-logo { width: 48px; height: 48px; border-radius: 14px; object-fit: contain; flex: none; }
-.brand strong { font-size: 16px; color: var(--black); white-space: nowrap; }
-.brand span { font-size: 12px; margin-top: 4px; white-space: nowrap; }
+
 
 /* ===== 导航菜单 ===== */
 nav {
@@ -38,35 +34,18 @@ nav a:hover dc-icon,
 nav a.active dc-icon { color: var(--blue); }
 
 /* ===== 侧边栏底部 ===== */
-.sidebar-bottom { flex: none; margin-top: auto; padding-top: 8px; }
-.sidebar-actions {
-  padding: 4px; margin-bottom: 14px;
-}
 .sidebar-actions button {
   width: 44px; height: 44px;
-  border: 0; border-radius: 10px; background: transparent; color: var(--muted);
+  border: 0; border-radius: 10px;
+  background: transparent; color: var(--muted);
+  transition: background-color .15s, color .15s;
 }
 .sidebar-actions button:hover,
-.sidebar-actions button:focus-visible { background: var(--page-bg); color: var(--blue); outline: 0; }
+.sidebar-actions button:focus-visible { background: var(--secondary-bg); color: var(--blue); outline: 0; }
 .sidebar-actions .theme-button.selected,
-.sidebar-actions .display-button.selected { background: var(--page-bg); color: var(--blue); }
-/* 退出：展开态靠右，去掉红色背景，仅图标为红色 */
-.sidebar-actions .sidebar-logout { margin-left: auto; color: var(--red); }
+.sidebar-actions .display-button.selected { background: var(--secondary-bg); color: var(--blue); }
 .sidebar-actions .sidebar-logout:hover,
-.sidebar-actions .sidebar-logout:focus-visible { background: var(--page-bg); color: var(--red); }
-
-/* ===== 版本卡片 ===== */
-.version-card {
-  padding: 0; border: 1px solid var(--line); border-radius: 12px;
-  overflow: hidden; background: var(--white);
-}
-.version-card-head {
-  padding: 14px 16px;
-}
-.version-card-head strong { color: var(--black); font-size: 16px; }
-
-
-
+.sidebar-actions .sidebar-logout:focus-visible { background: var(--secondary-bg); color: var(--red); }
 
 
 

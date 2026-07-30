@@ -15,6 +15,9 @@ $colors: (
   red: #e32635,
   red-dark: #ff7b83,
   red-soft: #fdecec,
+  critical: #b30c2b,
+  critical-dark: #ff4d6d,
+  critical-soft: #fbd9e0,
   green: #0a9b52,
   green-dark: #5ed490,
   green-soft: #e6f6ec,
@@ -22,7 +25,8 @@ $colors: (
   blue-dark: #5eb9e8,
   blue-soft: #eef4fb,
   purple: #8c36e8,
-  purple-soft: #8c36e814,
+  purple-dark: #bd8af4,
+  purple-soft: #7418d514,
   amber: #c99515,
   amber-dark: #e4b35f,
   amber-soft: #fff5e2,
@@ -63,7 +67,10 @@ $colors: (
 }
 
 @each $name, $color in $colors {
-  .text-#{$name} { color: var(--#{$name}) !important; }
-  .bg-#{$name} { background: var(--#{$name}) !important; }
-  .border-#{$name} { border-color: var(--#{$name}) !important; }
+  $name-string: "#{$name}";
+  @if string.slice($name-string, -5) != "-dark" {
+    .text-#{$name} { color: var(--#{$name}) !important; }
+    .bg-#{$name} { background: var(--#{$name}) !important; }
+    .border-#{$name} { border-color: var(--#{$name}) !important; }
+  }
 }

@@ -20,7 +20,7 @@
         <div resource-card-icon>
           <img class="resource-icon" [src]="icon(g)" [alt]="g.containerName" (error)="fallback($event)">
         </div>
-        <b resource-card-title class="d-block fs-16 text-ellipsis">{{ g.containerName }}</b>
+        <div resource-card-title class="fs-16">{{ g.containerName }}</div>
         <div resource-card-info class="fs-12 text-muted">
           <span class="d-block text-ellipsis">{{ g.project || '独立容器' }}</span>
         </div>

@@ -30,7 +30,6 @@
   height: 48px;
   max-height: 48px;
   object-fit: contain;
-  margin-right: 6px;
 }
 .resource-icon-wrap { position: relative; }
 .resource-icon-wrap .card-select {
@@ -66,18 +65,24 @@
 
 /* ===== 镜像卡：状态徽标 + 版本号一行带大小 + 发布时间 ===== */
 .status-badge {
-  border-radius: 20px; flex: none;
-  background: var(--red-soft); color: var(--red);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  border-radius: 20px;
+  flex: none;
+  line-height: 1.35;
+  background: var(--secondary-bg);
+  color: var(--secondary-text);
 }
-.status-badge.used { background: var(--green-soft); color: var(--green); }
-
-
-
-/* ===== 项目卡 ===== */
+.status-badge.used,
 .status-badge.using { background: var(--green-soft); color: var(--green); }
 .status-badge.stopped { background: var(--amber-soft); color: var(--amber); }
 .status-badge.unused { background: var(--purple-soft); color: var(--purple); }
-.status-badge.unknown { background: var(--red-soft); color: var(--red); }
+.status-badge.unknown,
+.status-badge.ignored { background: var(--secondary-bg); color: var(--muted); }
+
+/* ===== 项目卡 ===== */
 
 /* ===== 图标库 ===== */
 .empty { text-align: center; grid-column: 1 / -1; }

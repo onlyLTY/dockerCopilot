@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ComposeService, ComposeProject, ProjectsData } from '../../core/compose.service';
 import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
@@ -20,7 +21,24 @@ const defaultCompose = '';
   templateUrl: './compose.component.html',
 })
 export class ComposeComponent {
-  private readonly service = inject(ComposeService); private readonly icons = inject(IconService); private readonly toast = inject(ToastService); private readonly tasks = inject(TaskService); private readonly confirm = inject(ConfirmService);
+  private readonly service = inject(ComposeService); private readonly icons = inject(IconService); private readonly toast = inject(ToastService); private readonly tasks = inject(TaskService); private readonly confirm = inject(ConfirmService); private readonly sanitizer = inject(DomSanitizer);
+  // 行号：基于编辑器内容行数生成，外层 textarea 滚动时同步 gutter 的 scrollTop
+  readonly lineCount = computed(() => Math.max(1, (this.content() || '').split('\n').length));
+  readonly lineNumbers = computed<SafeHtml>(() => this.sanitizer.bypassSecurityTrustHtml(this.buildLines(this.lineCount())));
+  readonly createLineCount = computed(() => Math.max(1, (this.projectContent || '').split('\n').length));
+  readonly createLineNumbers = computed<SafeHtml>(() => this.sanitizer.bypassSecurityTrustHtml(this.buildLines(this.createLineCount())));
+  private buildLines(n: number): string {
+    let out = '';
+    for (let i = 1; i <= n; i++) out += `<span>${i}</span>`;
+    return out;
+  }
+  onEditorScroll(e: Event) { this.syncGutter(e); }
+  onCreateScroll(e: Event) { this.syncGutter(e); }
+  private syncGutter(e: Event) {
+    const ta = e.target as HTMLTextAreaElement;
+    const gutter = ta.parentElement?.querySelector('.code-gutter') as HTMLElement | null;
+    if (gutter) gutter.scrollTop = ta.scrollTop;
+  }
   // 项目数据、加载态来自服务常驻缓存
   readonly data = computed<ProjectsData | undefined>(() => {
     const value = this.service.cache.data();
@@ -45,16 +63,17 @@ export class ComposeComponent {
     ];
   });
   readonly selectionMode = signal(false); readonly selected = signal<Set<string>>(new Set()); readonly cleanupBusy = signal(false);
-  readonly editorProject = signal<ComposeProject | undefined>(undefined); readonly filename = signal(''); readonly content = signal(''); readonly version = signal(''); readonly message = signal(''); readonly messageType = signal(''); readonly pullImages = signal(false); readonly preview = signal<Record<string, any> | undefined>(undefined); readonly risks = signal<any[]>([]); readonly showCreate = signal(false); readonly creating = signal(false); projectName = ''; projectContent = defaultCompose; readonly createError = signal(''); readonly confirmDeploy = signal(false); readonly deployBusy = signal(false); readonly createPreview = signal<Record<string, any> | undefined>(undefined); readonly createValidated = signal(false);
+  readonly editorProject = signal<ComposeProject | undefined>(undefined); readonly filename = signal(''); readonly content = signal(''); readonly version = signal(''); readonly fileLoading = signal(false); readonly fileError = signal(''); readonly message = signal(''); readonly messageType = signal(''); readonly pullImages = signal(false); readonly preview = signal<Record<string, any> | undefined>(undefined); readonly risks = signal<any[]>([]); readonly showCreate = signal(false); readonly creating = signal(false); projectName = ''; projectContent = defaultCompose; readonly createError = signal(''); readonly createErrorType = signal<'error' | 'success' | ''>(''); readonly confirmDeploy = signal(false); readonly deployBusy = signal(false); readonly createPreview = signal<Record<string, any> | undefined>(undefined); readonly createValidated = signal(false);
   readonly composeDialog = computed(() => this.editorProject() ? 'edit' : this.showCreate() ? 'create' : 'closed');
   constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
   refresh() { this.service.refresh(); }
   selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); this.selected.set(new Set()); }
-  openEditor(p: ComposeProject) { const normalized = { ...p, files: Array.isArray(p.files) ? p.files : [], containers: Array.isArray(p.containers) ? p.containers : [], ports: Array.isArray(p.ports) ? p.ports : [] }; this.editorProject.set(normalized); this.preview.set(undefined); this.pullImages.set(false); this.message.set(''); this.messageType.set(''); const f = normalized.files.find(x => x.name === 'compose.yaml') || normalized.files[0]; if (f) this.openFile(f.name); }
-  openFile(n: string) { const ep = this.editorProject(); if (!ep) return; this.filename.set(n); this.service.file(ep.id, n).subscribe({ next: r => r.code === 200 ? (this.content.set(r.data.content), this.version.set(r.data.version), this.message.set('')) : this.showError(r.msg, '读取文件'), error: e => this.showError(e.error?.msg || '读取文件失败', '读取文件') }); }
+  openEditor(p: ComposeProject) { const normalized = { ...p, files: Array.isArray(p.files) ? p.files : [], containers: Array.isArray(p.containers) ? p.containers : [], ports: Array.isArray(p.ports) ? p.ports : [] }; this.editorProject.set(normalized); this.filename.set(''); this.content.set(''); this.version.set(''); this.fileLoading.set(false); this.fileError.set(''); this.preview.set(undefined); this.pullImages.set(false); this.message.set(''); this.messageType.set(''); const f = normalized.files.find(x => x.name === 'compose.yaml') || normalized.files[0]; if (f) this.openFile(f.name); else this.fileError.set('未找到 Compose 文件'); }
+  openFile(n: string) { const ep = this.editorProject(); if (!ep) return; this.filename.set(n); this.content.set(''); this.version.set(''); this.fileError.set(''); this.fileLoading.set(true); this.service.file(ep.id, n).subscribe({ next: r => { if (this.editorProject()?.id !== ep.id || this.filename() !== n) return; this.fileLoading.set(false); if (r.code === 200) { this.content.set(r.data.content); this.version.set(r.data.version); this.message.set(''); } else { this.fileError.set(r.msg || '读取文件失败'); } }, error: e => { if (this.editorProject()?.id !== ep.id || this.filename() !== n) return; this.fileLoading.set(false); this.fileError.set(e.error?.msg || '读取文件失败'); } }); }
   save() { const ep = this.editorProject(); if (!ep) return; this.service.update(ep.id, this.filename(), this.content(), this.version()).subscribe({ next: r => r.code === 200 ? (this.version.set(r.data.version), this.message.set('已保存')) : this.showError(r.msg, '保存文件'), error: e => this.showError(e.error?.msg || '保存失败', '保存文件') }); }
   validate() {
     const ep = this.editorProject(); if (!ep) return;
+    this.content.set(this.normalizeCompose(this.content()));
     this.service.validate(ep.id, this.filename(), this.content()).subscribe({
       next: r => r.code === 200 ? (this.message.set('校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务'), this.messageType.set('')) : this.showError(r.msg, '校验'),
       error: e => this.showError(e.error?.msg || '校验失败', '校验'),
@@ -115,40 +134,42 @@ export class ComposeComponent {
     });
   }
   newProject() { this.projectName = ''; this.projectContent = defaultCompose; this.createError.set(''); this.createValidated.set(false); this.showCreate.set(true); }
-  validateCreate() { const n = this.projectName.trim(); if (!n) { this.notifyComposeError('校验', '请输入项目名称'); return; } this.service.validate('', 'compose.yaml', this.projectContent).subscribe({ next: r => { if (r.code === 200) { this.createValidated.set(true); this.createError.set('格式校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务'); } else this.notifyComposeError('校验', r.msg); }, error: e => this.notifyComposeError('校验', e.error?.msg || '格式校验失败') }); }
+  validateCreate() { const n = this.projectName.trim(); if (!n) { this.setCreateError('请输入项目名称', 'error'); return; } this.projectContent = this.normalizeCompose(this.projectContent); this.service.validate('', 'compose.yaml', this.projectContent).subscribe({ next: r => { if (r.code === 200) { this.createValidated.set(true); this.setCreateError('格式校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务', 'success'); } else this.setCreateError(this.formatComposeError(r.msg), 'error'); }, error: e => this.setCreateError(this.formatComposeError(e.error?.msg || '格式校验失败'), 'error') }); }
   deployNewProject() { this.createProject(true); }
   createProject(deployAfterCreate = false) {
-    const n = this.projectName.trim(); if (!n) { this.notifyComposeError('创建', '请输入项目名称'); return; }
+    const n = this.projectName.trim(); if (!n) { this.setCreateError('请输入项目名称', 'error'); return; }
+    this.projectContent = this.normalizeCompose(this.projectContent);
     this.creating.set(true);
     this.service.createProject(n, 'compose.yaml', this.projectContent).subscribe({
       next: r => {
         this.creating.set(false);
-        if (r.code !== 200) { this.notifyComposeError('创建', r.msg); return; }
+        if (r.code !== 200) { this.setCreateError(this.formatComposeError(r.msg || '创建项目失败'), 'error'); return; }
         if (!deployAfterCreate) { this.closeCreate(); this.toast.success('项目已创建'); return; }
         this.createAndPreview(r.data.projectId);
       },
-      error: e => { this.creating.set(false); this.notifyComposeError('创建', e.error?.msg || '创建项目失败'); },
+      error: e => { this.creating.set(false); this.setCreateError(this.formatComposeError(e.error?.msg || '创建项目失败'), 'error'); },
     });
   }
   private createAndPreview(projectId: string) {
     this.service.projects().subscribe({
       next: projects => {
         const project = projects.data?.projects?.find(item => item.id === projectId);
-        if (!project) { this.notifyComposeError('读取项目', '项目已创建，但读取项目详情失败'); return; }
+        if (!project) { this.setCreateError('项目已创建，但读取项目详情失败', 'error'); return; }
         const file = project.files.find(item => item.name === 'compose.yaml') || project.files[0];
-        if (!file) { this.notifyComposeError('读取项目', '项目已创建，但没有找到 Compose 文件'); return; }
+        if (!file) { this.setCreateError('项目已创建，但没有找到 Compose 文件', 'error'); return; }
         this.service.deployPreview(project.id, file.name).subscribe({
           next: preview => {
-            if (preview.code !== 200) { this.notifyComposeError('部署预览', preview.msg || '部署预览失败'); return; }
+            if (preview.code !== 200) { this.setCreateError(this.formatComposeError(preview.msg || '部署预览失败'), 'error'); return; }
             this.closeCreate();
             this.askDeployment(project, file.name, preview.data);
           },
-          error: e => this.notifyComposeError('部署预览', e.error?.msg || '部署预览失败'),
+          error: e => this.setCreateError(this.formatComposeError(e.error?.msg || '部署预览失败'), 'error'),
         });
       },
-      error: () => this.notifyComposeError('读取项目', '项目已创建，但读取项目详情失败'),
+      error: () => this.setCreateError('项目已创建，但读取项目详情失败', 'error'),
     });
   }
+
   enterSelection() { this.selectionMode.set(true); }
   exitSelection() { this.selectionMode.set(false); this.selected.set(new Set()); }
   isSelected(id: string) { return this.selected().has(id); }
@@ -172,14 +193,35 @@ export class ComposeComponent {
   private finishCleanup(total: number, failed: number) { this.cleanupBusy.set(false); this.exitSelection(); this.service.refresh(); if (failed) this.toast.error(`项目清理完成 ${total - failed} 个，失败 ${failed} 个`); else this.toast.success(`已清理 ${total} 个项目`); }
   closeEditor(e?: Event) { if (!e || e.target === e.currentTarget) { this.editorProject.set(undefined); } }
   closeCreate(e?: Event) { if (!e || e.target === e.currentTarget) { this.showCreate.set(false); this.creating.set(false); this.createError.set(''); this.createValidated.set(false); this.projectName = ''; this.projectContent = defaultCompose; } }
-  private notifyComposeError(operation: string, detail: string): void {
-    const message = detail || '未知错误';
-    this.message.set('');
-    this.messageType.set('error');
-    this.createError.set('');
-    this.toast.error(`Compose ${operation}失败`, message);
+  private normalizeCompose(input: string): string {
+    // 将行首/行内非 ASCII 空白（NBSP、全角空格、零宽字符等）归一化为 ASCII 空格，
+    // 避免 yaml.v3 解析报 "could not find expected ':'"。
+    if (!input) return input;
+    return input.split('\n').map(line => line
+      .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF]/g, ' ')
+      .replace(/[\u200B\u200C\u200D]/g, '')
+    ).join('\n');
   }
-  private showError(detail: string, operation = '操作'): void { this.notifyComposeError(operation, detail); }
+  private formatComposeError(detail?: string): string {
+    if (!detail) return '未知错误';
+    let msg = String(detail);
+    const m = msg.match(/YAML 解析失败:\s*(.*)/);
+    if (m && m[1]) msg = 'YAML 解析失败：' + m[1].trim();
+    const lm = msg.match(/line\s+(\d+)/i);
+    if (lm) msg = msg.replace(/line\s+(\d+)/i, '第 $1 行');
+    return msg;
+  }
+  private setCreateError(detail: string, type: 'error' | 'success'): void {
+    if (!detail) { this.createError.set(''); this.createErrorType.set(''); return; }
+    this.createError.set(detail);
+    this.createErrorType.set(type);
+  }
+  private setEditorError(detail: string): void {
+    if (!detail) { this.message.set(''); this.messageType.set(''); return; }
+    this.message.set(detail);
+    this.messageType.set('error');
+  }
+  private showError(detail: string, operation = '操作'): void { this.setEditorError(detail); }
   statusLabel(s: string) { return ({ using: '使用中', stopped: '已停止', unused: '未使用', unknown: '未知' } as Record<string, string>)[s] || s; }
   icon(project: ComposeProject) { return this.icons.resolve(project.image || '', this.iconMap()); }
   fallback(event: Event) { (event.target as HTMLImageElement).src = this.icons.actionIcon('images'); }
