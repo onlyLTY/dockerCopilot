@@ -250,6 +250,10 @@ func SetupLog(logDir, level string) error {
 	if err != nil {
 		return err
 	}
+	if err := logx.SetUp(logx.LogConf{Level: logxConfigLevel(level), Mode: "console"}); err != nil {
+		_ = writer.Close()
+		return err
+	}
 	logx.SetWriter(writer)
 	logx.AddWriter(logx.NewWriter(os.Stdout))
 	return nil
