@@ -25,8 +25,7 @@
           }
         </div>
         <div class="task-actions d-flex items-center justify-end gap-8 pt-16">
-          <button class="btn text-red gap-4" (click)="remove(t.taskID)"><dc-icon class="icon-14" name="delete"></dc-icon>删除任务</button>
-          <button class="btn text-secondary-text bg-secondary-bg gap-4" (click)="goTasks()"><dc-icon class="icon-14" name="tasks"></dc-icon>前往任务</button>
+          <button class="btn text-red bg-secondary-bg gap-4" (click)="remove(t.taskID)"><dc-icon class="icon-14" name="delete"></dc-icon>删除任务</button>
           <button class="btn text-white bg-blue" (click)="tasks.closeView()">关闭</button>
         </div>
       </div>

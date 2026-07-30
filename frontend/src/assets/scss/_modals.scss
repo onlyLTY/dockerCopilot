@@ -133,16 +133,17 @@
 .code-gutter {
   position: absolute;
   top: 0; left: 0; bottom: 0;
-  width: 44px; flex: none;
+  width: 48px; flex: none;
   overflow: hidden;
   text-align: right;
   color: var(--muted);
-  padding: 22px 8px 22px 0;
+  padding: 22px 10px 22px 0;
   font: 14px/1.65 "SFMono-Regular", Consolas, monospace;
   pointer-events: none; user-select: none;
   z-index: 1; opacity: .55; box-sizing: border-box;
+  border-right: 1px solid rgba(255, 255, 255, .08);
 }
-.code-gutter span { display: block; }
+.code-gutter span { display: block; height: calc(14px * 1.65); line-height: 1.65; }
 .code-editor-overlay {
   position: absolute; inset: 0;
   display: flex; align-items: flex-start; justify-content: center;
@@ -155,9 +156,10 @@
   width: 100%; height: 100%;
   flex: 1 1 auto;
   border: 0; resize: none; overflow-y: auto;
-  padding: 22px 22px 22px 52px;
+  padding: 22px 22px 22px 60px;
   font: 14px/1.65 "SFMono-Regular", Consolas, monospace;
   outline: 0; position: relative; z-index: 0;
+  box-sizing: border-box; line-height: 1.65; tab-size: 2;
 }
 .editor-foot {
   color: var(--muted);

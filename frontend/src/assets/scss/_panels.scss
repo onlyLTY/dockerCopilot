@@ -82,6 +82,16 @@
 .status-badge.unknown,
 .status-badge.ignored { background: var(--secondary-bg); color: var(--muted); }
 
+.port-tags {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; text-align: center;
+}
+.port-tags > span { display: block; }
+/* 超过 2 个端口：每行 2 个，紧凑排列避免单卡过长 */
+.port-tags.port-tags-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+}
+
 /* ===== 项目卡 ===== */
 
 /* ===== 图标库 ===== */

@@ -25,7 +25,7 @@ export class ComposeComponent {
   // 行号：基于编辑器内容行数生成，外层 textarea 滚动时同步 gutter 的 scrollTop
   readonly lineCount = computed(() => Math.max(1, (this.content() || '').split('\n').length));
   readonly lineNumbers = computed<SafeHtml>(() => this.sanitizer.bypassSecurityTrustHtml(this.buildLines(this.lineCount())));
-  readonly createLineCount = computed(() => Math.max(1, (this.projectContent || '').split('\n').length));
+  readonly createLineCount = computed(() => Math.max(1, (this.projectContent() || '').split('\n').length));
   readonly createLineNumbers = computed<SafeHtml>(() => this.sanitizer.bypassSecurityTrustHtml(this.buildLines(this.createLineCount())));
   private buildLines(n: number): string {
     let out = '';
@@ -63,7 +63,7 @@ export class ComposeComponent {
     ];
   });
   readonly selectionMode = signal(false); readonly selected = signal<Set<string>>(new Set()); readonly cleanupBusy = signal(false);
-  readonly editorProject = signal<ComposeProject | undefined>(undefined); readonly filename = signal(''); readonly content = signal(''); readonly version = signal(''); readonly fileLoading = signal(false); readonly fileError = signal(''); readonly message = signal(''); readonly messageType = signal(''); readonly pullImages = signal(false); readonly preview = signal<Record<string, any> | undefined>(undefined); readonly risks = signal<any[]>([]); readonly showCreate = signal(false); readonly creating = signal(false); projectName = ''; projectContent = defaultCompose; readonly createError = signal(''); readonly createErrorType = signal<'error' | 'success' | ''>(''); readonly confirmDeploy = signal(false); readonly deployBusy = signal(false); readonly createPreview = signal<Record<string, any> | undefined>(undefined); readonly createValidated = signal(false);
+  readonly editorProject = signal<ComposeProject | undefined>(undefined); readonly filename = signal(''); readonly content = signal(''); readonly version = signal(''); readonly fileLoading = signal(false); readonly fileError = signal(''); readonly message = signal(''); readonly messageType = signal(''); readonly pullImages = signal(false); readonly preview = signal<Record<string, any> | undefined>(undefined); readonly risks = signal<any[]>([]); readonly showCreate = signal(false); readonly creating = signal(false); readonly projectName = signal(''); readonly projectContent = signal(defaultCompose); readonly createError = signal(''); readonly createErrorType = signal<'error' | 'success' | ''>(''); readonly confirmDeploy = signal(false); readonly deployBusy = signal(false); readonly createPreview = signal<Record<string, any> | undefined>(undefined); readonly createValidated = signal(false);
   readonly composeDialog = computed(() => this.editorProject() ? 'edit' : this.showCreate() ? 'create' : 'closed');
   constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
   refresh() { this.service.refresh(); }
@@ -133,14 +133,14 @@ export class ComposeComponent {
       error: e => { this.deployBusy.set(false); this.showError(e.error?.msg || '部署失败', '部署'); },
     });
   }
-  newProject() { this.projectName = ''; this.projectContent = defaultCompose; this.createError.set(''); this.createValidated.set(false); this.showCreate.set(true); }
-  validateCreate() { const n = this.projectName.trim(); if (!n) { this.setCreateError('请输入项目名称', 'error'); return; } this.projectContent = this.normalizeCompose(this.projectContent); this.service.validate('', 'compose.yaml', this.projectContent).subscribe({ next: r => { if (r.code === 200) { this.createValidated.set(true); this.setCreateError('格式校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务', 'success'); } else this.setCreateError(this.formatComposeError(r.msg), 'error'); }, error: e => this.setCreateError(this.formatComposeError(e.error?.msg || '格式校验失败'), 'error') }); }
+  newProject() { this.projectName.set(''); this.projectContent.set(defaultCompose); this.createError.set(''); this.createValidated.set(false); this.showCreate.set(true); }
+  validateCreate() { const n = this.projectName().trim(); if (!n) { this.setCreateError('请输入项目名称', 'error'); return; } this.projectContent.set(this.normalizeCompose(this.projectContent())); this.service.validate('', 'compose.yaml', this.projectContent()).subscribe({ next: r => { if (r.code === 200) { this.createValidated.set(true); this.setCreateError('格式校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务', 'success'); } else this.setCreateError(this.formatComposeError(r.msg), 'error'); }, error: e => this.setCreateError(this.formatComposeError(e.error?.msg || '格式校验失败'), 'error') }); }
   deployNewProject() { this.createProject(true); }
   createProject(deployAfterCreate = false) {
-    const n = this.projectName.trim(); if (!n) { this.setCreateError('请输入项目名称', 'error'); return; }
-    this.projectContent = this.normalizeCompose(this.projectContent);
+    const n = this.projectName().trim(); if (!n) { this.setCreateError('请输入项目名称', 'error'); return; }
+    this.projectContent.set(this.normalizeCompose(this.projectContent()));
     this.creating.set(true);
-    this.service.createProject(n, 'compose.yaml', this.projectContent).subscribe({
+    this.service.createProject(n, 'compose.yaml', this.projectContent()).subscribe({
       next: r => {
         this.creating.set(false);
         if (r.code !== 200) { this.setCreateError(this.formatComposeError(r.msg || '创建项目失败'), 'error'); return; }
@@ -192,7 +192,7 @@ export class ComposeComponent {
   }
   private finishCleanup(total: number, failed: number) { this.cleanupBusy.set(false); this.exitSelection(); this.service.refresh(); if (failed) this.toast.error(`项目清理完成 ${total - failed} 个，失败 ${failed} 个`); else this.toast.success(`已清理 ${total} 个项目`); }
   closeEditor(e?: Event) { if (!e || e.target === e.currentTarget) { this.editorProject.set(undefined); } }
-  closeCreate(e?: Event) { if (!e || e.target === e.currentTarget) { this.showCreate.set(false); this.creating.set(false); this.createError.set(''); this.createValidated.set(false); this.projectName = ''; this.projectContent = defaultCompose; } }
+  closeCreate(e?: Event) { if (!e || e.target === e.currentTarget) { this.showCreate.set(false); this.creating.set(false); this.createError.set(''); this.createValidated.set(false); this.projectName.set(''); this.projectContent.set(defaultCompose); } }
   private normalizeCompose(input: string): string {
     // 将行首/行内非 ASCII 空白（NBSP、全角空格、零宽字符等）归一化为 ASCII 空格，
     // 避免 yaml.v3 解析报 "could not find expected ':'"。

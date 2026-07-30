@@ -1,5 +1,4 @@
 import { Component, HostListener, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { TaskService } from '../../core/task.service';
 import { IconComponent } from '../icon/icon.component';
 
@@ -15,14 +14,12 @@ import { IconComponent } from '../icon/icon.component';
 })
 export class TaskProgressComponent {
   readonly tasks = inject(TaskService);
-  readonly router = inject(Router);
   readonly task = computed(() => this.tasks.tasks().find(t => t.taskID === this.tasks.viewing()));
 
   @HostListener('document:keydown.escape') onEscape(): void {
     if (this.task()) this.tasks.closeView();
   }
 
-  goTasks() { this.tasks.closeView(); this.router.navigateByUrl('/tasks'); }
   close(e: Event) { if (e.target === e.currentTarget) this.tasks.closeView(); }
   remove(taskID: string) { this.tasks.remove(taskID); }
 }

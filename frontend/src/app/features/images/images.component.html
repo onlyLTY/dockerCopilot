@@ -31,7 +31,7 @@
         <div resource-card-actions>
           <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
           @if (!image.inUsed) {
-            <button class="btn text-white bg-critical py-8 px-7 fs-12" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
+            <button class="btn text-critical border-1 py-8 px-7 fs-12" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
           }
         </div>
       </dc-resource-card>

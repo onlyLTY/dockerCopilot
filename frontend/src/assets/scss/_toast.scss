@@ -1,6 +1,6 @@
-// 全局轻提示：左下角弹出，成功/失败/信息三种样式，可点击关闭
+// 全局轻提示：居中上部弹出，成功/失败/信息三种样式，可点击关闭
 .toast-stack {
-  position: fixed; bottom: 24px; left: 24px;
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
   z-index: 60;
   pointer-events: none;
 }

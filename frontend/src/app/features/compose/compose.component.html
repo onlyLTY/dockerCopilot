@@ -81,12 +81,11 @@
           <button class="modal-close d-grid place-items-center" (click)="closeCreate()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
         </div>
         <div class="modal-body compose-body d-flex flex-col">
-          <label class="form-field d-block mt-20 fs-12">项目名称<input class="d-block mt-8 py-12 px-12" [(ngModel)]="projectName" placeholder="例如：my-app"></label>
-          <label class="form-field compose-config-field mt-12 code-editor-wrap" [class.is-loading]="creating()">
+          <div class="form-field d-block mt-20 fs-12">项目名称<input class="d-block mt-8 py-12 px-12" [ngModel]="projectName()" (ngModelChange)="projectName.set($event)" placeholder="例如：my-app，只能包含小写字母、数字、短横线和下划线，长度不超过 63"></div>
+          <div class="compose-config-field mt-12 code-editor-wrap" [class.is-loading]="creating()">
             <div class="code-gutter bg-black" aria-hidden="true" [innerHTML]="createLineNumbers()"></div>
-            <textarea class="code-editor bg-black text-white p-12 fs-14" [(ngModel)]="projectContent" (scroll)="onCreateScroll($event)" spellcheck="false" placeholder="请写入compose文件内容">
-            </textarea>
-          </label>
+            <textarea class="code-editor bg-black text-white fs-14" [ngModel]="projectContent()" (ngModelChange)="projectContent.set($event)" (scroll)="onCreateScroll($event)" spellcheck="false" placeholder="请写入compose文件内容"></textarea>
+          </div>
         </div>
         <div class="editor-foot d-flex items-center gap-16 pt-14 mt-14 fs-12">
           <span class="message flex-1 min-w-0 text-ellipsis" [class.text-red]="createErrorType() === 'error'" [class.text-green]="createErrorType() === 'success'">{{ createValidated() && !createError() ? '格式已通过，可创建或部署' : createError() }}</span>

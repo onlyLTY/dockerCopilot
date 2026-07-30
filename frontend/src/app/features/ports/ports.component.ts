@@ -42,6 +42,8 @@ export class PortsComponent {
     }
     return Array.from(map.values()).filter(g => this.filter() !== 'conflict' || g.ports.some(p => p.conflictKey && this.data().conflicts.includes(p.conflictKey)));
   });
+  // 端口超过 2 个时按网格每行 2 个排布，避免单卡过长
+  readonly multiPorts = (g: PortGroup) => g.ports.length > 2;
   constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
   refresh() { this.service.refresh(); }
   selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); }
