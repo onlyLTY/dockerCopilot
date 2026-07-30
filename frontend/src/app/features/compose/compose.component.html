@@ -57,7 +57,7 @@
           </div>
           <div class="code-editor-wrap" [class.is-loading]="fileLoading()">
             <div class="code-gutter bg-black" aria-hidden="true" [innerHTML]="lineNumbers()"></div>
-            <textarea class="code-editor bg-black text-white p-22 fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" (scroll)="onEditorScroll($event)" spellcheck="false"></textarea>
+            <textarea class="code-editor bg-black text-white fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" (scroll)="onEditorScroll($event)" spellcheck="false"></textarea>
             @if (fileLoading()) {
               <div class="code-editor-overlay" role="status">正在读取 {{ filename() }}…</div>
             } @else if (fileError()) {
