@@ -1,0 +1,51 @@
+@use "sass:map";
+
+// 颜色与边框由语义修饰类或 _color 的工具类提供，避免重复定义。
+
+/* ===== 基础按钮 ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  background: transparent;
+  color: var(--black);
+  cursor: pointer;
+  transition: filter .15s, background .15s, color .15s, border-color .15s;
+
+  &:hover { filter: brightness(2.5) saturate(0.3); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
+}
+
+
+/* ===== 按钮颜色修饰类 ===== */
+$button-colors: (
+  primary: (background: var(--blue), text: var(--white), shadow: 0 5px 12px var(--focus)),
+  secondary: (background: var(--secondary-bg), text: var(--secondary-text)),
+  danger: (background: var(--red), text: var(--white), weight: 650),
+);
+
+@each $name, $values in $button-colors {
+  .btn-#{"" + $name} {
+    @if map.has-key($values, background) {
+      background: map.get($values, background);
+    }
+    @if map.has-key($values, text) {
+      color: map.get($values, text);
+    }
+    @if map.has-key($values, shadow) {
+      box-shadow: map.get($values, shadow);
+    }
+    @if map.has-key($values, weight) {
+      font-weight: map.get($values, weight);
+    }
+    @if map.has-key($values, hover) {
+      &:hover { background: map.get($values, hover); }
+    }
+  }
+}

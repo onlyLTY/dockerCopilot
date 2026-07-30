@@ -15,7 +15,7 @@
     <span class="batch-title mr-auto fs-13 fw-650 text-text">批量操作</span>
     <label class="select-all mr-4"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
     <span class="text-muted fs-12">已选 {{ selected().size }} 个</span>
-    <button class="btn btn-link btn-danger-link" [disabled]="!selected().size || busy()" (click)="bulkRemove()"><dc-icon name="delete"></dc-icon>批量删除</button>
+    <button class="btn text-red" [disabled]="!selected().size || busy()" (click)="bulkRemove()"><dc-icon name="delete"></dc-icon>批量删除</button>
     <button class="btn btn-secondary batch-exit ml-auto" (click)="exitSelection()">完成</button>
   </div>
 }
@@ -28,8 +28,8 @@
         <img [src]="item[1]" [alt]="item[0]" (error)="fallback($event)">
         <b>{{ item[0] }}</b>
         <div class="icon-actions">
-          <button class="btn btn-link btn-danger-link" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
-          <button class="btn btn-link btn-danger-link" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
+          <button class="btn text-red" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
+          <button class="btn text-red" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
         </div>
       </article>
     }

@@ -4,7 +4,7 @@
 .nav-badge {
   min-width: 18px; height: 18px;
   border-radius: 9px;
-  background: var(--accent); color: var(--white); font-style: normal; line-height: 1;
+  background: var(--blue); color: var(--white); font-style: normal; line-height: 1;
 }
 .compact-shell .nav-badge {
   position: absolute; top: 6px; right: 6px; margin: 0;
@@ -15,33 +15,33 @@
 .task-list { gap: 12px; }
 .task-row {
   align-items: center; gap: 16px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
-  box-shadow: 0 8px 20px var(--shadow-sm);
+  background: var(--white); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 8px 20px var(--shadow);
 }
 .task-row-main { flex: 1; min-width: 0; }
 .task-row-head { gap: 10px; }
-.task-row-head b { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-row-head b { color: var(--black); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-row-main small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-state {
   flex: none; border-radius: 20px;
-  background: var(--accent-soft); color: var(--muted);
+  background: var(--blue-soft); color: var(--muted);
 }
-.task-state.active { background: var(--amber-soft); color: var(--warning); }
+.task-state.active { background: var(--amber-soft); color: var(--amber); }
 .task-state.ok { background: var(--green-soft); color: var(--green); }
-.task-state.bad { background: var(--red-soft); color: var(--danger); }
+.task-state.bad { background: var(--red-soft); color: var(--red); }
 .task-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
-.task-bar i { height: 100%; background: var(--accent); transition: width .3s ease; }
-.task-bar i.bad { background: var(--danger); }
+.task-bar i { height: 100%; background: var(--blue); transition: width .3s ease; }
+.task-bar i.bad { background: var(--red); }
 
 /* ===== 进度弹窗 ===== */
 .task-content { min-height: 0; flex-direction: column; overflow: hidden; }
 .task-progress { min-height: 0; }
 .task-progress .progress-bar { height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; }
-.task-progress .progress-bar span { height: 100%; background: var(--accent); transition: width .3s ease; }
+.task-progress .progress-bar span { height: 100%; background: var(--blue); transition: width .3s ease; }
 .task-progress .progress-bar.done span { background: var(--green); }
-.task-progress .progress-bar.failed span { background: var(--danger); }
-.progress-meta { gap: 12px; color: var(--text); }
-.progress-meta .failed { color: var(--danger); }
+.task-progress .progress-bar.failed span { background: var(--red); }
+.progress-meta { gap: 12px; color: var(--black); }
+.progress-meta .failed { color: var(--red); }
 .progress-meta .muted { color: var(--muted); }
 .task-detail {
   min-height: 0; max-height: 220px; overflow: auto;
@@ -51,18 +51,18 @@
 
 /* ===== 设置页 ===== */
 .settings-card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: 0 8px 20px var(--shadow-sm);
+  background: var(--white); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 8px 20px var(--shadow);
 }
 .settings-item { align-items: center; gap: 20px; }
 .settings-item-text { min-width: 0; }
-.settings-item-text b { color: var(--text); }
+.settings-item-text b { color: var(--black); }
 .settings-item-text span { color: var(--muted); line-height: 1.6; }
 .settings-item-control { gap: 10px; flex: none; }
 .settings-item-control select {
   border: 1px solid var(--line); border-radius: 8px;
-  background: var(--surface); color: var(--text); min-width: 160px;
+  background: var(--white); color: var(--black); min-width: 160px;
 }
-.settings-item-control select:focus { border-color: var(--accent); outline: 0; box-shadow: 0 0 0 3px var(--focus-ring); }
+.settings-item-control select:focus { border-color: var(--blue); outline: 0; box-shadow: 0 0 0 3px var(--focus); }
 .settings-hint { border-top: 1px solid var(--line); color: var(--muted); }
-.dark-shell .settings-item-control select { background: var(--select-bg); }
+.dark-shell .settings-item-control select { background: #1a2130; }

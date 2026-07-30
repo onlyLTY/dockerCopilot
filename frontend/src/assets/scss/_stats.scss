@@ -2,16 +2,16 @@
 
 .stats {
   display: grid; grid-template-columns: repeat(5, 1fr);
-  background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
-  overflow: hidden; box-shadow: 0 12px 24px var(--shadow-sm); margin-bottom: 28px;
+  background: var(--white); border: 1px solid var(--line); border-radius: 18px;
+  overflow: hidden; box-shadow: 0 12px 24px var(--shadow); margin-bottom: 28px;
 }
 .stats div { padding: 22px 20px; text-align: center; border-right: 1px solid var(--line); }
 .stats div:last-child { border-right: 0; }
-.stats strong { color: var(--accent); }
+.stats strong { color: var(--blue); }
 .stats span { color: var(--muted); }
 .stats .green strong { color: var(--green); }
 .stats .amber strong { color: var(--amber); }
-.stats .violet strong { color: var(--violet); }
+.stats .violet strong { color: var(--purple); }
 .stats .red strong { color: var(--red); }
 .stats .blue strong { color: var(--blue); }
 

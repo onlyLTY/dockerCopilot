@@ -30,9 +30,9 @@
               </div>
               <div class="backup-actions mt-18 pt-14 d-flex justify-center gap-18">
                 @if (extension(file) === '.json') {
-                  <button class="btn btn-link btn-restore py-6 px-12 fs-12" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
+                  <button class="btn text-blue py-6 px-12 fs-12" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
                 }
-                <button class="btn btn-link btn-danger-link py-6 px-12 fs-12" (click)="remove(file)"><dc-icon name="delete"></dc-icon>删除</button>
+                <button class="btn text-red py-6 px-12 fs-12" (click)="remove(file)"><dc-icon name="delete"></dc-icon>删除</button>
               </div>
             </article>
           }

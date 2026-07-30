@@ -23,9 +23,9 @@
     <span class="batch-title mr-auto fs-13 fw-650 text-text">批量操作</span>
     @if (containers().length) {
       <label class="select-all mr-4"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
-      <button class="btn btn-secondary gap-8 btn-start" [disabled]="!selectedCount() || busy()" (click)="bulkStart()"><dc-icon name="start"></dc-icon>批量启动</button>
-      <button class="btn btn-secondary gap-8 btn-stop" [disabled]="!selectedCount() || busy()" (click)="bulkStop()"><dc-icon name="stop"></dc-icon>批量停止</button>
-      <button class="btn btn-secondary gap-8 btn-update" [disabled]="!selectedCount() || busy() || hasActiveUpdates()" (click)="bulkUpdate()"><dc-icon name="update"></dc-icon>批量更新</button>
+      <button class="btn btn-secondary gap-8 text-green" [disabled]="!selectedCount() || busy()" (click)="bulkStart()"><dc-icon name="start"></dc-icon>批量启动</button>
+      <button class="btn btn-secondary gap-8 text-red" [disabled]="!selectedCount() || busy()" (click)="bulkStop()"><dc-icon name="stop"></dc-icon>批量停止</button>
+      <button class="btn btn-secondary gap-8 text-purple" [disabled]="!selectedCount() || busy() || hasActiveUpdates()" (click)="bulkUpdate()"><dc-icon name="update"></dc-icon>批量更新</button>
       @if (selectedCount()) { <span class="text-muted fs-12">已选 {{ selectedCount() }} 个</span> }
     }
           <button class="btn btn-secondary batch-exit ml-auto" (click)="exitSelection()">完成</button>
@@ -49,12 +49,12 @@
         </div>
         <div class="resource-actions mt-14">
           @if (isRunning(item)) {
-            <button class="btn btn-link btn-stop py-8 px-7 fs-12" (click)="stop(item)"><dc-icon name="stop"></dc-icon>停止</button>
+            <button class="btn text-red py-8 px-7 fs-12" (click)="stop(item)"><dc-icon name="stop"></dc-icon>停止</button>
           } @else {
-            <button class="btn btn-link btn-start py-8 px-7 fs-12" (click)="start(item)"><dc-icon name="start"></dc-icon>启动</button>
+            <button class="btn text-green py-8 px-7 fs-12" (click)="start(item)"><dc-icon name="start"></dc-icon>启动</button>
           }
-          <button class="d-inline-flex items-center gap-4" (click)="restart(item)"><dc-icon name="restart"></dc-icon>重启</button>
-          <button class="btn btn-link btn-update py-8 px-7 fs-12" [class.has-update]="item.haveUpdate" [disabled]="activeUpdateIds().has(item.id)" (click)="update(item)"><dc-icon name="update"></dc-icon>{{ activeUpdateIds().has(item.id) ? '更新中' : '更新' }}</button>
+          <button class="btn py-8 px-7 fs-12" (click)="restart(item)"><dc-icon name="restart"></dc-icon>重启</button>
+          <button class="btn text-purple py-8 px-7 fs-12" [class.has-update]="item.haveUpdate" [disabled]="activeUpdateIds().has(item.id)" (click)="update(item)"><dc-icon name="update"></dc-icon>{{ activeUpdateIds().has(item.id) ? '更新中' : '更新' }}</button>
         </div>
       </article>
     }

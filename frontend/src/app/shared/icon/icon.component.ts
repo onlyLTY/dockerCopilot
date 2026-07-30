@@ -13,22 +13,7 @@ import { Component, computed, input } from '@angular/core';
     '[style.-webkit-mask-image]': 'maskUrl()',
     '[style.mask-image]': 'maskUrl()',
   },
-  styles: [`
-    :host {
-      display: inline-block;
-      width: var(--icon-size, 16px);
-      height: var(--icon-size, 16px);
-      flex: none;
-      background-color: currentColor;
-      -webkit-mask-repeat: no-repeat;
-      mask-repeat: no-repeat;
-      -webkit-mask-position: center;
-      mask-position: center;
-      -webkit-mask-size: contain;
-      mask-size: contain;
-      vertical-align: -0.15em;
-    }
-  `],
+  styleUrl: './icon.component.scss',
 })
 export class IconComponent {
   readonly name = input.required<string>();

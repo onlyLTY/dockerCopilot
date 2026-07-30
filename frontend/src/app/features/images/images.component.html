@@ -31,9 +31,9 @@
           </div>
         </div>
         <div class="resource-actions mt-14">
-          <button class="btn btn-link btn-danger-link py-8 px-7 fs-12" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
+          <button class="btn text-red py-8 px-7 fs-12" (click)="remove(image, false)"><dc-icon name="delete"></dc-icon>删除</button>
           @if (!image.inUsed) {
-            <button class="btn btn-link btn-danger-link force py-8 px-7 fs-12" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
+            <button class="btn text-red force py-8 px-7 fs-12" (click)="remove(image, true)"><dc-icon name="delete"></dc-icon>强制删除</button>
           }
         </div>
       </article>

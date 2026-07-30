@@ -7,8 +7,7 @@
 .toast {
   pointer-events: auto; align-items: flex-start; gap: 10px;
   width: min(520px, 90vw); border: 1px solid var(--line); border-radius: 10px;
-  background: var(--surface); color: var(--text);
-  box-shadow: 0 12px 30px var(--toast-shadow); text-align: left; cursor: pointer;
+  box-shadow: 0 12px 30px var(--shadow); text-align: left; cursor: pointer;
   animation: toast-in .18s ease-out;
 }
 .toast-mark {
@@ -18,16 +17,12 @@
 .toast-text { flex: 1; min-width: 0; word-break: break-word; }
 .toast-text strong { color: inherit; font-weight: 750; }
 .toast-text span { color: inherit; line-height: 1.45; }
-.toast.success { border-color: var(--toast-success-line); background: var(--toast-success-bg); color: var(--toast-success-text); }
-.toast.success .toast-mark { background: var(--toast-success-mark); }
-.toast.error { border-color: var(--toast-error-line); background: var(--toast-error-bg); color: var(--toast-error-text); }
-.toast.error .toast-mark { background: var(--danger); }
-.toast.info { border-color: var(--toast-info-line); background: var(--toast-info-bg); color: var(--info); }
-.toast.info .toast-mark { background: var(--accent); }
-
-.dark-shell .toast.success { background: var(--toast-success-bg); }
-.dark-shell .toast.error { background: var(--toast-error-bg); }
-.dark-shell .toast.info { background: var(--toast-info-bg); }
+.toast.success { border-color: color-mix(in srgb, var(--green) 28%, transparent); color: var(--green); }
+.toast.success .toast-mark { background: var(--green); }
+.toast.error { border-color: color-mix(in srgb, var(--red) 18%, transparent); color: var(--red); }
+.toast.error .toast-mark { background: var(--red); }
+.toast.info { border-color: color-mix(in srgb, var(--blue) 22%, transparent); color: var(--blue); }
+.toast.info .toast-mark { background: var(--blue); }
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-8px); }

@@ -64,7 +64,7 @@
           <div class="file-tabs">
             @for (file of ep.files; track file.name) { <button class="file-tab py-9 px-14 fs-12" (click)="openFile(file.name)">{{ file.name }}</button> }
           </div>
-          <textarea class="code-editor p-22 fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" spellcheck="false"></textarea>
+          <textarea class="code-editor bg-black text-white p-22 fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" spellcheck="false"></textarea>
           @if (preview(); as p) {
             <div class="risk-box mb-18 p-16 fs-12">
               <p class="m-0 my-8">服务：{{ p['services']?.join(', ') }}</p>
@@ -86,7 +86,7 @@
         </div>
         <div class="modal-body compose-body">
           <label class="form-field d-block mt-20 fs-12">项目名称<input class="d-block mt-8 py-12 px-12" [(ngModel)]="projectName" placeholder="例如：my-app"></label>
-          <label class="form-field compose-config-field">Compose 配置<textarea class="code-editor p-22 fs-14" [(ngModel)]="projectContent" spellcheck="false" placeholder="services:&#10;  app:&#10;    image: nginx:alpine&#10;    ports:&#10;      - &quot;8080:80&quot;"></textarea></label>
+          <label class="form-field compose-config-field">Compose 配置<textarea class="code-editor bg-black text-white p-22 fs-14" [(ngModel)]="projectContent" spellcheck="false" placeholder="services:&#10;  app:&#10;    image: nginx:alpine&#10;    ports:&#10;      - &quot;8080:80&quot;"></textarea></label>
         </div>
         <div class="editor-foot pt-14 fs-12">
           <span class="message flex-1 min-w-0">{{ createValidated() ? '格式已通过，可创建或部署' : '' }}</span>

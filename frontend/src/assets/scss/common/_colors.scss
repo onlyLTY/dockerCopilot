@@ -1,154 +1,69 @@
-// 颜色令牌：基础语义色、组件色和主题相关效果。
-// 其他样式只引用 var(--xxx)，不在组件样式中直接声明颜色值。
+@use "sass:string";
+
+// 基础色板与少量组件效果色。
+$colors: (
+  page-bg: #f6f8fb,
+  page-bg-dark: #151a24,
+  white: #fff,
+  white-dark: #202735,
+  line: #e3e8ef,
+  line-dark: #354052,
+  black: #172033,
+  black-dark: #edf2f8,
+  muted: #78849a,
+  muted-dark: #aab5c5,
+  red: #e32635,
+  red-dark: #ff7b83,
+  red-soft: #fdecec,
+  green: #0a9b52,
+  green-dark: #5ed490,
+  green-soft: #e6f6ec,
+  blue: #087db7,
+  blue-dark: #5eb9e8,
+  blue-soft: #eef4fb,
+  purple: #8c36e8,
+  purple-soft: #8c36e814,
+  amber: #c99515,
+  amber-dark: #e4b35f,
+  amber-soft: #fff5e2,
+  focus: #138bc21a,
+  focus-dark: #5eb9e81a,
+  secondary-bg: #edf2f7,
+  secondary-bg-dark: #303a4a,
+  secondary-text: #42516a,
+  secondary-text-dark: #dce5f1,
+  overlay: #14203966,
+  shadow: #18365c0b,
+  shadow-modal: #1420393d,
+);
 
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* 基础语义色 */
-  --page-bg: #f6f8fb;
-  --surface: #fff;
-  --line: #e3e8ef;
-  --text: #172033;
-  --muted: #78849a;
-  --accent: #087db7;
-  --danger: #e5484d;
-  --success: #15915a;
-  --warning: #b8791b;
-  --info: #2b5f9e;
-  --white: #fff;
-
-  /* 状态和统计色 */
-  --green: #17a35a;
-  --green-soft: #e6f6ec;
-  --amber: #c99515;
-  --amber-soft: #fff5e2;
-  --violet: #855bd0;
-  --red: #d65554;
-  --red-soft: #fdecec;
-  --blue: #2473d1;
-  --running-text: #19a35a;
-  --running-dot: #21a35e;
-
-  /* 图标、徽标和卡片色 */
-  --accent-soft: #eef4fb;
-  --port-soft: #eaf7fd;
-  --update-soft: #f3ebff;
-  --teal: #0ca99b;
-  --teal-soft: #dcfaf6;
-  --badge-blue: #2b63dc;
-  --badge-blue-soft: #e4efff;
-
-  /* 按钮和操作色 */
-  --btn-secondary-bg: #edf2f7;
-  --btn-secondary-text: #42516a;
-  --modal-close-bg: var(--page-bg);
-  --form-input-bg: var(--surface);
-  --select-bg: var(--surface);
-  --danger-link: #bd5660;
-  --danger-link-strong: #92535b;
-  --danger-link-hover: #a5424c;
-  --action-stop: #e32635;
-  --action-start: #0a9b52;
-  --action-update: #8c36e8;
-
-  /* 提示和消息色 */
-  --alert-error-text: #ae4e58;
-  --alert-error-bg: #fff0f1;
-  --alert-error-line: #f6d6d9;
-  --alert-warning-text: #8a681b;
-  --alert-warning-bg: #fff8e4;
-  --alert-warning-line: #f4e2a8;
-  --toast-success-line: #b6e6c9;
-  --toast-success-bg: #f2fbf6;
-  --toast-success-text: #197a48;
-  --toast-success-mark: var(--running-dot);
-  --toast-error-line: var(--alert-error-line);
-  --toast-error-bg: #fff2f3;
-  --toast-error-text: var(--alert-error-text);
-  --toast-info-line: #cfe3f6;
-  --toast-info-bg: #f2f8ff;
-  --risk-bg: #fff9e9;
-  --risk-text: #705719;
-
-  /* 编辑器、日志和页面状态色 */
-  --code-bg: #172236;
-  --code-text: #d8e2f0;
-  --log-debug: #6e7d91;
-  --page-state-icon: #68aaca;
-  --message-error: #c44c55;
-
-  /* 阴影、遮罩和焦点效果 */
-  --accent-shadow: #087db733;
-  --overlay: #14203966;
-  --shadow-xs: #18365c08;
-  --shadow-sm: #18365c0b;
-  --shadow-md: #18365c14;
-  --shadow-modal: #1420393d;
-  --overlay-sidebar: #14203955;
-  --toast-shadow: #14203926;
-  --focus-ring: #138bc21a;
-  --login-shadow: #27466d12;
-
-  /* 交互态背景 */
-  --nav-active-bg: #087db71a;
-  --resource-action-hover: #2b63dc14;
-  --danger-link-hover-bg: #bd566019;
-  --danger-link-force-hover-bg: #92535b1f;
-  --action-stop-hover: #e3263514;
-  --action-start-hover: #0a9b5214;
-  --action-update-hover: #8c36e814;
-  --accent-hover-bg: #087db71a;
+  @each $name, $color in $colors {
+    $name-string: "#{$name}";
+    @if string.slice($name-string, -5) != "-dark" {
+      --#{"" + $name}: #{$color};
+    }
+  }
 }
 
 :root[data-theme="dark"] {
-  /* 基础语义色 */
-  --page-bg: #151a24;
-  --surface: #202735;
-  --line: #354052;
-  --text: #edf2f8;
-  --muted: #aab5c5;
-  --accent: #5eb9e8;
-  --danger: #ff7b83;
-  --success: #5ed490;
-  --warning: #e4b35f;
-  --info: #8bc8f2;
-
-  /* 深色容器和表单底色 */
-  --btn-secondary-bg: #303a4a;
-  --btn-secondary-text: #dce5f1;
-  --modal-close-bg: #303a4a;
-  --form-input-bg: #1a2130;
-  --select-bg: #1a2130;
-
-  /* 深色主题中的品牌效果 */
-  --accent-shadow: #5eb9e833;
-  --focus-ring: #5eb9e81a;
-  --nav-active-bg: #5eb9e81a;
-  --accent-hover-bg: #5eb9e81a;
-
-  /* 深色 toast 背景 */
-  --toast-success-bg: #16281e;
-  --toast-error-bg: #2a1a1c;
-  --toast-info-bg: #172231;
+  @each $name, $color in $colors {
+    $name-string: "#{$name}";
+    @if string.slice($name-string, -5) == "-dark" {
+      $base-name: string.slice($name-string, 1, string.length($name-string) - 5);
+      --#{"" + $base-name}: #{$color};
+    }
+  }
 }
 
-/* 文字色工具类 */
-.text-primary { color: var(--accent) !important; }
-.text-muted { color: var(--muted) !important; }
-.text-text { color: var(--text) !important; }
-.text-danger { color: var(--danger) !important; }
-.text-success { color: var(--success) !important; }
-.text-warning { color: var(--warning) !important; }
-.text-info { color: var(--info) !important; }
-.text-inherit { color: inherit !important; }
-.text-white { color: var(--white) !important; }
-
-/* 背景色工具类 */
-.bg-primary { background: var(--accent) !important; }
-.bg-surface { background: var(--surface) !important; }
-.bg-page { background: var(--page-bg) !important; }
-.bg-danger { background: var(--danger) !important; }
-.bg-success { background: var(--success) !important; }
-.bg-warning { background: var(--warning) !important; }
-.bg-info { background: var(--info) !important; }
-.bg-transparent { background: transparent !important; }
+@each $name, $color in $colors {
+  $name-string: "#{$name}";
+  @if string.slice($name-string, -5) != "-dark" {
+    .text-#{"" + $name} { color: var(--#{"" + $name}) !important; }
+    .bg-#{"" + $name} { background: var(--#{"" + $name}) !important; }
+    .border-#{"" + $name} { border-color: var(--#{"" + $name}) !important; }
+    .icon-cloor-#{"" + $name} { color: var(--#{"" + $name}) !important; }
+  }
+}

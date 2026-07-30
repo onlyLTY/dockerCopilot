@@ -31,7 +31,7 @@
         </div>
         <div class="task-actions d-flex items-center justify-end gap-8 mt-auto pt-16">
           <button class="btn btn-secondary" (click)="view(t.taskID)"><dc-icon name="about"></dc-icon>详情</button>
-          <button class="btn btn-link btn-danger-link" (click)="remove(t.taskID)"><dc-icon name="delete"></dc-icon>删除</button>
+          <button class="btn text-red" (click)="remove(t.taskID)"><dc-icon name="delete"></dc-icon>删除</button>
         </div>
       </article>
     }

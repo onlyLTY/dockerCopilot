@@ -8,10 +8,10 @@
 }
 .page-state-spinner {
   width: 30px; height: 30px; border-radius: 50%;
-  border: 3px solid var(--line); border-top-color: var(--accent);
+  border: 3px solid var(--line); border-top-color: var(--blue);
   animation: dc-spin 0.7s linear infinite;
 }
-.page-state-icon { color: var(--page-state-icon); }
+.page-state-icon { color: var(--blue); }
 
 
 @keyframes dc-spin { to { transform: rotate(360deg); } }
