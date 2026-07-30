@@ -8,9 +8,9 @@
 <dc-stats [items]="stats()" [columns]="4" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
 
 @if (filteredTasks().length) {
-  <section class="task-list page-scroll-area d-flex flex-col gap-12 mb-24">
+  <section class="task-list page-scroll-area responsive-card-grid d-grid gap-12 mb-24">
     @for (t of filteredTasks(); track t.taskID) {
-      <article class="task-row d-flex items-center gap-16 py-16 px-18" [class.done]="t.isDone && !t.failed" [class.failed]="t.failed">
+      <article class="task-row d-flex flex-col gap-12 py-16 px-18" [class.done]="t.isDone && !t.failed" [class.failed]="t.failed">
         <div class="task-row-main flex-1 min-w-0">
           <div class="task-row-head d-flex items-center gap-10">
             <b class="fs-16">{{ t.title }}</b>
@@ -19,7 +19,7 @@
           <div class="task-bar mt-10"><i class="d-block" [style.width.%]="t.percentage" [class.bad]="t.failed"></i></div>
           <small class="d-block mt-8 fs-12 text-muted">{{ t.message }} · {{ t.percentage }}% · {{ time(t.updatedAt) }}</small>
         </div>
-        <div class="task-actions d-flex items-center justify-end gap-8 mt-auto pt-16">
+        <div class="task-actions d-flex items-center justify-end gap-8">
           <button class="btn text-secondary-text bg-secondary-bg" (click)="view(t.taskID)"><dc-icon name="about"></dc-icon>详情</button>
           <button class="btn text-red bg-secondary-bg" (click)="remove(t.taskID)"><dc-icon name="delete"></dc-icon>删除</button>
         </div>

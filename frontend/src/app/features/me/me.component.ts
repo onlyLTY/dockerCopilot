@@ -35,6 +35,29 @@ export class MeComponent {
   readonly loadingLogs = signal(false);
   readonly logError = signal('');
   readonly logs = signal<LogEntry[]>([]);
+  // 日志弹窗：按等级筛选的 tab，'all' = 全部
+  readonly logLevelFilter = signal<string>('all');
+  readonly logLevels = signal<string[]>(['debug', 'info', 'warn', 'error']);
+  readonly logLevelCount = computed<Record<string, number>>(() => {
+    const counts: Record<string, number> = { all: this.logs().length };
+    for (const e of this.logs()) counts[e.level] = (counts[e.level] || 0) + 1;
+    return counts;
+  });
+  readonly filteredLogs = computed<LogEntry[]>(() => {
+    const f = this.logLevelFilter();
+    return f === 'all' ? this.logs() : this.logs().filter(e => e.level === f);
+  });
+  // 等级筛选 stats：全部(无 tone) + 各等级带 tone
+  readonly logLevelStats = computed<StatItem[]>(() => {
+    const counts = this.logLevelCount();
+    return [
+      { key: 'all', value: counts['all'] || 0, label: '全部' },
+      { key: 'debug', value: counts['debug'] || 0, label: 'DEBUG' },
+      { key: 'info', value: counts['info'] || 0, label: 'INFO', tone: 'blue' },
+      { key: 'warn', value: counts['warn'] || 0, label: 'WARN', tone: 'amber' },
+      { key: 'error', value: counts['error'] || 0, label: 'ERROR', tone: 'red' },
+    ];
+  });
   readonly updateOptions = signal<string[]>([]);
   readonly backupOptions = signal<string[]>([]);
   readonly logOptions = signal<string[]>(['debug', 'info', 'warn', 'error']);
@@ -97,5 +120,7 @@ export class MeComponent {
     this.showLogs.set(true); this.loadingLogs.set(true); this.logError.set('');
     this.http.get<ApiResponse<{ entries: LogEntry[] }>>('/api/logs?limit=100').subscribe({ next: r => { this.loadingLogs.set(false); if (r.code === 200) this.logs.set(r.data?.entries || []); else this.logError.set(r.msg || '读取日志失败'); }, error: e => { this.loadingLogs.set(false); this.logError.set(e.error?.msg || '读取日志失败'); } });
   }
-  closeLogs() { this.showLogs.set(false); }
+  closeLogs() { this.showLogs.set(false); this.logLevelFilter.set('all'); }
+  // dc-stats 在再次点击当前 active 项时 emit ''，此时归一回「全部」
+  selectLogLevel(key: string) { this.logLevelFilter.set(key || 'all'); }
 }

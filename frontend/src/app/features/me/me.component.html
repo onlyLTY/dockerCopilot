@@ -78,11 +78,12 @@
         @if (loadingLogs()) { <p class="text-muted">读取中…</p> }
         @if (logError()) { <p class="message error">{{ logError() }}</p> }
         @if (!loadingLogs() && !logError()) {
+          <dc-stats [items]="logLevelStats()" [columns]="5" [activeKey]="logLevelFilter()" (selectedChange)="selectLogLevel($event)"></dc-stats>
           <div class="log-list">
-          @for (entry of logs(); track $index) {
+          @for (entry of filteredLogs(); track $index) {
             <article class="log-entry py-14"><div class="log-meta d-flex items-center gap-9"><span class="log-level" [class]="'level-' + entry.level">{{ entry.level.toUpperCase() }}</span><time class="d-block fs-12">{{ entry.timestamp }}</time></div><p class="m-0 mt-7 fs-12">{{ entry.message }}</p></article>
           }
-          @if (!logs().length) { <p class="text-muted">暂无日志</p> }
+          @if (!filteredLogs().length) { <p class="text-muted">暂无日志</p> }
           </div>
         }
       </div>
