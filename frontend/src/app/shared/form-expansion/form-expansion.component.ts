@@ -1,10 +1,11 @@
 import { Component, input } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'dc-form-expansion',
   standalone: true,
-  imports: [MatExpansionModule],
+  imports: [MatExpansionModule, IconComponent],
   templateUrl: './form-expansion.component.html',
   styleUrl: './form-expansion.component.scss',
 })

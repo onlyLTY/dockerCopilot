@@ -45,22 +45,27 @@
   color: var(--muted) !important;
   line-height: 1.45;
   white-space: normal;
+  font-size: 12px;
 }
 
 :host ::ng-deep .form-expansion .mat-expansion-indicator {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: var(--muted) !important;
+  display: none !important;
 }
 
-:host ::ng-deep .form-expansion .mat-expansion-panel-header:hover .mat-expansion-indicator,
-:host ::ng-deep .form-expansion .mat-expansion-panel-header:focus .mat-expansion-indicator,
-:host ::ng-deep .form-expansion .mat-expansion-panel-header.mat-expanded .mat-expansion-indicator {
-  color: var(--blue) !important;
+.expansion-icon {
+  flex: 0 0 14px;
+  --icon-size: 14px;
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.2s ease, color 0.15s;
 }
 
-:host ::ng-deep .form-expansion .mat-expansion-panel-body {
-  padding: 0 16px 16px;
-  background: var(--panel-bg);
+:host ::ng-deep .form-expansion .mat-expansion-panel-header.mat-expanded .expansion-icon {
+  transform: rotate(180deg);
+  color: var(--blue);
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-panel-header:hover .expansion-icon,
+:host ::ng-deep .form-expansion .mat-expansion-panel-header:focus .expansion-icon {
+  color: var(--blue);
 }
