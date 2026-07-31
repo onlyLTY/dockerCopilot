@@ -3,10 +3,12 @@ package settingstore
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 // 更新检查频率的预设选项。key 为前端下拉选项值，cron 为对应的 cron 表达式（分 时 日 月 周）。
@@ -55,6 +57,11 @@ type Settings struct {
 	LogLevel                string   `json:"logLevel"`
 	Retention               int      `json:"retention"`
 	IgnoredContainerUpdates []string `json:"ignoredContainerUpdates,omitempty"`
+	GithubProxy             string   `json:"githubProxy,omitempty"`
+	HTTPProxy               string   `json:"HTTP_PROXY,omitempty"`
+	HTTPSProxy              string   `json:"HTTPS_PROXY,omitempty"`
+	NoProxy                 string   `json:"NO_PROXY,omitempty"`
+	ProxySettingsConfigured bool     `json:"proxySettingsConfigured,omitempty"`
 }
 
 // SettingsPath 设置文件路径。可用 APP_SETTINGS_PATH 覆盖，便于测试。
@@ -80,6 +87,15 @@ func load() Settings {
 	if err := json.Unmarshal(content, &stored); err != nil {
 		return s
 	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(content, &fields); err == nil {
+		_, hasGithubProxy := fields["githubProxy"]
+		_, hasHTTPProxy := fields["HTTP_PROXY"]
+		_, hasHTTPSProxy := fields["HTTPS_PROXY"]
+		_, hasNoProxy := fields["NO_PROXY"]
+		_, hasProxyMarker := fields["proxySettingsConfigured"]
+		stored.ProxySettingsConfigured = stored.ProxySettingsConfigured || hasGithubProxy || hasHTTPProxy || hasHTTPSProxy || hasNoProxy || hasProxyMarker
+	}
 	if ValidUpdateCheckInterval(stored.UpdateCheckInterval) {
 		s.UpdateCheckInterval = stored.UpdateCheckInterval
 	}
@@ -93,6 +109,11 @@ func load() Settings {
 		s.Retention = stored.Retention
 	}
 	s.IgnoredContainerUpdates = normalizeIgnoredContainers(stored.IgnoredContainerUpdates)
+	s.GithubProxy = stored.GithubProxy
+	s.HTTPProxy = stored.HTTPProxy
+	s.HTTPSProxy = stored.HTTPSProxy
+	s.NoProxy = stored.NoProxy
+	s.ProxySettingsConfigured = stored.ProxySettingsConfigured
 	return s
 }
 
@@ -334,4 +355,104 @@ func SetLogLevel(level string) (string, error) {
 		return "", err
 	}
 	return level, nil
+}
+
+// ProxySettings 返回应用出站请求使用的代理配置。
+type ProxySettings struct {
+	GithubProxy string `json:"githubProxy"`
+	HTTPProxy   string `json:"HTTP_PROXY"`
+	HTTPSProxy  string `json:"HTTPS_PROXY"`
+	NoProxy     string `json:"NO_PROXY"`
+}
+
+// GetProxySettings 读取代理配置，缺省值为空。
+func GetProxySettings() ProxySettings {
+	s := load()
+	return ProxySettings{
+		GithubProxy: s.GithubProxy,
+		HTTPProxy:   s.HTTPProxy,
+		HTTPSProxy:  s.HTTPSProxy,
+		NoProxy:     s.NoProxy,
+	}
+}
+
+func validProxyURL(value string, name string) error {
+	if value == "" {
+		return nil
+	}
+	for _, r := range value {
+		if unicode.IsControl(r) || unicode.IsSpace(r) {
+			return fmt.Errorf("%s 不能包含空白或控制字符", name)
+		}
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return fmt.Errorf("%s 必须是包含协议和主机的 URL", name)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" && parsed.Scheme != "socks5" && parsed.Scheme != "socks5h" {
+		return fmt.Errorf("%s 使用了不支持的协议", name)
+	}
+	if parsed.User != nil {
+		return fmt.Errorf("%s 不支持在 URL 中包含账号密码", name)
+	}
+	return nil
+}
+
+func validNoProxy(value string) error {
+	for _, r := range value {
+		if unicode.IsControl(r) {
+			return fmt.Errorf("NO_PROXY 不能包含控制字符")
+		}
+	}
+	return nil
+}
+
+// SetProxySettings 校验并持久化应用出站请求的代理配置。
+func SetProxySettings(value ProxySettings) (ProxySettings, error) {
+	if err := validProxyURL(value.GithubProxy, "githubProxy"); err != nil {
+		return ProxySettings{}, err
+	}
+	if err := validProxyURL(value.HTTPProxy, "HTTP_PROXY"); err != nil {
+		return ProxySettings{}, err
+	}
+	if err := validProxyURL(value.HTTPSProxy, "HTTPS_PROXY"); err != nil {
+		return ProxySettings{}, err
+	}
+	if err := validNoProxy(value.NoProxy); err != nil {
+		return ProxySettings{}, err
+	}
+	value.GithubProxy = strings.TrimSpace(value.GithubProxy)
+	value.HTTPProxy = strings.TrimSpace(value.HTTPProxy)
+	value.HTTPSProxy = strings.TrimSpace(value.HTTPSProxy)
+	value.NoProxy = strings.TrimSpace(value.NoProxy)
+	if err := update(func(s *Settings) error {
+		s.GithubProxy = value.GithubProxy
+		s.HTTPProxy = value.HTTPProxy
+		s.HTTPSProxy = value.HTTPSProxy
+		s.NoProxy = value.NoProxy
+		s.ProxySettingsConfigured = true
+		return nil
+	}); err != nil {
+		return ProxySettings{}, err
+	}
+	return value, nil
+}
+
+func ApplyProxySettings() error {
+	settings := load()
+	if !settings.ProxySettingsConfigured {
+		return nil
+	}
+	values := map[string]string{
+		"githubProxy": settings.GithubProxy,
+		"HTTP_PROXY":  settings.HTTPProxy,
+		"HTTPS_PROXY": settings.HTTPSProxy,
+		"NO_PROXY":    settings.NoProxy,
+	}
+	for name, value := range values {
+		if err := os.Setenv(name, value); err != nil {
+			return err
+		}
+	}
+	return nil
 }

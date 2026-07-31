@@ -1,0 +1,9 @@
+<mat-expansion-panel class="form-expansion" [expanded]="expanded()" [disabled]="disabled()">
+  <mat-expansion-panel-header>
+    <mat-panel-title>{{ title() }}</mat-panel-title>
+    @if (description()) {
+      <mat-panel-description>{{ description() }}</mat-panel-description>
+    }
+  </mat-expansion-panel-header>
+  <ng-content></ng-content>
+</mat-expansion-panel>

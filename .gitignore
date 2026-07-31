@@ -38,8 +38,7 @@ __pycache__/
 /gui-test-screenshots/
 # 本地测试用 Dockerfile（换国内 apk 源，仅本地使用，不入库）
 /docker/Dockerfile.localtest
-# 本地一键构建脚本（仅本地使用，不入库）
-/docker/build.sh
+# 本地一键构建脚本
 /docker/docker-compose.yml
 # 忽略数据目录及其中的所有文件
 /docker/test/

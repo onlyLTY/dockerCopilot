@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@angular/compiler": "^22.1.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^22.1.2",
+    "@angular/cli": "^22.1.2",
+    "@angular/compiler-cli": "^22.1.0"
+  }
+}

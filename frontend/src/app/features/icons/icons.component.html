@@ -38,12 +38,7 @@
 @if (show()) {
   <div class="modal-backdrop d-grid place-items-center" (click)="close($event)">
     <section class="modal min-w-0 d-grid modal-form modal-auto modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="modal-head d-flex justify-between gap-20">
-        <div>
-          <h2 class="m-0">{{ editing() ? '替换图标' : '上传图标' }}</h2>
-        </div>
-        <button class="modal-close d-grid place-items-center" (click)="show.set(false)" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
-      </div>
+      <dc-modal-heading [title]="editing() ? '替换图标' : '上传图标'" (closed)="show.set(false)" />
       <div class="modal-body">
         <label class="form-field d-block mt-20 fs-12">镜像仓库名称<input class="d-block mt-8 py-12 px-12" [(ngModel)]="name" placeholder="例如 nginx 或 ghcr.io/company/app"></label>
         <p class="form-hint m-0 mt-8 fs-12">输入 tag 或 digest 也会自动归一化，同一镜像仓库的所有版本共用此图标。</p>

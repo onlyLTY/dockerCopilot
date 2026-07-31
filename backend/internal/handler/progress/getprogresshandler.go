@@ -26,3 +26,15 @@ func GetProgressHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 	}
 }
+
+func ListProgressHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		l := progress.NewGetProgressLogic(r.Context(), svcCtx)
+		resp, err := l.ListProgress()
+		if err != nil {
+			httpx.WriteJson(w, resp.Code, resp)
+		} else {
+			httpx.OkJsonCtx(r.Context(), w, resp)
+		}
+	}
+}

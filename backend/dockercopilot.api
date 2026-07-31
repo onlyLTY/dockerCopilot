@@ -149,6 +149,7 @@ service dockerCopilot {
 @server(
 	prefix: /api
 	group: progress
+	jwt: Auth
 )
 service dockerCopilot {
 	@handler GetProgress

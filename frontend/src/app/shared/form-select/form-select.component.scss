@@ -1,0 +1,69 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.form-select {
+  position: relative;
+  display: block;
+  min-width: 0;
+  color: var(--muted);
+}
+
+.form-select select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  outline: 0;
+  background: var(--field-bg);
+  color: var(--black);
+  padding: 12px 40px 12px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+:host(.compact) .form-select select {
+  padding: 9px 40px 9px 12px;
+}
+
+.form-select select:focus-visible {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+.form-select select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.form-select > dc-icon {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  --icon-size: 14px;
+  color: var(--muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: color 0.15s, transform 0.15s;
+}
+
+.form-select:focus-within > dc-icon {
+  color: var(--blue);
+}
+
+.form-select select:focus-visible ~ dc-icon {
+  color: var(--blue);
+}
+
+.form-select select:disabled ~ dc-icon {
+  opacity: 0.55;
+}
+
+.form-select select option {
+  background: var(--field-bg);
+  color: var(--black);
+}

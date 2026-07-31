@@ -81,3 +81,46 @@ func TestRetentionValidation(t *testing.T) {
 		t.Fatal("valid retention rejected")
 	}
 }
+
+func TestProxySettingsPersistenceAndValidation(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "appSettings.json")
+	t.Setenv("APP_SETTINGS_PATH", path)
+
+	if got := GetProxySettings(); got.GithubProxy != "" || got.HTTPProxy != "" || got.HTTPSProxy != "" || got.NoProxy != "" {
+		t.Fatalf("unexpected proxy defaults: %+v", got)
+	}
+
+	want := ProxySettings{
+		GithubProxy: "https://github-proxy.example/",
+		HTTPProxy:   "http://127.0.0.1:7890",
+		HTTPSProxy:  "http://127.0.0.1:7890",
+		NoProxy:     "localhost,127.0.0.1,::1",
+	}
+	got, err := SetProxySettings(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want || GetProxySettings() != want {
+		t.Fatalf("proxy settings were not persisted: got=%+v want=%+v", got, want)
+	}
+	var stored Settings
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(content, &stored); err != nil || !stored.ProxySettingsConfigured {
+		t.Fatalf("proxy configuration marker was not persisted: %+v", stored)
+	}
+
+	for _, value := range []ProxySettings{
+		{HTTPProxy: "proxy.example:7890"},
+		{HTTPProxy: "http://user:password@proxy.example:7890"},
+		{GithubProxy: "ftp://github-proxy.example/"},
+		{NoProxy: "localhost\n127.0.0.1"},
+	} {
+		if _, err := SetProxySettings(value); err == nil {
+			t.Fatalf("invalid proxy settings accepted: %+v", value)
+		}
+	}
+}

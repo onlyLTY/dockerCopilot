@@ -10,20 +10,26 @@
 @if (filteredTasks().length) {
   <section class="task-list page-scroll-area responsive-card-grid d-grid gap-12 mb-24">
     @for (t of filteredTasks(); track t.taskID) {
-      <article class="task-row d-flex flex-col gap-12 py-16 px-18" [class.done]="t.isDone && !t.failed" [class.failed]="t.failed">
-        <div class="task-row-main flex-1 min-w-0">
-          <div class="task-row-head d-flex items-center gap-10">
-            <b class="fs-16">{{ t.title }}</b>
-            <span class="task-state py-2 px-9 fs-12" [class.active]="!t.isDone" [class.ok]="t.isDone && !t.failed" [class.bad]="t.failed">{{ statusText(t) }}</span>
-          </div>
-          <div class="task-bar mt-10"><i class="d-block" [style.width.%]="t.percentage" [class.bad]="t.failed"></i></div>
-          <small class="d-block mt-8 fs-12 text-muted">{{ t.message }} · {{ t.percentage }}% · {{ time(t.updatedAt) }}</small>
+      <dc-resource-card>
+        <div resource-card-icon class="task-icon d-grid place-items-center">
+          <dc-icon name="tasks"></dc-icon>
         </div>
-        <div class="task-actions d-flex items-center justify-end gap-8">
+        <div resource-card-title>
+          <span class="text-ellipsis min-w-0">{{ t.title }}</span>
+          <small class="task-state py-2 px-9 fs-12" [class.active]="!t.isDone" [class.ok]="t.isDone && !t.failed" [class.bad]="t.failed">{{ statusText(t) }}</small>
+        </div>
+        <div resource-card-info class="fs-12 text-muted">
+          <span class="text-ellipsis">{{ t.message }}</span>
+          <small>{{ t.percentage }}% · {{ time(t.updatedAt) }}</small>
+        </div>
+        <div resource-card-content>
+          <div class="task-bar"><i class="d-block" [style.width.%]="t.percentage" [class.bad]="t.failed"></i></div>
+        </div>
+        <div resource-card-actions>
           <button class="btn text-blue bg-secondary-bg" (click)="view(t.taskID)"><dc-icon name="about"></dc-icon>详情</button>
           <button class="btn text-red bg-secondary-bg" (click)="remove(t.taskID)"><dc-icon name="delete"></dc-icon>删除</button>
         </div>
-      </article>
+      </dc-resource-card>
     }
   </section>
 } @else {

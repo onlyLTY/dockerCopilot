@@ -1,12 +1,13 @@
 // 全局轻提示：居中上部弹出，成功/失败/信息三种样式，可点击关闭
 .toast-stack {
   position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
-  z-index: 60;
+  z-index: var(--layer-toast);
   pointer-events: none;
 }
 .toast {
   pointer-events: auto;
   width: min(520px, 90vw); border: 1px solid var(--line); border-radius: 10px;
+  background: var(--toast-bg); color: var(--toast-fg);
   box-shadow: 0 12px 30px var(--shadow); text-align: left; cursor: pointer;
   animation: toast-in .18s ease-out;
 }

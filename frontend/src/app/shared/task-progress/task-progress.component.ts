@@ -1,6 +1,7 @@
 import { Component, HostListener, computed, inject } from '@angular/core';
 import { TaskService } from '../../core/task.service';
 import { IconComponent } from '../icon/icon.component';
+import { ModalHeadingComponent } from '../modal-heading/modal-heading.component';
 
 /**
  * 任务进度弹窗：展示 TaskService.viewing 指向的任务进度。
@@ -9,7 +10,7 @@ import { IconComponent } from '../icon/icon.component';
 @Component({
   selector: 'dc-task-progress',
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, ModalHeadingComponent],
   templateUrl: './task-progress.component.html',
 })
 export class TaskProgressComponent {

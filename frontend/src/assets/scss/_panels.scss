@@ -2,12 +2,12 @@
 
 /* ===== 提示条 ===== */
 .alert { border-radius: 8px; white-space: pre-wrap; word-break: break-word; }
-.error-alert { color: var(--alert-error-text); background: var(--alert-error-bg); border: 1px solid var(--alert-error-line); }
-.warning-alert { color: var(--alert-warning-text); background: var(--alert-warning-bg); border: 1px solid var(--alert-warning-line); }
+.error-alert { color: var(--red); background: var(--red-soft); border: 1px solid var(--red); }
+.warning-alert { color: var(--amber); background: var(--amber-soft); border: 1px solid var(--amber); }
 
 /* ===== 面板 ===== */
 .panel {
-  background: var(--white); border: 1px solid var(--line); border-radius: 14px;
+  background: var(--panel-bg); border: 1px solid var(--line); border-radius: 14px;
   box-shadow: 0 9px 22px var(--shadow); overflow: hidden; margin-bottom: 24px;
 }
 
@@ -36,7 +36,7 @@
   position: absolute;
   inset: 0;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--white) 82%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 82%, transparent);
 }
 .resource-icon-wrap .card-select input { margin: 0; }
 [resource-card-title],

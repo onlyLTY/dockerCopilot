@@ -8,6 +8,8 @@ on:
     paths:
       - version
       - frontend/**
+      - backend/**
+      - docker/**
 
 jobs:
   build-frontend:
@@ -52,10 +54,10 @@ jobs:
         with:
           pattern: my-artifact-frontend-*
           merge-multiple: true
-          path: backend/web/dist/browser
+          path: frontend-dist
 
-      - run: ls -R backend/web/dist/browser
-      - run: test -f backend/web/dist/browser/index.html
+      - run: ls -R frontend-dist
+      - run: test -f frontend-dist/index.html
 
       - name: Get version from file
         id: get_version
@@ -74,15 +76,16 @@ jobs:
 
       - name: Prepare Files
         run: |
-          mkdir -p build/docker-${{ matrix.arch }}
-          cp -r build/backend build/docker-${{ matrix.arch }}/dist
-          cp -r backend/etc build/docker-${{ matrix.arch }}/etc
+          mkdir -p build/docker/dist/linux/${{ matrix.arch }} build/docker/etc build/docker/web
+          cp build/backend/linux/${{ matrix.arch }}/dockerCopilot build/docker/dist/linux/${{ matrix.arch }}/dockerCopilot
+          cp -r backend/etc/. build/docker/etc/
+          cp -r frontend-dist/. build/docker/web/
 
       - name: Upload Backend Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: my-artifact-backend-${{ matrix.arch }}
-          path: build/docker-${{ matrix.arch }}
+          path: build/docker
 
   docker-setup:
     runs-on: ubuntu-latest

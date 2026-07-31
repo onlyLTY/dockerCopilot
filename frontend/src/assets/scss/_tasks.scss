@@ -12,15 +12,15 @@
 .compact-shell nav a { position: relative; }
 
 /* ===== 任务列表 ===== */
-.task-row {
-  background: var(--white); border: 1px solid var(--line); border-radius: 12px;
-  box-shadow: 0 8px 20px var(--shadow);
+.task-icon {
+  color: var(--blue);
+  background: var(--blue-soft);
+  border-radius: 12px;
 }
-.task-row-head b { color: var(--black); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.task-row-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-icon dc-icon { --icon-size: 24px; }
 .task-state {
   flex: none; border-radius: 20px;
-  background: var(--blue-soft); color: var(--muted);
+  background: var(--blue-soft); color: var(--blue);
 }
 .task-state.active { background: var(--amber-soft); color: var(--amber); }
 .task-state.ok { background: var(--green-soft); color: var(--green); }
@@ -46,16 +46,11 @@
 
 /* ===== 设置页 ===== */
 .settings-card {
-  background: var(--white); border: 1px solid var(--line); border-radius: 14px;
+  background: var(--panel-bg); border: 1px solid var(--line); border-radius: 14px;
   box-shadow: 0 8px 20px var(--shadow);
 }
 .settings-item-text b { color: var(--black); }
 .settings-item-text span { line-height: 1.6; }
 .settings-item-control { flex: none; }
-.settings-item-control select {
-  border: 1px solid var(--line); border-radius: 8px;
-  background: var(--white); color: var(--black); min-width: 160px;
-}
-.settings-item-control select:focus { border-color: var(--blue); outline: 0; box-shadow: 0 0 0 3px var(--focus); }
+.settings-item-control dc-form-select { min-width: 160px; }
 .settings-hint { border-top: 1px solid var(--line); }
-.dark-shell .settings-item-control select { background: #1a2130; }

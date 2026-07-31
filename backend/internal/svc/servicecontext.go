@@ -47,12 +47,12 @@ type cronTask struct {
 }
 
 type TaskProgress struct {
-	TaskID     string
-	Percentage int
-	Message    string
-	Name       string
-	DetailMsg  string
-	IsDone     bool
+	TaskID     string `json:"taskID"`
+	Percentage int    `json:"percentage"`
+	Message    string `json:"message"`
+	Name       string `json:"name"`
+	DetailMsg  string `json:"detailMsg"`
+	IsDone     bool   `json:"isDone"`
 }
 
 type ProgressStoreType map[string]TaskProgress
@@ -107,10 +107,18 @@ func progressStorePath() string {
 func loadProgressStore(path string) ProgressStoreType {
 	content, err := os.ReadFile(path)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			logx.Errorf("无法读取任务进度文件 %s: %v", path, err)
+		}
 		return make(ProgressStoreType)
 	}
 	var store ProgressStoreType
 	if err := json.Unmarshal(content, &store); err != nil || store == nil {
+		if err != nil {
+			logx.Errorf("无法解析任务进度文件 %s: %v", path, err)
+		} else {
+			logx.Errorf("任务进度文件 %s 不是有效对象", path)
+		}
 		return make(ProgressStoreType)
 	}
 	return store
@@ -133,10 +141,14 @@ func (ctx *ServiceContext) persistProgress() {
 	}
 	tmpName := tmp.Name()
 	defer os.Remove(tmpName)
-	if err := tmp.Chmod(0644); err == nil {
-		_, err = tmp.Write(content)
+	if err := tmp.Chmod(0644); err != nil {
+		_ = tmp.Close()
+		logx.Errorf("无法设置任务进度临时文件权限: %v", err)
+		return
 	}
-	if closeErr := tmp.Close(); err == nil {
+	if _, err = tmp.Write(content); err != nil {
+		_ = tmp.Close()
+	} else if closeErr := tmp.Close(); closeErr != nil {
 		err = closeErr
 	}
 	if err != nil {
@@ -160,6 +172,16 @@ func (ctx *ServiceContext) GetProgress(taskID string) (TaskProgress, bool) {
 	defer ctx.mu.Unlock()
 	progress, ok := ctx.ProgressStore[taskID]
 	return progress, ok
+}
+
+func (ctx *ServiceContext) ListProgress() ProgressStoreType {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	store := make(ProgressStoreType, len(ctx.ProgressStore))
+	for taskID, progress := range ctx.ProgressStore {
+		store[taskID] = progress
+	}
+	return store
 }
 
 func (ctx *ServiceContext) TryStartContainerUpdate(containerID, taskID string) bool {

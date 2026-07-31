@@ -6,6 +6,7 @@ import { ApiResponse } from './compose.service';
 export interface UpdateSettings { interval: string; options: string[]; }
 export interface BackupSettings { interval: string; options: string[]; }
 export interface LogSettings { level: string; options: string[]; }
+export interface ProxySettings { githubProxy: string; HTTP_PROXY: string; HTTPS_PROXY: string; NO_PROXY: string; }
 
 export interface RuntimeSettings {
   updateInterval: string;
@@ -48,4 +49,6 @@ export class SettingsService {
   setBackupInterval(interval: string): Observable<ApiResponse<BackupSettings>> { return this.http.put<ApiResponse<BackupSettings>>('/api/settings/auto-backup', { interval }).pipe(tap(r => { if (r.code === 200) this.setRuntime({ backupInterval: interval }); })); }
   getLogSettings(): Observable<ApiResponse<LogSettings>> { return this.http.get<ApiResponse<LogSettings>>('/api/settings/log-level'); }
   setLogLevel(level: string): Observable<ApiResponse<LogSettings>> { return this.http.put<ApiResponse<LogSettings>>('/api/settings/log-level', { level }).pipe(tap(r => { if (r.code === 200) this.setRuntime({ logLevel: level }); })); }
+  getProxySettings(): Observable<ApiResponse<ProxySettings>> { return this.http.get<ApiResponse<ProxySettings>>('/api/settings/proxy'); }
+  setProxySettings(settings: ProxySettings): Observable<ApiResponse<ProxySettings>> { return this.http.put<ApiResponse<ProxySettings>>('/api/settings/proxy', settings); }
 }

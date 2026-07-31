@@ -7,12 +7,13 @@ import { ToastService } from '../../core/toast.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
+import { ModalHeadingComponent } from '../../shared/modal-heading/modal-heading.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 
 @Component({
   selector: 'dc-icons',
   standalone: true,
-  imports: [FormsModule, IconComponent, PageHeadingComponent, ResourceCardComponent],
+  imports: [FormsModule, IconComponent, PageHeadingComponent, ResourceCardComponent, ModalHeadingComponent],
   templateUrl: './icons.component.html',
 })
 export class IconsComponent {

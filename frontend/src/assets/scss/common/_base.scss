@@ -12,7 +12,32 @@ button,
 input,
 textarea { font: inherit; }
 
+p { margin: 0; }
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--muted) 68%, transparent);
+  opacity: 1;
+}
+
 button { cursor: pointer; }
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+  transition: color 0.15s, opacity 0.15s;
+}
+
+a:hover {
+  color: var(--blue);
+  opacity: 0.82;
+}
+
+a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
 
 
 /* dc-icon 尺寸工具类 */

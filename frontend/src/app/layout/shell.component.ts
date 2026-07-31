@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { VersionService } from '../core/version.service';
@@ -16,12 +16,16 @@ export class ShellComponent {
   readonly auth = inject(AuthService); readonly ui = inject(UiStateService); readonly tasks = inject(TaskService); private readonly router = inject(Router); private readonly versionService = inject(VersionService);
   open = false; readonly version = signal({ version: '', buildDate: '' });
   constructor() {
-    if (this.auth.isAuthenticated()) {
+    effect(() => {
+      if (!this.auth.authenticated()) {
+        this.version.set({ version: '', buildDate: '' });
+        return;
+      }
       this.versionService.local().subscribe({
         next: result => { if (result.code === 200) this.version.set(result.data); },
         error: () => this.version.set({ version: '', buildDate: '' }),
       });
-    }
+    });
   }
   navigate(path: string): void { this.router.navigateByUrl(path); this.closeMenu(); }
   isActive(path: string): boolean {

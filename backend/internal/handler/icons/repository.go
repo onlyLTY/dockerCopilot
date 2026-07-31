@@ -1,8 +1,6 @@
 package icons
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -14,8 +12,16 @@ import (
 )
 
 var iconConfigMu sync.Mutex
+var iconDirectory = func() string { return "/data/icon/icons" }
+var iconConfigPath = func() string { return "/data/icon/imageLogos.js" }
 var invalidRepositoryChars = regexp.MustCompile(`[^a-z0-9._:/-]+`)
 var trailingComma = regexp.MustCompile(`,\s*}`)
+
+func withIconConfigLock[T any](fn func() (T, error)) (T, error) {
+	iconConfigMu.Lock()
+	defer iconConfigMu.Unlock()
+	return fn()
+}
 
 func normalizeRepository(value string) (string, error) {
 	value = strings.ToLower(strings.TrimSpace(value))
@@ -49,26 +55,14 @@ func normalizeRepository(value string) (string, error) {
 	return value, nil
 }
 
-func iconDirectory() string { return "/data/icon/icons" }
-
-func iconConfigPath() string { return "/data/icon/imageLogos.js" }
-
-func withIconConfigLock[T any](fn func() (T, error)) (T, error) {
-	iconConfigMu.Lock()
-	defer iconConfigMu.Unlock()
-	return fn()
-}
-
-func iconFilename(repository, original string) (string, error) {
+func iconExtension(original string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(filepath.Base(original)))
 	switch ext {
-	case ".png", ".jpg", ".jpeg", ".webp", ".svg":
+	case ".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif":
 	default:
-		return "", fmt.Errorf("仅支持 png、jpg、jpeg、webp、svg 图标")
+		return "", fmt.Errorf("仅支持 png、jpg、jpeg、webp、svg、gif 图标")
 	}
-	hash := sha256.Sum256([]byte(repository))
-	name := strings.NewReplacer("/", "_", ":", "_", "@", "_", ".", "_", "-", "_", "_", "_").Replace(repository)
-	return name + "-" + hex.EncodeToString(hash[:4]) + ext, nil
+	return ext, nil
 }
 
 func imageURL(filename string) string { return "/src/config/image/" + filename }

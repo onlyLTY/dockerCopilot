@@ -1,14 +1,7 @@
 @if (task(); as t) {
   <div class="modal-backdrop d-grid place-items-center" (click)="close($event)">
     <section class="modal min-w-0 d-grid modal-content modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="modal-head d-flex justify-between gap-20">
-        <div>
-          <h2 class="m-0">{{ t.title }}</h2>
-          <span class="mt-6 fs-12">{{ t.message }}</span>
-        </div>
-        <button class="modal-close d-grid place-items-center" (click)="tasks.closeView()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
-      </div>
-
+      <dc-modal-heading [title]="t.title" [subtitle]="t.message" (closed)="tasks.closeView()" />
       <div class="modal-body task-content d-flex flex-col">
         <div class="task-progress mt-20">
           <div class="progress-bar" [class.failed]="t.failed" [class.done]="t.isDone && !t.failed">

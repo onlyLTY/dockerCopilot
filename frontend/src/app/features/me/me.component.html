@@ -48,18 +48,24 @@
 
 @if (showSettings()) {
   <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeSettings()">
-    <section class="modal min-w-0 d-grid modal-form modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="modal-head d-flex justify-between gap-20">
-        <div>
-          <h2 class="m-0">应用设置</h2><p class="mt-6 fs-12">调整后台任务、备份和日志输出。</p>
-        </div>
-        <button class="modal-close d-grid place-items-center" (click)="closeSettings()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
-      </div>
+    <section class="modal min-w-0 d-grid modal-form modal-settings" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <dc-modal-heading title="应用设置" subtitle="调整后台任务、备份和日志输出。" (closed)="closeSettings()" />
       <div class="modal-body">
-        <label class="form-field d-block mt-20 fs-12">更新检查频率<select class="d-block mt-8 py-12 px-12" [(ngModel)]="updateDraft">@for (opt of updateOptions(); track opt) {<option [value]="opt">{{ updateLabel(opt) }}</option>}</select></label>
-        <label class="form-field d-block mt-20 fs-12">自动备份频率<select class="d-block mt-8 py-12 px-12" [(ngModel)]="backupDraft">@for (opt of backupOptions(); track opt) {<option [value]="opt">{{ backupLabel(opt) }}</option>}</select></label>
-        <label class="form-field d-block mt-20 fs-12">备份保留数量<input class="d-block mt-8 py-12 px-12" type="number" min="1" max="100" [(ngModel)]="retentionDraft"><span class="path-hint d-block mt-8 p-0 fs-12">JSON 和 YAML 分别保留最近的备份</span></label>
-        <label class="form-field d-block mt-20 fs-12">日志级别<select class="d-block mt-8 py-12 px-12" [(ngModel)]="logDraft">@for (opt of logOptions(); track opt) {<option [value]="opt">{{ opt }}</option>}</select></label>
+        <div class="settings-grid">
+          <label class="form-field d-block mt-20 fs-12">更新检查频率<dc-form-select class="d-block mt-8" [options]="updateSelectOptions()" [(ngModel)]="updateDraft"></dc-form-select></label>
+          <label class="form-field d-block mt-20 fs-12">自动备份频率<dc-form-select class="d-block mt-8" [options]="backupSelectOptions()" [(ngModel)]="backupDraft"></dc-form-select></label>
+          <label class="form-field d-block mt-20 fs-12">备份保留数量<input class="d-block mt-8 py-12 px-12" type="number" min="1" max="100" [(ngModel)]="retentionDraft"><span class="text-muted d-block mt-8 p-0 fs-12">JSON 和 YAML 分别保留最近的备份</span></label>
+          <label class="form-field d-block mt-20 fs-12">日志级别<dc-form-select class="d-block mt-8" [options]="logSelectOptions()" [(ngModel)]="logDraft"></dc-form-select></label>
+        </div>
+        <dc-form-expansion class="proxy-panel mt-20" title="代理设置" description="代理设置保存后需要重启DC服务才能生效">
+          <label class="form-field d-block mt-20 fs-12">GitHub 地址前缀代理<input class="d-block mt-8 py-12 px-12" type="url" [(ngModel)]="proxyDraft.githubProxy" placeholder="例如 https://github-proxy.example/" autocomplete="off"><span class="text-muted d-block mt-8 p-0 fs-10">用于版本检查和程序更新地址拼接，可留空。</span></label>
+          <label class="form-field d-block mt-20 fs-12">
+            HTTP 代理
+            <input class="d-block mt-8 py-12 px-12" type="url" [(ngModel)]="proxyDraft.HTTP_PROXY" placeholder="例如 http://127.0.0.1:7890" autocomplete="off">
+          </label>
+          <label class="form-field d-block mt-20 fs-12">HTTPS 代理<input class="d-block mt-8 py-12 px-12" type="url" [(ngModel)]="proxyDraft.HTTPS_PROXY" placeholder="例如 http://127.0.0.1:7890" autocomplete="off"></label>
+          <label class="form-field d-block mt-20 fs-12">不使用代理的地址<input class="d-block mt-8 py-12 px-12" type="text" [(ngModel)]="proxyDraft.NO_PROXY" placeholder="例如 localhost,127.0.0.1,::1" autocomplete="off"></label>
+        </dc-form-expansion>
       </div>
       <div class="modal-actions d-flex justify-end gap-10 pt-18"><button class="btn text-secondary-text bg-secondary-bg" (click)="closeSettings()">取消</button><button class="btn text-white bg-blue" [disabled]="saving()" (click)="saveSettings()">{{ saving() ? '保存中…' : '保存设置' }}</button></div>
     </section>
@@ -69,11 +75,7 @@
 @if (showLogs()) {
   <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeLogs()">
     <section class="modal min-w-0 d-grid modal-content modal-xl" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="modal-head d-flex justify-between gap-20"><div>
-        <h2 class="m-0">日志</h2>
-        <span class="mt-6 fs-12">最近运行记录</span>
-      </div>
-      <button class="modal-close d-grid place-items-center" (click)="closeLogs()" aria-label="关闭"><dc-icon name="close"></dc-icon></button></div>
+      <dc-modal-heading title="日志" subtitle="最近运行记录" (closed)="closeLogs()" />
       <div class="modal-body">
         @if (loadingLogs()) { <p class="text-muted">读取中…</p> }
         @if (logError()) { <p class="message error">{{ logError() }}</p> }

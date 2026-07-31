@@ -41,6 +41,9 @@ type UnauthorizedResponse struct {
 }
 
 func main() {
+	if err := settingstore.ApplyProxySettings(); err != nil {
+		logx.Errorf("应用代理设置失败: %v", err)
+	}
 	logDir := os.Getenv("LOG_DIR")
 	if logDir == "" {
 		logDir = "./logs"

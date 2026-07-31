@@ -198,6 +198,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/settings/proxy",
+				Handler: GetProxySettingsHandler,
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/settings/proxy",
+				Handler: UpdateProxySettingsHandler,
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/logs",
 				Handler: GetLogsHandler,
 			},
@@ -264,6 +274,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/progress/list",
+				Handler: progress.ListProgressHandler(serverCtx),
+			},
 			{
 				Method:  http.MethodGet,
 				Path:    "/progress/:taskid",

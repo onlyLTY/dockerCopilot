@@ -1,11 +1,11 @@
 import { Component, HostListener, inject } from '@angular/core';
 import { ConfirmService } from '../../core/confirm.service';
-import { IconComponent } from '../icon/icon.component';
+import { ModalHeadingComponent } from '../modal-heading/modal-heading.component';
 
 @Component({
   selector: 'dc-confirm-dialog',
   standalone: true,
-  imports: [IconComponent],
+  imports: [ModalHeadingComponent],
   templateUrl: './confirm-dialog.component.html',
 })
 export class ConfirmDialogComponent {

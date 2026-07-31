@@ -1,0 +1,9 @@
+<div class="modal-head d-flex justify-between gap-20">
+  <div>
+    <h2 class="m-0">{{ title() }}</h2>
+    @if (subtitle()) {
+      <span class="modal-subtitle fs-12">{{ subtitle() }}</span>
+    }
+  </div>
+  <button class="modal-close d-grid place-items-center" (click)="closed.emit()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
+</div>

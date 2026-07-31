@@ -11,13 +11,14 @@ import { IconService } from '../../core/icon.service';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
+import { ModalHeadingComponent } from '../../shared/modal-heading/modal-heading.component';
 
 const defaultCompose = '';
 
 @Component({
   selector: 'dc-compose',
   standalone: true,
-  imports: [FormsModule, PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent, PageHeadingComponent],
+  imports: [FormsModule, PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent, PageHeadingComponent, ModalHeadingComponent],
   templateUrl: './compose.component.html',
 })
 export class ComposeComponent {

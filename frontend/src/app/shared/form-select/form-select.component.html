@@ -1,0 +1,12 @@
+<div class="form-select">
+  <select
+    [value]="value"
+    [disabled]="disabled() || controlDisabled"
+    (change)="change($event)"
+    (blur)="blur()">
+    @for (option of options(); track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
+  <dc-icon name="chevron-down" aria-hidden="true"></dc-icon>
+</div>

@@ -1,0 +1,86 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+:host ::ng-deep .form-expansion.mat-expansion-panel {
+  margin: 12px 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px;
+  background: var(--panel-bg) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-panel-header {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 56px !important;
+  height: auto !important;
+  padding: 14px 16px !important;
+  color: var(--black) !important;
+  background: var(--panel-header-bg) !important;
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-panel-header:hover,
+:host ::ng-deep .form-expansion .mat-expansion-panel-header:focus,
+:host ::ng-deep .form-expansion .mat-expansion-panel-header.mat-expanded,
+:host ::ng-deep .form-expansion .mat-expansion-panel-header.mat-expanded:hover {
+  color: var(--black) !important;
+  background: var(--panel-header-bg) !important;
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-panel-header-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  color: var(--black) !important;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-panel-header-description {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0 16px;
+  color: var(--muted) !important;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-indicator {
+  display: block !important;
+  flex: 0 0 12px !important;
+  width: 12px !important;
+  height: 12px !important;
+  margin: 0 0 0 16px !important;
+  color: var(--muted) !important;
+  transform: translateY(0) !important;
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-panel-header:hover .mat-expansion-indicator,
+:host ::ng-deep .form-expansion .mat-expansion-panel-header:focus .mat-expansion-indicator,
+:host ::ng-deep .form-expansion .mat-expansion-panel-header.mat-expanded .mat-expansion-indicator {
+  color: var(--blue);
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-panel-header:focus-visible .mat-expansion-indicator {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-indicator::after {
+  display: block !important;
+  width: 7px !important;
+  height: 7px !important;
+  margin: 0 !important;
+  border-width: 0 2px 2px 0 !important;
+  border-style: solid !important;
+  border-color: currentColor !important;
+  transform: rotate(45deg) !important;
+}
+
+:host ::ng-deep .form-expansion .mat-expansion-panel-body {
+  padding: 0 16px 16px;
+  background: var(--panel-bg);
+}

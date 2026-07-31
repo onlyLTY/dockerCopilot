@@ -9,11 +9,7 @@
       <span class="d-block mt-6 fs-12 text-muted">定时检查所有容器的镜像是否有新版本。你也可以随时在容器页手动检查。</span>
     </div>
     <div class="settings-item-control d-flex items-center gap-10">
-      <select class="py-9 px-12 fs-14" [(ngModel)]="updateDraft" [disabled]="loading() || updateSaving()">
-        @for (opt of updateOptions(); track opt) {
-          <option [value]="opt">{{ updateLabel(opt) }}</option>
-        }
-      </select>
+      <dc-form-select class="settings-select compact" [options]="updateSelectOptions()" [(ngModel)]="updateDraft" [disabled]="loading() || updateSaving()"></dc-form-select>
       <button class="btn text-white bg-blue" [disabled]="!updateDirty() || updateSaving()" (click)="saveUpdate()">{{ updateSaving() ? '保存中…' : '保存' }}</button>
     </div>
   </div>
@@ -25,11 +21,7 @@
       <span class="d-block mt-6 fs-12 text-muted">定时创建容器备份（同时生成 JSON 和 YAML）。保留数量沿用备份页的保留设置。你也可以随时在备份页手动备份。</span>
     </div>
     <div class="settings-item-control d-flex items-center gap-10">
-      <select class="py-9 px-12 fs-14" [(ngModel)]="backupDraft" [disabled]="loading() || backupSaving()">
-        @for (opt of backupOptions(); track opt) {
-          <option [value]="opt">{{ backupLabel(opt) }}</option>
-        }
-      </select>
+      <dc-form-select class="settings-select compact" [options]="backupSelectOptions()" [(ngModel)]="backupDraft" [disabled]="loading() || backupSaving()"></dc-form-select>
       <button class="btn text-white bg-blue" [disabled]="!backupDirty() || backupSaving()" (click)="saveBackup()">{{ backupSaving() ? '保存中…' : '保存' }}</button>
     </div>
   </div>

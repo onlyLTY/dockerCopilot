@@ -5,6 +5,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
+import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 
 /**
  * 任务页：查看容器更新 / 备份恢复 / 部署等异步任务的列表与进度，
@@ -13,7 +14,7 @@ import { PageHeadingComponent } from '../../shared/page-heading/page-heading.com
 @Component({
   selector: 'dc-tasks',
   standalone: true,
-  imports: [PageStateComponent, IconComponent, StatsComponent, PageHeadingComponent],
+  imports: [PageStateComponent, IconComponent, StatsComponent, PageHeadingComponent, ResourceCardComponent],
   templateUrl: './tasks.component.html',
 })
 export class TasksComponent {

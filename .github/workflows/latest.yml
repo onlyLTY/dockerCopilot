@@ -8,6 +8,8 @@ on:
     paths:
       - version
       - frontend/**
+      - backend/**
+      - docker/**
 
 jobs:
   build-frontend:

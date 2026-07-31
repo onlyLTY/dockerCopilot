@@ -4,6 +4,7 @@ import { SettingsService } from '../../core/settings.service';
 import { ToastService } from '../../core/toast.service';
 import { SectionToolbarComponent } from '../../shared/section-toolbar/section-toolbar.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
+import { FormSelectComponent, FormSelectOption } from '../../shared/form-select/form-select.component';
 
 /**
   * 设置页：提供定时任务配置（预设下拉）。
@@ -14,7 +15,7 @@ import { PageHeadingComponent } from '../../shared/page-heading/page-heading.com
 @Component({
   selector: 'dc-settings',
   standalone: true,
-  imports: [FormsModule, SectionToolbarComponent, PageHeadingComponent],
+  imports: [FormsModule, SectionToolbarComponent, PageHeadingComponent, FormSelectComponent],
   templateUrl: './settings.component.html',
 })
 export class SettingsComponent {
@@ -35,6 +36,8 @@ export class SettingsComponent {
   readonly backupDirty = computed(() => this.backupDraft !== this.backupInterval());
 
   readonly loading = signal<boolean>(false);
+  readonly updateSelectOptions = computed<FormSelectOption[]>(() => this.updateOptions().map(value => ({ value, label: this.updateLabel(value) })));
+  readonly backupSelectOptions = computed<FormSelectOption[]>(() => this.backupOptions().map(value => ({ value, label: this.backupLabel(value) })));
 
   private readonly updateLabels: Record<string, string> = {
     off: '关闭（仅手动检查）', '30m': '每 30 分钟', '1h': '每小时', '6h': '每 6 小时', '12h': '每 12 小时', '24h': '每天一次',

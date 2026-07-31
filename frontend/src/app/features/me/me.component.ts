@@ -10,6 +10,9 @@ import { HttpClient } from '@angular/common/http';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
+import { ModalHeadingComponent } from '../../shared/modal-heading/modal-heading.component';
+import { FormSelectComponent, FormSelectOption } from '../../shared/form-select/form-select.component';
+import { FormExpansionComponent } from '../../shared/form-expansion/form-expansion.component';
 
 interface LogEntry { timestamp: string; level: string; message: string; }
 interface LogLevelData { level: string; options: string[]; }
@@ -17,7 +20,7 @@ interface LogLevelData { level: string; options: string[]; }
 @Component({
   selector: 'dc-me',
   standalone: true,
-  imports: [FormsModule, IconComponent, StatsComponent, PageHeadingComponent],
+  imports: [FormsModule, IconComponent, StatsComponent, PageHeadingComponent, ModalHeadingComponent, FormSelectComponent, FormExpansionComponent],
   templateUrl: './me.component.html',
 })
 export class MeComponent {
@@ -61,6 +64,9 @@ export class MeComponent {
   readonly updateOptions = signal<string[]>([]);
   readonly backupOptions = signal<string[]>([]);
   readonly logOptions = signal<string[]>(['debug', 'info', 'warn', 'error']);
+  readonly updateSelectOptions = computed<FormSelectOption[]>(() => this.updateOptions().map(value => ({ value, label: this.updateLabel(value) })));
+  readonly backupSelectOptions = computed<FormSelectOption[]>(() => this.backupOptions().map(value => ({ value, label: this.backupLabel(value) })));
+  readonly logSelectOptions = computed<FormSelectOption[]>(() => this.logOptions().map(value => ({ value, label: value })));
   readonly stats = computed<readonly StatItem[]>(() => [
     { value: this.updateLabel(this.runtime().updateInterval), label: '更新检查', tone: 'blue' },
     { value: this.backupLabel(this.runtime().backupInterval), label: '自动备份', tone: 'green' },
@@ -72,6 +78,7 @@ export class MeComponent {
   get logLevel() { return this.runtime().logLevel; }
   get retention() { return this.runtime().retention; }
   updateDraft = ''; backupDraft = ''; logDraft = 'info'; retentionDraft = 10;
+  proxyDraft = { githubProxy: '', HTTP_PROXY: '', HTTPS_PROXY: '', NO_PROXY: '' };
 
   private readonly updateLabels: Record<string, string> = { off: '关闭（仅手动检查）', '30m': '每 30 分钟', '1h': '每小时', '6h': '每 6 小时', '12h': '每 12 小时', '24h': '每天一次' };
   private readonly backupLabels: Record<string, string> = { off: '关闭（仅手动备份）', '6h': '每 6 小时', '12h': '每 12 小时', '24h': '每天一次', week: '每周', month: '每月' };
@@ -95,6 +102,7 @@ export class MeComponent {
     this.settings.getBackupSettings().subscribe({ next: r => { if (r.code === 200) { this.backupOptions.set(r.data.options || []); this.backupDraft = this.runtime().backupInterval || r.data.interval; } } });
     this.settings.getLogSettings().subscribe({ next: r => { if (r.code === 200) { this.logOptions.set(r.data.options || this.logOptions()); this.logDraft = this.runtime().logLevel || r.data.level; } } });
     this.backups.settings().subscribe({ next: r => { if (r.code === 200) { this.retentionDraft = r.data.retention; this.settings.setRuntime({ retention: r.data.retention }); } } });
+    this.settings.getProxySettings().subscribe({ next: r => { if (r.code === 200 && r.data) this.proxyDraft = { ...r.data }; } });
   }
 
   saveSettings() {
@@ -106,6 +114,7 @@ export class MeComponent {
       this.settings.setBackupInterval(this.backupDraft),
       this.settings.setLogLevel(this.logDraft),
       this.backups.updateSettings(value),
+      this.settings.setProxySettings(this.proxyDraft),
     ]).subscribe({ next: results => this.finishSave(value, results.some(r => r.code !== 200)), error: () => this.finishSave(value, true) });
   }
 
@@ -113,7 +122,7 @@ export class MeComponent {
     this.saving.set(false);
     if (failed) { this.toast.error('部分设置保存失败'); return; }
     this.settings.setRuntime({ updateInterval: this.updateDraft, backupInterval: this.backupDraft, logLevel: this.logDraft, retention: value });
-    this.showSettings.set(false); this.toast.success('设置已保存');
+    this.showSettings.set(false); this.toast.success('设置已保存，代理设置将在重启服务后生效');
   }
 
   openLogs() {

@@ -1,7 +1,8 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { ApiResponse } from './compose.service';
+import { AuthService } from './auth.service';
 import { CacheBus } from './cache-bus';
 import { ToastService } from './toast.service';
 
@@ -30,21 +31,28 @@ interface ProgressData {
   isDone: boolean;
 }
 
+interface ProgressListResponse {
+  code: number;
+  msg: string;
+  data: ProgressData[];
+}
+
 const STORAGE_KEY = 'dc-tasks';
 const POLL_INTERVAL = 1500;   // 轮询间隔（毫秒）
 const DONE_KEEP = 60 * 60 * 1000; // 已完成任务保留 1 小时后可被清理
 
 /**
- * 任务服务：后端进度存于内存且只提供单任务查询，因此任务列表在前端维护。
+ * 任务服务：后端进度持久化在 taskProgress.json，前端 localStorage 保存展示元数据。
  * - track()：发起异步操作（更新/恢复/部署）拿到 taskID 后登记，开始轮询。
  * - 轮询 /api/progress/:taskid 更新进度；isDone 后停止轮询并联动刷新相关缓存。
- * - 列表持久化到 localStorage，刷新页面后仍可看到，未完成的会恢复轮询。
+ * - 启动或登录后从 /api/progress 合并后端任务，刷新页面后仍保留本地展示信息。
  */
 @Injectable({ providedIn: 'root' })
 export class TaskService {
   private readonly http = inject(HttpClient);
   private readonly bus = inject(CacheBus);
   private readonly toast = inject(ToastService);
+  private readonly auth = inject(AuthService);
   readonly completed = new Subject<{ taskID: string; resourceID?: string; refresh: boolean }>();
   readonly tasks = signal<TaskItem[]>(this.restore());
   readonly activeCount = computed(() => this.tasks().filter(t => !t.isDone).length);
@@ -54,8 +62,14 @@ export class TaskService {
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private polling = new Set<string>();
   private unknownCounts = new Map<string, number>();
+  private persistedLoaded = false;
 
-  constructor() { this.tasks().forEach(t => { if (!t.isDone) this.startPolling(t.taskID); }); }
+  constructor() {
+    effect(() => {
+      if (this.auth.authenticated()) this.loadPersisted();
+    });
+    this.tasks().forEach(t => { if (!t.isDone) this.startPolling(t.taskID); });
+  }
 
   /** 登记一个异步任务并开始轮询；refresh 表示完成后要联动刷新资源缓存 */
   track(taskID: string, title: string, refresh = false, resourceID = ''): void {
@@ -68,6 +82,49 @@ export class TaskService {
     this.persist();
     this.viewing.set(taskID);
     this.startPolling(taskID);
+  }
+
+  private loadPersisted(): void {
+    if (this.persistedLoaded) return;
+    this.persistedLoaded = true;
+    this.http.get<ProgressListResponse>('/api/progress/list').subscribe({
+      next: response => {
+        if (response.code !== 200 || !Array.isArray(response.data)) return;
+        const now = Date.now();
+        const local = new Map(this.tasks().map(item => [item.taskID, item]));
+        const merged = response.data.map(progress => {
+          const existing = local.get(progress.taskID);
+          if (existing) {
+            local.delete(progress.taskID);
+            return {
+              ...existing,
+              percentage: progress.percentage,
+              message: progress.message || existing.message,
+              detailMsg: progress.detailMsg || existing.detailMsg,
+              isDone: progress.isDone,
+              failed: progress.isDone && (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
+              updatedAt: existing.updatedAt || now,
+            };
+          }
+          return {
+            taskID: progress.taskID,
+            title: progress.name || progress.taskID,
+            percentage: progress.percentage,
+            message: progress.message || '任务已恢复',
+            detailMsg: progress.detailMsg || '',
+            isDone: progress.isDone,
+            failed: progress.isDone && (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
+            refresh: false,
+            createdAt: now,
+            updatedAt: now,
+          };
+        });
+        this.tasks.set([...merged, ...local.values()]);
+        this.persist();
+        this.tasks().filter(item => !item.isDone).forEach(item => this.startPolling(item.taskID));
+      },
+      error: () => { this.persistedLoaded = false; },
+    });
   }
 
   /** 打开某个任务的进度弹窗 */

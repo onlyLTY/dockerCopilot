@@ -6,8 +6,21 @@ $colors: (
   page-bg-dark: #151a24,
   white: #fff,
   white-dark: #202735,
+  panel-bg: #fff,
+  panel-bg-dark: #202b3b,
+  panel-header-bg: #edf2f7,
+  panel-header-bg-dark: #2b394d,
+  modal-bg: #fff,
+  modal-bg-dark: #2d394c,
+  field-bg: #fff,
+  field-bg-dark: #18212f,
+  editor-bg: #111722,
+  editor-fg: #edf2f8,
+  editor-gutter: #92a1b6,
+  toast-bg: #172033,
+  toast-fg: #edf2f8,
   line: #e3e8ef,
-  line-dark: #354052,
+  line-dark: #4a596e,
   black: #172033,
   black-dark: #edf2f8,
   muted: #78849a,
@@ -15,21 +28,27 @@ $colors: (
   red: #e32635,
   red-dark: #ff7b83,
   red-soft: #fdecec,
+  red-soft-dark: #4b2029,
   critical: #b30c2b,
   critical-dark: #ff4d6d,
   critical-soft: #fbd9e0,
+  critical-soft-dark: #4b1d2c,
   green: #0a9b52,
   green-dark: #5ed490,
   green-soft: #e6f6ec,
+  green-soft-dark: #173d2c,
   blue: #087db7,
   blue-dark: #5eb9e8,
   blue-soft: #eef4fb,
+  blue-soft-dark: #173752,
   purple: #8c36e8,
   purple-dark: #bd8af4,
   purple-soft: #7418d514,
+  purple-soft-dark: #36234d,
   amber: #c99515,
   amber-dark: #e4b35f,
   amber-soft: #fff5e2,
+  amber-soft-dark: #4b3820,
   port-detail: #172033,
   port-detail-dark: #edf2f8,
   port-detail-bg: #dcecff,
@@ -41,8 +60,23 @@ $colors: (
   secondary-text: #42516a,
   secondary-text-dark: #dce5f1,
   overlay: #14203966,
+  overlay-dark: #070b12b8,
+  modal-overlay: #14203966,
+  modal-overlay-dark: #070b12b8,
+  sidebar-overlay: #14203966,
+  sidebar-overlay-dark: #070b12a6,
   shadow: #18365c0b,
+  shadow-dark: #00000038,
   shadow-modal: #1420393d,
+  shadow-modal-dark: #00000080,
+);
+
+$layers: (
+  sidebar-overlay: 29,
+  sidebar: 30,
+  modal-backdrop: 70,
+  modal: 71,
+  toast: 90,
 );
 
 :root {
@@ -66,11 +100,17 @@ $colors: (
   }
 }
 
+:root {
+  @each $name, $layer in $layers {
+    --layer-#{$name}: #{$layer};
+  }
+}
+
 @each $name, $color in $colors {
   $name-string: "#{$name}";
   @if string.slice($name-string, -5) != "-dark" {
-    .text-#{$name} { color: var(--#{$name}) !important; }
-    .bg-#{$name} { background: var(--#{$name}) !important; }
-    .border-#{$name} { border-color: var(--#{$name}) !important; }
+    .text-#{$name-string} { color: var(--#{$name-string}) !important; }
+    .bg-#{$name-string} { background: var(--#{$name-string}) !important; }
+    .border-#{$name-string} { border-color: var(--#{$name-string}) !important; }
   }
 }

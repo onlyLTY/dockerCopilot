@@ -25,7 +25,6 @@ func NewGetProgressLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetPr
 
 func (l *GetProgressLogic) GetProgress(req *types.GetProgressReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	//progress, exists := l.svcCtx.ProgressStore[req.TaskId]
 	progress, exists := l.svcCtx.GetProgress(req.TaskId)
 	if !exists {
 		resp.Code = 400
@@ -35,7 +34,21 @@ func (l *GetProgressLogic) GetProgress(req *types.GetProgressReq) (resp *types.R
 	}
 	resp.Code = 200
 	resp.Msg = progress.Message
-	resp.Data = map[string]interface{}{
+	resp.Data = progressData(progress)
+	return resp, nil
+}
+
+func (l *GetProgressLogic) ListProgress() (resp *types.Resp, err error) {
+	items := make([]map[string]interface{}, 0)
+	for _, progress := range l.svcCtx.ListProgress() {
+		items = append(items, progressData(progress))
+	}
+	resp = &types.Resp{Code: 200, Msg: "success", Data: items}
+	return resp, nil
+}
+
+func progressData(progress svc.TaskProgress) map[string]interface{} {
+	return map[string]interface{}{
 		"taskID":     progress.TaskID,
 		"percentage": progress.Percentage,
 		"message":    progress.Message,
@@ -43,5 +56,4 @@ func (l *GetProgressLogic) GetProgress(req *types.GetProgressReq) (resp *types.R
 		"detailMsg":  progress.DetailMsg,
 		"isDone":     progress.IsDone,
 	}
-	return resp, nil
 }

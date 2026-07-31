@@ -40,13 +40,7 @@
   <div class="modal-backdrop d-grid place-items-center" (click)="composeDialog() === 'edit' ? closeEditor($event) : closeCreate($event)">
     <section class="modal min-w-0 d-grid modal-form modal-xl" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       @if (editorProject(); as ep) {
-        <div class="modal-head d-flex justify-between gap-20">
-          <div>
-            <h2 class="m-0">{{ ep.name || '项目' }}</h2>
-            <span class="mt-6 fs-12">{{ ep.root }}</span>
-          </div>
-          <button class="modal-close d-grid place-items-center" (click)="closeEditor()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
-        </div>
+        <dc-modal-heading [title]="ep.name || '项目'" [subtitle]="ep.root" (closed)="closeEditor()" />
           <div class="modal-body compose-body d-flex flex-col">
           <div class="file-tabs d-flex gap-2">
             @for (file of ep.files; track file.name) {
@@ -56,8 +50,8 @@
             }
           </div>
           <div class="code-editor-wrap" [class.is-loading]="fileLoading()">
-            <div class="code-gutter bg-black" aria-hidden="true" [innerHTML]="lineNumbers()"></div>
-            <textarea class="code-editor bg-black text-white fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" (scroll)="onEditorScroll($event)" spellcheck="false"></textarea>
+            <div class="code-gutter" aria-hidden="true" [innerHTML]="lineNumbers()"></div>
+            <textarea class="code-editor fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" (scroll)="onEditorScroll($event)" spellcheck="false"></textarea>
             @if (fileLoading()) {
               <div class="code-editor-overlay" role="status">正在读取 {{ filename() }}…</div>
             } @else if (fileError()) {
@@ -74,18 +68,12 @@
           </div>
         </div>
       } @else {
-        <div class="modal-head d-flex justify-between gap-20">
-          <div>
-            <h2 class="m-0">新建项目</h2>
-            <span class="mt-6 fs-12">填写完建议先检验一下格式</span>
-          </div>
-          <button class="modal-close d-grid place-items-center" (click)="closeCreate()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
-        </div>
+        <dc-modal-heading title="新建项目" subtitle="填写完建议先检验一下格式" (closed)="closeCreate()" />
         <div class="modal-body compose-body d-flex flex-col">
-          <div class="form-field d-block mt-20 fs-12">项目名称<input class="d-block mt-8 py-12 px-12" [ngModel]="projectName()" (ngModelChange)="projectName.set($event)" placeholder="例如：my-app，只能包含小写字母、数字、短横线和下划线，长度不超过 63"></div>
+          <div class="form-field d-block mt-8 fs-12">项目名称<input class="d-block mt-8 py-12 px-12" [ngModel]="projectName()" (ngModelChange)="projectName.set($event)" placeholder="例如：my-app，只能包含小写字母、数字、短横线和下划线，长度不超过 63"></div>
           <div class="compose-config-field mt-12 code-editor-wrap" [class.is-loading]="creating()">
-            <div class="code-gutter bg-black" aria-hidden="true" [innerHTML]="createLineNumbers()"></div>
-            <textarea class="code-editor bg-black text-white fs-14" [ngModel]="projectContent()" (ngModelChange)="projectContent.set($event)" (scroll)="onCreateScroll($event)" spellcheck="false" placeholder="请写入compose文件内容"></textarea>
+            <div class="code-gutter" aria-hidden="true" [innerHTML]="createLineNumbers()"></div>
+            <textarea class="code-editor fs-14" [ngModel]="projectContent()" (ngModelChange)="projectContent.set($event)" (scroll)="onCreateScroll($event)" spellcheck="false" placeholder="请写入compose文件内容"></textarea>
           </div>
         </div>
         <div class="editor-foot d-flex items-center gap-16 pt-14 mt-14 fs-12">
