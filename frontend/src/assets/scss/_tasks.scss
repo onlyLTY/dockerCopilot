@@ -12,21 +12,14 @@
 .compact-shell nav a { position: relative; }
 
 /* ===== 任务列表 ===== */
-.task-icon {
-  color: var(--blue);
-  background: var(--blue-soft);
-  border-radius: 12px;
+.task-state-badge {
+  flex: none;
+  font-weight: 500;
+  line-height: 1.2;
 }
-.task-icon dc-icon { --icon-size: 24px; }
-.task-state {
-  flex: none; border-radius: 20px;
-  background: var(--blue-soft); color: var(--blue);
-}
-.task-state.active { background: var(--amber-soft); color: var(--amber); }
-.task-state.ok { background: var(--green-soft); color: var(--green); }
-.task-state.bad { background: var(--red-soft); color: var(--red); }
 .task-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .task-bar i { height: 100%; background: var(--blue); transition: width .3s ease; }
+.task-bar i.ok { background: var(--green); }
 .task-bar i.bad { background: var(--red); }
 
 /* ===== 进度弹窗 ===== */

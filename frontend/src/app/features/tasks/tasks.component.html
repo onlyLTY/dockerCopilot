@@ -11,19 +11,21 @@
   <section class="task-list page-scroll-area responsive-card-grid d-grid gap-12 mb-24">
     @for (t of filteredTasks(); track t.taskID) {
       <dc-resource-card>
-        <div resource-card-icon class="task-icon d-grid place-items-center">
-          <dc-icon name="tasks"></dc-icon>
-        </div>
         <div resource-card-title>
-          <span class="text-ellipsis min-w-0">{{ t.title }}</span>
-          <small class="task-state py-2 px-9 fs-12" [class.active]="!t.isDone" [class.ok]="t.isDone && !t.failed" [class.bad]="t.failed">{{ statusText(t) }}</small>
+          <span class="task-state-badge d-inline-block rounded py-3 px-8 fs-12 text-white" [class.bg-green]="t.isDone && !t.failed" [class.bg-amber]="!t.isDone" [class.bg-red]="t.failed">
+            {{ statusText(t) }}
+          </span>
+          <span class="text-ellipsis min-w-0 flex-1">{{ t.title }}</span>
         </div>
-        <div resource-card-info class="fs-12 text-muted">
-          <span class="text-ellipsis">{{ t.message }}</span>
-          <small>{{ t.percentage }}% · {{ time(t.updatedAt) }}</small>
+        <div resource-card-info class="fs-12 text-muted mt-4">
+          <span>{{ time(t.updatedAt) }}</span>
         </div>
-        <div resource-card-content>
-          <div class="task-bar"><i class="d-block" [style.width.%]="t.percentage" [class.bad]="t.failed"></i></div>
+        <div resource-card-content class="mt-14">
+          <div class="d-flex justify-between items-center fs-12 mb-6">
+            <span class="text-ellipsis min-w-0 text-muted">{{ t.message }}</span>
+            <b class="ml-8" [class.text-red]="t.failed" [class.text-green]="t.isDone && !t.failed" [class.text-blue]="!t.isDone">{{ t.percentage }}%</b>
+          </div>
+          <div class="task-bar"><i class="d-block" [style.width.%]="t.percentage" [class.ok]="t.isDone && !t.failed" [class.bad]="t.failed"></i></div>
         </div>
         <div resource-card-actions>
           <button class="btn text-blue bg-secondary-bg" (click)="view(t.taskID)"><dc-icon name="about"></dc-icon>详情</button>

@@ -22,13 +22,17 @@
 }
 
 .resource-card-main {
-  display: grid;
+  display: flex;
   min-width: 0;
-  grid-template-columns: 48px minmax(0, 1fr);
   align-items: center;
-  column-gap: 8px;
+  gap: 8px;
   padding: 0 0 6px;
   border-bottom: 1px solid var(--line) !important;
+}
+
+.resource-card-main:has([resource-card-icon]) {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
 }
 
 :host ::ng-deep [resource-card-icon] {
