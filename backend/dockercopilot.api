@@ -5,42 +5,42 @@ type DoLoginReq {
 }
 
 type LoginReq {
-	SecretKey string `form:"secretKey,optional"`
+	SecretKey string `form:"secretKey" validate:"required"`
 }
 
 type VerifyJwtReq {
-	Jwt string `form:"jwt,optional"`
+	Jwt string `form:"jwt" validate:"required"`
 }
 
 type GetProgressReq {
-	TaskId string `path:"taskid"`
+	TaskId string `path:"taskid" validate:"required"`
 }
 
 type StartContainerReq {
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required"`
 }
 
 type StopContainerReq {
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required"`
 }
 
 type RenameContainerReq {
-	OldName string `json:"oldName"`
-	NewName string `json:"newName"`
+	OldName string `json:"oldName" validate:"required"`
+	NewName string `json:"newName" validate:"required"`
 }
 
 type CreateContainerReq {
-	OldName         string `json:"old_name"`
-	NewName         string `json:"new_name"`
-	ImageNameAndTag string `json:"image_name_and_tag"`
+	OldName         string `json:"old_name,optional"`
+	NewName         string `json:"new_name" validate:"required"`
+	ImageNameAndTag string `json:"image_name_and_tag" validate:"required"`
 }
 
 type RemoveContainerReq {
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required"`
 }
 
 type getNewImageReq {
-	ImageNameAndTag string `json:"image_name_and_tag"`
+	ImageNameAndTag string `json:"image_name_and_tag" validate:"required"`
 }
 
 type MsgResp {
@@ -55,20 +55,20 @@ type Resp {
 }
 
 type IdReq {
-	Id string `path:"id"`
+	Id string `path:"id" validate:"required"`
 }
 
 type ContainerRestoreReq {
-	Filename string `json:"filename"`
+	Filename string `json:"filename" validate:"required"`
 }
 
 type DelContainerBackupReq {
-	Filename string `form:"filename"`
+	Filename string `form:"filename" validate:"required"`
 }
 
 type ContainerRenameReq {
 	IdReq
-	NewName string `form:"newName"`
+	NewName string `form:"newName" validate:"required"`
 }
 
 type RemoveImageReq {
@@ -77,89 +77,88 @@ type RemoveImageReq {
 }
 
 type ImagePruneReq {
-	Kind string `form:"kind"`
+	Kind string `form:"kind,optional"`
 }
 
 type ContainerUpdateReq {
 	IdReq
-	ImageNameAndTag string `form:"imageNameAndTag"`
-	ContainerName   string `form:"containerName"`
+	ImageNameAndTag string `form:"imageNameAndTag" validate:"required"`
+	ContainerName   string `form:"containerName,optional"`
 }
 
 type ComposeProjectCreateReq {
-	ProjectName string `json:"projectName"`
-	Filename string `json:"filename"`
-	Content string `json:"content"`
+	ProjectName string `json:"projectName" validate:"required"`
+	Filename    string `json:"filename" validate:"required"`
+	Content     string `json:"content" validate:"required"`
 }
 
 type ComposeProjectFileReq {
-	ProjectID string `path:"id"`
-	Filename string `path:"filename"`
+	ProjectID string `path:"id" validate:"required"`
+	Filename  string `path:"filename" validate:"required"`
 }
 
 type ComposeProjectFileUpdateReq {
-	ProjectID string `path:"id"`
-	Filename string `path:"filename"`
-	Content string `json:"content"`
-	Version string `json:"version"`
+	ProjectID string `path:"id" validate:"required"`
+	Filename  string `path:"filename" validate:"required"`
+	Content   string `json:"content" validate:"required"`
+	Version   string `json:"version,optional"`
 }
 
 type ComposeDeployReq {
-	ProjectID string `json:"projectId"`
-	Filename string `json:"filename"`
-	ConfirmToken string `json:"confirmToken"`
-	ConfirmWarnings bool `json:"confirmWarnings"`
+	ProjectID       string `json:"projectId" validate:"required"`
+	Filename        string `json:"filename" validate:"required"`
+	ConfirmToken    string `json:"confirmToken,optional"`
+	ConfirmWarnings bool   `json:"confirmWarnings,optional"`
 }
 
 type ComposeDeployPreviewReq {
-	ProjectID string `json:"projectId"`
-	Filename string `json:"filename"`
+	ProjectID string `json:"projectId" validate:"required"`
+	Filename  string `json:"filename" validate:"required"`
 }
 
 type ComposeCleanupPreviewReq {
-	ProjectID string `json:"projectId"`
+	ProjectID string `json:"projectId" validate:"required"`
 }
 
 type ComposeCleanupReq {
-	ProjectID string `json:"projectId"`
-	PreviewToken string `json:"previewToken"`
-	DeleteDir bool `json:"deleteDir"`
-	Confirm bool `json:"confirm"`
+	ProjectID    string `json:"projectId" validate:"required"`
+	PreviewToken string `json:"previewToken,optional"`
+	DeleteDir    bool   `json:"deleteDir,optional"`
+	Confirm      bool   `json:"confirm,optional"`
 }
 
-
 type VersionReq {
-	Type string `form:"type"`
+	Type string `form:"type,optional"`
 }
 
 service dockerCopilot {
 	@handler webindex
-		get /
+	get /
 }
 
-@server(
+@server (
 	prefix: /api
-	group: auth
+	group:  auth
 )
 service dockerCopilot {
 	@handler Login
-		post /auth (LoginReq) returns (Resp)
+	post /auth (LoginReq) returns (Resp)
 }
 
-@server(
+@server (
 	prefix: /api
-	group: progress
-	jwt: Auth
+	group:  progress
+	jwt:    Auth
 )
 service dockerCopilot {
 	@handler GetProgress
-		get /progress/:taskid (GetProgressReq) returns (Resp)
+	get /progress/:taskid (GetProgressReq) returns (Resp)
 }
 
-@server(
+@server (
 	prefix: /api
-	group: container
-	jwt: Auth
+	group:  container
+	jwt:    Auth
 )
 service dockerCopilot {
 	@handler containersList
@@ -190,10 +189,10 @@ service dockerCopilot {
 	get /container/listBackups returns (Resp)
 
 	@handler restore
-		post /container/backups/restore (ContainerRestoreReq) returns (Resp)
+	post /container/backups/restore (ContainerRestoreReq) returns (Resp)
 
 	@handler delRestore
-		delete /container/backups (DelContainerBackupReq) returns (Resp)
+	delete /container/backups (DelContainerBackupReq) returns (Resp)
 
 	@handler backupSettings
 	get /container/backup-settings returns (Resp)
@@ -202,10 +201,10 @@ service dockerCopilot {
 	put /container/backup-settings returns (Resp)
 }
 
-@server(
+@server (
 	prefix: /api
-	group: compose
-	jwt: Auth
+	group:  compose
+	jwt:    Auth
 )
 service dockerCopilot {
 	@handler composeProjects
@@ -223,9 +222,6 @@ service dockerCopilot {
 	@handler composeProjectFileUpdate
 	put /compose/projects/:id/files/:filename (ComposeProjectFileUpdateReq) returns (Resp)
 
-	@handler composeValidate
-	post /compose/validate (ComposeProjectValidateReq) returns (Resp)
-
 	@handler composeDeployPreview
 	post /compose/projects/:id/deploy/preview (ComposeDeployPreviewReq) returns (Resp)
 
@@ -242,7 +238,6 @@ service dockerCopilot {
 	get /ports returns (Resp)
 }
 
-
 service dockerCopilot {
 	@handler imagesList
 	get /images returns (Resp)
@@ -254,32 +249,32 @@ service dockerCopilot {
 	delete /image/:id (RemoveImageReq) returns (Resp)
 }
 
-@server(
+@server (
 	prefix: /api
-	group: version
-	jwt: Auth
+	group:  version
+	jwt:    Auth
 )
 service dockerCopilot {
 	@handler version
-		get /version (VersionReq) returns (Resp)
+	get /version (VersionReq) returns (Resp)
 
 	@handler updateProgram
-		put /program returns (Resp)
+	put /program returns (Resp)
 }
 
-@server(
+@server (
 	prefix: /api/icons
-	group: icons
-	jwt: Auth
+	group:  icons
+	jwt:    Auth
 )
 service dockerCopilot {
 	@handler upload
-		post / returns (Resp)
+	post / returns (Resp)
 
 	@handler obtain
 	get / returns (Resp)
 
 	@handler delete
-		delete / returns (Resp)
+	delete / returns (Resp)
 }
 

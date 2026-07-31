@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
@@ -32,12 +33,12 @@ func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp
 		resp.Code = 400
 		resp.Msg = "备份文件名不合法"
 		resp.Data = map[string]interface{}{}
-		return resp, nil
+		return resp, errorx.NewCodeError(400, "备份文件名不合法")
 	}
 	if strings.ToLower(filepath.Ext(fileName)) != ".json" {
-		err = fmt.Errorf("目前仅支持config备份恢复")
+		err = errorx.NewCodeError(400, "目前仅支持config备份恢复")
 		resp.Code = 400
-		resp.Msg = err.Error()
+		resp.Msg = "目前仅支持config备份恢复"
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}

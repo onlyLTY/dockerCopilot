@@ -2,8 +2,8 @@ package container
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
@@ -25,22 +25,23 @@ func (l *UpdateIgnoreLogic) Set(req *types.ContainerUpdateIgnoreReq, ignored boo
 	if l.svcCtx.DockerClient == nil {
 		resp.Code = 500
 		resp.Msg = "Docker 客户端不可用"
-		return resp, fmt.Errorf(resp.Msg)
+		return resp, errorx.NewCodeError(500, "Docker 客户端不可用")
 	}
 	inspected, err := l.svcCtx.DockerClient.ContainerInspect(l.ctx, req.Id)
 	if err != nil || inspected.Name == "" {
-		if err == nil {
-			err = fmt.Errorf("无法获取容器名称")
+		errMsg := "无法获取容器名称"
+		if err != nil {
+			errMsg = err.Error()
 		}
 		resp.Code = 404
-		resp.Msg = err.Error()
-		return resp, err
+		resp.Msg = errMsg
+		return resp, errorx.NewCodeError(404, errMsg)
 	}
 	name := inspected.Name[1:]
 	if err = settingstore.SetContainerUpdateIgnored(name, ignored); err != nil {
 		resp.Code = 500
 		resp.Msg = err.Error()
-		return resp, err
+		return resp, errorx.NewCodeError(500, err.Error())
 	}
 	resp.Code = 200
 	resp.Msg = "success"

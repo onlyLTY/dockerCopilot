@@ -8,3 +8,7 @@ type Container struct {
 	docker.Container
 	Update bool `json:"Update"`
 }
+
+type ContainerUpdateIgnoreReq struct {
+	IdReq
+}

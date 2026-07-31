@@ -6,10 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-func DeleteHandler() http.HandlerFunc {
+func DeleteHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		repository, err := normalizeRepository(r.URL.Query().Get("imageName"))
 		if err != nil {

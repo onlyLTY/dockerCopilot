@@ -2,12 +2,14 @@ package auth
 
 import (
 	"context"
-	"errors"
+	"time"
+
 	"github.com/golang-jwt/jwt"
+	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
+
 	"github.com/zeromicro/go-zero/core/logx"
-	"time"
 )
 
 type LoginLogic struct {
@@ -34,7 +36,7 @@ func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.Resp, err error) {
 		resp.Code = 401
 		resp.Msg = "无效的secretKey"
 		resp.Data = JwtResponse{Jwt: ""}
-		return resp, errors.New("无效的secretKey")
+		return resp, errorx.NewCodeError(401, "无效的secretKey")
 	}
 	jwtToken, err := l.getJwtToken(l.svcCtx.Config.Auth.AccessSecret,
 		time.Now().Unix(),
@@ -44,7 +46,7 @@ func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.Resp, err error) {
 		resp.Code = 500
 		resp.Msg = "无法生成 token，请重试"
 		resp.Data = JwtResponse{Jwt: ""}
-		return resp, errors.New("生成 token出现错误，请重试")
+		return resp, errorx.NewCodeError(500, "生成 token出现错误，请重试")
 	}
 	resp.Code = 200
 	resp.Msg = "success"

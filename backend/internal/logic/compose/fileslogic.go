@@ -2,8 +2,8 @@ package compose
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	composeProject "github.com/onlyLTY/dockerCopilot/internal/utiles/compose_project"
@@ -53,7 +53,7 @@ func (l *FilesLogic) List(req *types.ComposeProjectFileReq) (*types.Resp, error)
 	files, err := composeProject.ListProjectFiles(root)
 	if err != nil {
 		logx.Errorf("compose operation=file_list project=%s failed=%v", req.ProjectID, err)
-		return errorResp(resp, 500, "读取 Compose 文件失败"), err
+		return errorResp(resp, 500, "读取 Compose 文件失败"), errorx.NewCodeError(500, "读取 Compose 文件失败")
 	}
 	logx.Infof("compose operation=file_list project=%s success count=%d", req.ProjectID, len(files))
 	return successResp(resp, files), nil
@@ -129,10 +129,10 @@ func (l *FilesLogic) Validate(req *types.ComposeProjectValidateReq) (*types.Resp
 
 func (l *FilesLogic) validateContent(content string) error {
 	if content == "" {
-		return fmt.Errorf("Compose 文件不能为空")
+		return errorx.NewCodeError(400, "Compose 文件不能为空")
 	}
 	if limit := l.svcCtx.Config.Compose.MaxFileSize; limit > 0 && int64(len(content)) > limit {
-		return fmt.Errorf("Compose 文件超过大小限制")
+		return errorx.NewCodeError(400, "Compose 文件超过大小限制")
 	}
 	return nil
 }
