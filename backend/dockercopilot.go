@@ -12,7 +12,6 @@ import (
 
 	"github.com/onlyLTY/dockerCopilot/internal/config"
 	"github.com/onlyLTY/dockerCopilot/internal/handler"
-	"github.com/onlyLTY/dockerCopilot/internal/logwriter"
 	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
@@ -48,12 +47,10 @@ func main() {
 	if logDir == "" {
 		logDir = "./logs"
 	}
-	ErrSetupLog := SetupLog(logDir, settingstore.GetLogLevel())
-	if ErrSetupLog != nil {
-		logx.Errorf("failed to setup log: %v", ErrSetupLog)
+	if err := SetupLog(logDir, settingstore.GetLogLevel()); err != nil {
+		logx.Errorf("failed to setup log: %v", err)
 		os.Exit(1)
 	}
-	logx.SetLevel(setupLogLevel(settingstore.GetLogLevel()))
 
 	flag.Parse()
 	var c config.Config
@@ -213,17 +210,6 @@ func newFrontendHandler() http.Handler {
 	})
 }
 
-func setupLogLevel(level string) uint32 {
-	switch level {
-	case "debug":
-		return logx.DebugLevel
-	case "error", "warn":
-		return logx.ErrorLevel
-	default:
-		return logx.InfoLevel
-	}
-}
-
 func logxConfigLevel(level string) string {
 	if level == "warn" {
 		return "error"
@@ -231,33 +217,31 @@ func logxConfigLevel(level string) string {
 	return level
 }
 
-// 检查并创建日志目录
+// ensureLogDirectory 检查并创建日志目录
 func ensureLogDirectory(logDir string) error {
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
-		return os.MkdirAll(logDir, 0755) // 创建目录并设置权限
+		return os.MkdirAll(logDir, 0755)
 	}
 	return nil
 }
 
-// SetupLog 初始化日志设置
+// SetupLog 使用 go-zero 原生 LogConf 标准初始化日志设置
 func SetupLog(logDir, level string) error {
 	if !settingstore.ValidLogLevel(level) {
 		level = "info"
 	}
-	// 检查日志目录是否存在
 	if err := ensureLogDirectory(logDir); err != nil {
 		return fmt.Errorf("failed to create log directory: %v", err)
 	}
 
-	writer, err := logwriter.New(logDir, 7, true)
-	if err != nil {
-		return err
+	logConf := logx.LogConf{
+		ServiceName: "dockerCopilot",
+		Mode:        "file",
+		Path:        logDir,
+		Level:       logxConfigLevel(level),
+		KeepDays:    7,
+		Compress:    true,
 	}
-	if err := logx.SetUp(logx.LogConf{Level: logxConfigLevel(level), Mode: "console"}); err != nil {
-		_ = writer.Close()
-		return err
-	}
-	logx.SetWriter(writer)
-	logx.AddWriter(logx.NewWriter(os.Stdout))
-	return nil
+
+	return logx.SetUp(logConf)
 }
