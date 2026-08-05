@@ -1,0 +1,38 @@
+services:
+  dockercopilot:
+    container_name: ${DOCKER_COPILOT_CONTAINER:-dockercopilot}
+    image: ${DOCKER_COPILOT_IMAGE:-dockercopilot:latest}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      # 默认仅本机访问；如需局域网请改 DOCKER_BIND_ADDRESS=0.0.0.0 并自行做好网络隔离
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_PORT:-12712}:12712"
+    volumes:
+      # Docker socket 等价于宿主机 Docker 管理权限，请仅在可信环境使用。
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      # 持久化备份、图标、任务进度与应用设置（对应容器 /data）
+      # 相对路径相对本 compose 文件所在目录（docker/）；默认 ../data → 仓库根 ./data
+      - ${DOCKER_DATA_DIR:-../data}:/data
+      # 持久化服务日志（容器工作目录 /app，日志写 ./logs → /app/logs）
+      - ${DOCKER_LOG_DIR:-../logs}:/app/logs
+      # Compose 项目扫描根目录（对应 etc 中 Compose.ScanPaths=/compose）
+      - ${DOCKER_COMPOSE_DIR:-../compose}:/compose
+    environment:
+      secretKey: ${secretKey:?secretKey must be set}
+      TZ: ${TZ:-Asia/Shanghai}
+      DOCKER_HOST: unix:///var/run/docker.sock
+      # 可选：GitHub 下载前缀代理（程序更新/远程版本）
+      # githubProxy: ${githubProxy:-}
+      # 可选：HTTP 客户端代理（不影响 Docker daemon 拉镜像代理）
+      # HTTP_PROXY: ${HTTP_PROXY:-}
+      # HTTPS_PROXY: ${HTTPS_PROXY:-}
+      # NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:12712/manager"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

@@ -39,7 +39,7 @@ func (l *DelRestoreLogic) DelRestore(req *types.DelContainerBackupReq) (resp *ty
 	if err != nil {
 		l.Errorf("删除备份文件失败，filename=%q, error=%v", fileName, err)
 		resp.Code = 400
-		resp.Msg = "备份文件名不合法：" + err.Error()
+		resp.Msg = "备份文件名不合法"
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
@@ -47,7 +47,7 @@ func (l *DelRestoreLogic) DelRestore(req *types.DelContainerBackupReq) (resp *ty
 	if err != nil {
 		l.Errorf("删除备份文件失败，filename=%q, error=%v", fileName, err)
 		resp.Code = 400
-		resp.Msg = "删除失败：" + err.Error()
+		resp.Msg = "删除备份失败"
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}

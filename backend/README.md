@@ -9,55 +9,78 @@ backend/
 ├── dockercopilot.api        # API 规范描述文件 (Spec-First)
 ├── dockercopilot.go         # 服务入口文件
 ├── etc/
-│   └── dockercopilot.yaml   # 配置文件
+│   └── dockerCopilot.yaml   # 配置文件
 ├── internal/
-│   ├── config/              # 配置结构体定义
-│   ├── errorx/              # 统一 CodeError 异常与错误处理包
-│   ├── handler/             # HTTP 路由与 Handler 层 (goctl 生成)
-│   ├── logic/               # 业务逻辑代码实现层
-│   ├── svc/                 # ServiceContext 服务上下文
-│   ├── types/               # 请求/响应数据结构体定义 (goctl 生成)
-│   └── utiles/              # 工具函数与辅助模块
+│   ├── config/              # 配置结构体与版本解析
+│   ├── errorx/              # 统一 CodeError
+│   ├── handler/             # HTTP 路由与 Handler（含 goctl 生成与手写补丁）
+│   ├── logic/               # 业务逻辑
+│   ├── middleware/          # 登录限流、安全响应头等
+│   ├── svc/                 # ServiceContext、任务进度、定时任务
+│   ├── types/               # 请求/响应结构体（goctl 生成）
+│   └── utiles/              # Docker/Compose/备份等工具与子包
 └── README.md
 ```
 
 ## 核心开发规范
 
-1. **Spec-First 规范**：所有 RESTful API 的变更必须优先修改 `dockercopilot.api`，并使用 `goctl api go -api dockercopilot.api -dir .` 生成框架代码。
-2. **请求参数校验**：所有 Request 结构体必须在 `.api` 文件中明确配置 `validate` 校验规则标签（如 `validate:"required"`）。
-3. **错误处理标准**：Logic 逻辑层统一使用 `internal/errorx` 抛出标准 CodeError（如 `errorx.NewCodeError(code, msg)`），严禁使用 raw `fmt.Errorf` 泄露底层错误。
-4. **编译与验证**：每次变更后需按顺序执行 `go mod tidy` 与 `go build ./...` 确保代码可以通过编译。
+1. **Spec-First**：API 变更优先改 `dockercopilot.api`，再 `goctl api go -api dockercopilot.api -dir .` 生成框架代码。
+2. **手写路由**：扩展路由与中间件在 `internal/handler/routes_manual.go`（`RegisterManualHandlers`）。`routes.go` 为 goctl 业务路由；重新生成后务必保留对 `RegisterManualHandlers` 的调用。
+3. **错误处理**：对客户端返回可读业务文案（Compose 使用 `clientMsg`），底层错误只写日志。
+4. **日志**：`SetupLog` 使用 go-zero file 模式，**按天轮转**（`Rotation=daily`），`KeepDays=7` 并压缩历史；不是无限追加单个文件。
+5. **编译与验证**：`go test ./...` 与 `go build ./...`。
 
 ## 启动与运行
 
-```bash
-# 启动服务
-go run dockercopilot.go -f etc/dockercopilot.yaml
+本地推荐固定配置（`etc/dockerCopilot.local.yaml` 已 gitignore，密钥写在文件里，无需 export）：
 
-# 验证构建
-go build ./...
+```bash
+# 首次可从主配置复制后改 AccessSecret / ScanPaths
+# cp etc/dockerCopilot.yaml etc/dockerCopilot.local.yaml
+go run dockercopilot.go -f etc/dockerCopilot.local.yaml
 ```
+
+或主配置 + 环境变量：
+
+```bash
+export secretKey=test123456
+go run dockercopilot.go -f etc/dockerCopilot.yaml
+go build ./...
+go test ./...
+```
+
+- `etc/dockerCopilot.yaml`：通用/容器用，`Auth.AccessSecret: ${secretKey}`
+- `etc/dockerCopilot.local.yaml`：本机开发，AccessSecret 可写明文；`Compose.AllowHighRisk` 控制极高危部署门禁
 
 ## 核心接口说明
 
-### 认证接口 (Auth)
-- `POST /api/auth` - 用户登录鉴权
+### 认证
 
-### 容器管理 (Container)
-- `GET /api/containers` - 获取容器列表
-- `POST /api/container/:id/start` - 启动容器
-- `POST /api/container/:id/stop` - 停止容器
-- `POST /api/container/:id/restart` - 重启容器
-- `POST /api/container/:id/rename` - 容器重命名
-- `POST /api/container/:id/update` - 升级/更新容器
+- `POST /api/auth` — 登录（含 IP 失败限流）
 
-### Compose 管理 (Compose)
-- `GET /api/compose/projects` - 获取 Compose 项目列表
-- `POST /api/compose/projects` - 创建 Compose 项目
-- `GET /api/compose/projects/:id/files` - 查看项目文件
-- `POST /api/compose/projects/:id/deploy` - 部署 Compose 项目
+### 容器
 
-### 图标管理 (Icons)
-- `POST /api/icons/` - 上传图标
-- `GET /api/icons/` - 获取图标
-- `DELETE /api/icons/` - 删除图标
+- `GET /api/containers` — 容器列表
+- `POST /api/containers/check-update` — 检查镜像更新（异步任务）
+- `POST /api/container/:id/start|stop|restart|rename|update`
+- `POST|DELETE /api/container/:id/update-ignore` — 忽略/恢复更新检测
+- 备份：`/api/container/backup`、`listBackups`、`backups/restore` 等
+
+### Compose
+
+- `GET|POST /api/compose/projects`
+- `POST /api/compose/projects/:id/deploy` 与 `deploy/preview`
+- 文件读写、cleanup 等
+
+### 镜像 / 端口 / 图标 / 进度 / 版本
+
+- `GET /api/images`、`POST /api/images/prune`、`DELETE /api/image/:id`（JWT + `/api` 前缀）
+- `GET /api/ports`
+- `/api/icons`
+- `GET /api/progress/list`、`GET /api/progress/:taskid`
+- `GET /api/version`、`PUT /api/program`
+
+### 设置与日志（手写路由）
+
+- `/api/settings` 及 update-check / auto-backup / log-level / proxy
+- `GET /api/logs`

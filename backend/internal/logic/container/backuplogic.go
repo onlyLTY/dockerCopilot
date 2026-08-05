@@ -28,8 +28,9 @@ func (l *BackupLogic) Backup() (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	err = utiles.BackupContainer(l.svcCtx)
 	if err != nil {
+		l.Errorf("备份容器失败: %v", err)
 		resp.Code = 500
-		resp.Msg = err.Error()
+		resp.Msg = "备份容器失败"
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}

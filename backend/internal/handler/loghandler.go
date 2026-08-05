@@ -47,12 +47,22 @@ func GetLogsHandler(w http.ResponseWriter, r *http.Request) {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
-	entries, err := logstore.ReadRecent(limit)
+	// level=all|debug|info|warn|error；空或 all 表示混合最近 N 条
+	level := r.URL.Query().Get("level")
+	entries, err := logstore.ReadRecent(limit, level)
 	if err != nil {
 		httpx.ErrorCtx(r.Context(), w, err)
 		return
 	}
-	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{"code": 200, "msg": "success", "data": map[string]interface{}{"entries": entries}})
+	httpx.OkJsonCtx(r.Context(), w, map[string]interface{}{
+		"code": 200,
+		"msg":  "success",
+		"data": map[string]interface{}{
+			"entries": entries,
+			"level":   level,
+			"limit":   limit,
+		},
+	})
 }
 
 // logLevel 将设置项映射为 go-zero 的日志级别。go-zero 只有

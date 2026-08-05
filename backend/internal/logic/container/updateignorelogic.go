@@ -29,19 +29,19 @@ func (l *UpdateIgnoreLogic) Set(req *types.ContainerUpdateIgnoreReq, ignored boo
 	}
 	inspected, err := l.svcCtx.DockerClient.ContainerInspect(l.ctx, req.Id)
 	if err != nil || inspected.Name == "" {
-		errMsg := "无法获取容器名称"
 		if err != nil {
-			errMsg = err.Error()
+			l.Errorf("获取容器名称失败 id=%s: %v", req.Id, err)
 		}
 		resp.Code = 404
-		resp.Msg = errMsg
-		return resp, errorx.NewCodeError(404, errMsg)
+		resp.Msg = "无法获取容器名称"
+		return resp, errorx.NewCodeError(404, "无法获取容器名称")
 	}
 	name := inspected.Name[1:]
 	if err = settingstore.SetContainerUpdateIgnored(name, ignored); err != nil {
+		l.Errorf("更新容器忽略状态失败 name=%s: %v", name, err)
 		resp.Code = 500
-		resp.Msg = err.Error()
-		return resp, errorx.NewCodeError(500, err.Error())
+		resp.Msg = "更新忽略状态失败"
+		return resp, errorx.NewCodeError(500, "更新忽略状态失败")
 	}
 	resp.Code = 200
 	resp.Msg = "success"

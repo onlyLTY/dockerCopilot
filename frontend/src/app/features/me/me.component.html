@@ -75,7 +75,7 @@
 @if (showLogs()) {
   <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeLogs()">
     <section class="modal min-w-0 d-grid modal-content modal-xl" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <dc-modal-heading title="日志" subtitle="最近运行记录" (closed)="closeLogs()" />
+      <dc-modal-heading title="日志" subtitle="最近最多 100 条；切换级别会重新向服务端按级别查询" (closed)="closeLogs()" />
       <div class="modal-body">
         @if (loadingLogs()) { <p class="text-muted">读取中…</p> }
         @if (logError()) { <p class="message error">{{ logError() }}</p> }

@@ -7,6 +7,8 @@ import { IconService } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
 import { ConfirmService } from '../../core/confirm.service';
+import { SoftRefreshHandle, startSoftRefresh } from '../../core/soft-refresh';
+import { actionErrorMessage, actionLabel, runAction } from '../../core/run-action';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
@@ -26,7 +28,7 @@ export class ContainersComponent {
   private readonly tasks = inject(TaskService);
   private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
-  private softTimer: ReturnType<typeof setInterval> | null = null;
+  private softRefresh: SoftRefreshHandle | null = null;
   // 数据、加载态、错误态均来自服务里的常驻缓存，页面切换不再重复请求
   readonly containers = computed(() => this.service.cache.data() || []);
   readonly loading = this.service.cache.loading;
@@ -75,53 +77,29 @@ export class ContainersComponent {
       next.delete(resourceID);
       this.activeUpdateIds.set(next);
     });
-    this.startSoftRefresh();
-    this.destroyRef.onDestroy(() => this.stopSoftRefresh());
+    this.softRefresh = startSoftRefresh({
+      intervalMs: 20_000,
+      refresh: () => this.service.refresh(),
+      shouldSkip: () => this.busy() || this.checking() || this.loading(),
+    });
+    this.destroyRef.onDestroy(() => this.softRefresh?.stop());
   }
   refresh(): void { this.service.refresh(); }
-
-  private startSoftRefresh(): void {
-    this.stopSoftRefresh();
-    const tick = () => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      if (this.busy() || this.checking() || this.loading()) return;
-      this.service.refresh();
-    };
-    this.softTimer = setInterval(tick, 20_000);
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', this.onVisibility);
-    }
-  }
-
-  private readonly onVisibility = () => {
-    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !this.loading()) {
-      this.service.refresh();
-    }
-  };
-
-  private stopSoftRefresh(): void {
-    if (this.softTimer) {
-      clearInterval(this.softTimer);
-      this.softTimer = null;
-    }
-    if (typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', this.onVisibility);
-    }
-  }
   selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); this.selected.set(new Set()); }
   // 手动检查更新：异步任务，登记进度；完成后刷新容器列表以更新“有更新”标识
   checkUpdate(): void {
     if (this.checking()) return;
-    this.checking.set(true);
-    this.service.checkUpdate().subscribe({
-      next: r => {
-        this.checking.set(false);
-        const taskID = r.data?.taskID;
-        if (r.code === 200 && taskID) this.tasks.track(String(taskID), '检查更新', true);
-        else if (r.code === 200) this.toast.info('检查更新任务已提交');
-        else this.toast.error(`检查更新失败：${r.msg || '未知错误'}`);
+    runAction({
+      request: this.service.checkUpdate(),
+      onStart: () => this.checking.set(true),
+      onFinally: () => this.checking.set(false),
+      onSuccess: r => {
+        const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
+        if (taskID) this.tasks.track(String(taskID), '检查更新', true);
+        else this.toast.info('检查更新任务已提交');
       },
-      error: e => { this.checking.set(false); this.toast.error(`检查更新失败：${e.error?.msg || e.message || '请求错误'}`); },
+      onBizError: r => this.toast.error(`检查更新失败：${r.msg || '未知错误'}`),
+      onHttpError: e => this.toast.error(`检查更新失败：${actionErrorMessage(e)}`),
     });
   }
   hasUpdate(x: ContainerRow) { return !!x.haveUpdate; }
@@ -162,17 +140,16 @@ export class ContainersComponent {
   actionBusyLabel(id: string): string | undefined { return this.actionBusy().get(id); }
   private run(x: ContainerRow, fn: (id: string) => any, label: string, async = false) {
     if (this.actionBusy().has(x.id)) return;
-    this.actionBusy.update(m => new Map(m).set(x.id, label));
-    fn(x.id).subscribe({
-      next: (r: any) => {
-        this.clearActionBusy(x.id);
-        if (r.code === 200) { async ? this.toast.info(`${x.name} ${label}任务已提交`) : this.toast.success(`${x.name} ${label}成功`); }
-        else this.toast.error(`${x.name} ${label}失败：${r.msg || '未知错误'}`);
+    runAction({
+      request: fn(x.id),
+      onStart: () => this.actionBusy.update(m => new Map(m).set(x.id, label)),
+      onFinally: () => this.clearActionBusy(x.id),
+      onSuccess: () => {
+        if (async) this.toast.info(`${x.name} ${label}任务已提交`);
+        else this.toast.success(actionLabel(x.name, label, true));
       },
-      error: (e: any) => {
-        this.clearActionBusy(x.id);
-        this.toast.error(`${x.name} ${label}失败：${e.error?.msg || e.message || '请求错误'}`);
-      },
+      onBizError: r => this.toast.error(actionLabel(x.name, label, false, r.msg || '未知错误')),
+      onHttpError: e => this.toast.error(actionLabel(x.name, label, false, actionErrorMessage(e))),
     });
   }
   start(x: ContainerRow) { this.run(x, id => this.service.start(id), '启动'); }
@@ -184,20 +161,21 @@ export class ContainersComponent {
   // 更新是异步任务：拿到 taskID 后登记进度，弹窗展示进度
   update(x: ContainerRow) {
     if (this.activeUpdateIds().has(x.id)) return;
-    this.markUpdateActive(x.id);
-    this.service.update(x.id, x.usingImage, x.name).subscribe({
-      next: (r: any) => {
+    runAction({
+      request: this.service.update(x.id, x.usingImage, x.name),
+      onStart: () => this.markUpdateActive(x.id),
+      onSuccess: (r: any) => {
         const taskID = r.data?.taskID;
-        if (r.code === 200 && taskID) this.tasks.track(String(taskID), '更新 ' + x.name, true, x.id);
-        else {
-          this.markUpdateInactive(x.id);
-          if (r.code === 200) this.toast.info(`${x.name} 更新任务已提交`);
-          else this.toast.error(`${x.name} 更新失败：${r.msg || '未知错误'}`);
-        }
+        if (taskID) this.tasks.track(String(taskID), '更新 ' + x.name, true, x.id);
+        else this.toast.info(`${x.name} 更新任务已提交`);
       },
-      error: (e: any) => {
+      onBizError: r => {
         this.markUpdateInactive(x.id);
-        this.toast.error(`${x.name} 更新失败：${e.error?.msg || e.message || '请求错误'}`);
+        this.toast.error(actionLabel(x.name, '更新', false, r.msg || '未知错误'));
+      },
+      onHttpError: e => {
+        this.markUpdateInactive(x.id);
+        this.toast.error(actionLabel(x.name, '更新', false, actionErrorMessage(e)));
       },
     });
   }
@@ -206,14 +184,14 @@ export class ContainersComponent {
   restoreUpdate(x: ContainerRow) { this.setUpdateIgnored(x, false); }
   private setUpdateIgnored(x: ContainerRow, ignored: boolean): void {
     if (this.updateIgnoreBusyIds().has(x.id)) return;
-    const next = new Set(this.updateIgnoreBusyIds()); next.add(x.id); this.updateIgnoreBusyIds.set(next);
+    const label = ignored ? '忽略更新' : '恢复检测';
     const request = ignored ? this.service.ignoreUpdate(x.id) : this.service.restoreUpdate(x.id);
-    request.subscribe({
-      next: r => {
-        this.updateIgnoreBusyIds.update(ids => { const copy = new Set(ids); copy.delete(x.id); return copy; });
-        if (r.code !== 200) this.toast.error(`${x.name} ${ignored ? '忽略' : '恢复'}更新失败：${r.msg || '未知错误'}`);
-      },
-      error: e => { this.updateIgnoreBusyIds.update(ids => { const copy = new Set(ids); copy.delete(x.id); return copy; }); this.toast.error(`${x.name} ${ignored ? '忽略' : '恢复'}更新失败：${e.error?.msg || e.message || '请求错误'}`); },
+    runAction({
+      request,
+      onStart: () => this.updateIgnoreBusyIds.update(ids => new Set(ids).add(x.id)),
+      onFinally: () => this.updateIgnoreBusyIds.update(ids => { const copy = new Set(ids); copy.delete(x.id); return copy; }),
+      onBizError: r => this.toast.error(actionLabel(x.name, label, false, r.msg || '未知错误')),
+      onHttpError: e => this.toast.error(actionLabel(x.name, label, false, actionErrorMessage(e))),
     });
   }
   private bulk(fn: (id: string) => any, label: string, async = false) {

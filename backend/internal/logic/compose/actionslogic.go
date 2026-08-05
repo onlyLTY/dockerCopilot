@@ -35,12 +35,12 @@ func (l *ActionsLogic) DeployPreview(req *types.ComposeDeployPreviewReq) (*types
 	root, content, version, project, err := l.loadCompose(req.ProjectID, req.Filename)
 	if err != nil {
 		logx.Errorf("compose operation=deploy_preview project=%s filename=%s failed=load error=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "读取 Compose 配置失败")), nil
 	}
 	risks := composeProject.InspectRisks(project, root)
 	if err := composeProject.ValidateRisks(project, root, true); err != nil {
 		logx.Errorf("compose operation=deploy_preview project=%s filename=%s failed=risk error=%v risks=%d", req.ProjectID, req.Filename, err, len(risks))
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "读取 Compose 配置失败")), nil
 	}
 	token := newToken()
 	l.svcCtx.ComposeMu.Lock()
@@ -65,7 +65,7 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 	root, content, version, project, err := l.loadCompose(req.ProjectID, req.Filename)
 	if err != nil {
 		logx.Errorf("compose operation=deploy project=%s filename=%s failed=load error=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "读取 Compose 配置失败")), nil
 	}
 	if version != token.Version {
 		logx.Errorf("compose operation=deploy project=%s filename=%s failed=version conflict", req.ProjectID, req.Filename)
@@ -74,11 +74,11 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 	// 极高危（docker.sock / privileged / 敏感路径）仅 AllowHighRisk 可放行；其余 high 仍可由 confirmWarnings 确认。
 	if err := composeProject.ValidateCriticalRisks(project, root, l.svcCtx.Config.Compose.AllowHighRisk); err != nil {
 		logx.Errorf("compose operation=deploy project=%s filename=%s failed=critical risk error=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "存在极高危配置，无法部署")), nil
 	}
 	if err := composeProject.ValidateRisks(project, root, req.ConfirmWarnings || l.svcCtx.Config.Compose.AllowHighRisk); err != nil {
 		logx.Errorf("compose operation=deploy project=%s filename=%s failed=risk error=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "存在高风险配置，请确认后部署")), nil
 	}
 	if !composeRunner.Available(l.ctx, l.svcCtx.DockerClient) {
 		logx.Errorf("compose operation=deploy project=%s filename=%s failed=docker daemon unavailable", req.ProjectID, req.Filename)
@@ -87,7 +87,7 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 	filePath, err := composeProject.ProjectFilePath(root, req.Filename)
 	if err != nil {
 		logx.Errorf("compose operation=deploy project=%s filename=%s failed=path error=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "Compose 文件路径无效")), nil
 	}
 	_ = content
 	files := []string{filePath}
@@ -107,7 +107,8 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 		defer func() {
 			if r := recover(); r != nil {
 				logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=panic failed=%v", req.ProjectID, req.Filename, taskID, r)
-				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "部署异常", DetailMsg: fmt.Sprintf("%v", r), IsDone: true})
+				logx.Errorf("compose deploy panic detail=%v", r)
+				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "部署异常", DetailMsg: "部署过程发生内部错误，请查看服务日志", IsDone: true})
 			}
 		}()
 		bg := context.Background()
@@ -139,7 +140,7 @@ func (l *ActionsLogic) CleanupPreview(req *types.ComposeCleanupPreviewReq) (*typ
 	root, err := composeProject.FindProjectRoot(l.svcCtx, req.ProjectID)
 	if err != nil {
 		logx.Errorf("compose operation=cleanup_preview project=%s failed=find_root error=%v", req.ProjectID, err)
-		return errorResp(resp, 404, err.Error()), nil
+		return errorResp(resp, 404, clientMsg(err, "Compose 项目不存在")), nil
 	}
 	projects, err := composeProject.ScanProjects(l.ctx, l.svcCtx)
 	if err != nil {
@@ -189,7 +190,7 @@ func (l *ActionsLogic) Cleanup(req *types.ComposeCleanupReq) (*types.Resp, error
 	root, err := composeProject.FindProjectRoot(l.svcCtx, req.ProjectID)
 	if err != nil {
 		logx.Errorf("compose operation=cleanup project=%s failed=find_root error=%v", req.ProjectID, err)
-		return errorResp(resp, 404, err.Error()), nil
+		return errorResp(resp, 404, clientMsg(err, "Compose 项目不存在")), nil
 	}
 	projects, err := composeProject.ScanProjects(l.ctx, l.svcCtx)
 	if err != nil {
@@ -292,9 +293,13 @@ func newToken() string {
 // composeErrMsg 组合用户可读的前缀与 docker 实际输出，便于前端直接展示真实原因。
 // output 已在 compose_runner 中做过敏感信息脱敏与长度限制。
 func composeErrMsg(prefix string, err error, output string) string {
+	// output 已经过 compose_runner 脱敏；无输出时仅用 client 安全摘要，不回传原始 err
 	detail := strings.TrimSpace(output)
 	if detail == "" && err != nil {
-		detail = strings.TrimSpace(err.Error())
+		detail = clientMsg(err, "")
+		if detail == "操作失败" {
+			detail = ""
+		}
 	}
 	if detail == "" {
 		return prefix

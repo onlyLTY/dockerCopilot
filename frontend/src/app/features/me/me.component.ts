@@ -34,27 +34,23 @@ export class MeComponent {
   readonly loadingLogs = signal(false);
   readonly logError = signal('');
   readonly logs = signal<LogEntry[]>([]);
-  // 日志弹窗：按等级筛选的 tab，'all' = 全部
+  // 日志弹窗：按等级筛选；切换时重新请求后端（level=error 为最近 N 条 error，非混合 100 条里筛）
   readonly logLevelFilter = signal<string>('all');
   readonly logLevels = signal<string[]>(['debug', 'info', 'warn', 'error']);
-  readonly logLevelCount = computed<Record<string, number>>(() => {
-    const counts: Record<string, number> = { all: this.logs().length };
-    for (const e of this.logs()) counts[e.level] = (counts[e.level] || 0) + 1;
-    return counts;
-  });
-  readonly filteredLogs = computed<LogEntry[]>(() => {
-    const f = this.logLevelFilter();
-    return f === 'all' ? this.logs() : this.logs().filter(e => e.level === f);
-  });
-  // 等级筛选 stats：全部(无 tone) + 各等级带 tone
+  /** 当前结果条数（服务端已按 level 过滤） */
+  readonly logResultCount = computed(() => this.logs().length);
+  readonly filteredLogs = computed<LogEntry[]>(() => this.logs());
+  // 等级 tab：当前选中项显示本次拉到的条数；其它项为 0（点击后会重新请求）
   readonly logLevelStats = computed<StatItem[]>(() => {
-    const counts = this.logLevelCount();
+    const n = this.logResultCount();
+    const f = this.logLevelFilter();
+    const v = (key: string) => (f === key ? n : 0);
     return [
-      { key: 'all', value: counts['all'] || 0, label: '全部' },
-      { key: 'debug', value: counts['debug'] || 0, label: 'DEBUG' },
-      { key: 'info', value: counts['info'] || 0, label: 'INFO', tone: 'blue' },
-      { key: 'warn', value: counts['warn'] || 0, label: 'WARN', tone: 'amber' },
-      { key: 'error', value: counts['error'] || 0, label: 'ERROR', tone: 'red' },
+      { key: 'all', value: v('all'), label: '全部' },
+      { key: 'debug', value: v('debug'), label: 'DEBUG' },
+      { key: 'info', value: v('info'), label: 'INFO', tone: 'blue' },
+      { key: 'warn', value: v('warn'), label: 'WARN', tone: 'amber' },
+      { key: 'error', value: v('error'), label: 'ERROR', tone: 'red' },
     ];
   });
   readonly updateOptions = signal<string[]>([]);
@@ -140,10 +136,34 @@ export class MeComponent {
   }
 
   openLogs() {
-    this.showLogs.set(true); this.loadingLogs.set(true); this.logError.set('');
-    this.http.get<ApiResponse<{ entries: LogEntry[] }>>('/api/logs?limit=100').subscribe({ next: r => { this.loadingLogs.set(false); if (r.code === 200) this.logs.set(r.data?.entries || []); else this.logError.set(r.msg || '读取日志失败'); }, error: e => { this.loadingLogs.set(false); this.logError.set(e.error?.msg || '读取日志失败'); } });
+    this.showLogs.set(true);
+    this.logLevelFilter.set('all');
+    this.fetchLogs('all');
   }
-  closeLogs() { this.showLogs.set(false); this.logLevelFilter.set('all'); }
-  // dc-stats 在再次点击当前 active 项时 emit ''，此时归一回「全部」
-  selectLogLevel(key: string) { this.logLevelFilter.set(key || 'all'); }
+  closeLogs() { this.showLogs.set(false); this.logLevelFilter.set('all'); this.logs.set([]); }
+  // dc-stats 在再次点击当前 active 项时 emit ''，此时归一回「全部」并重新拉取
+  selectLogLevel(key: string) {
+    const next = key || 'all';
+    if (next === this.logLevelFilter() && this.logs().length) return;
+    this.logLevelFilter.set(next);
+    this.fetchLogs(next);
+  }
+
+  private fetchLogs(level: string) {
+    this.loadingLogs.set(true);
+    this.logError.set('');
+    const params = new URLSearchParams({ limit: '100' });
+    if (level && level !== 'all') params.set('level', level);
+    this.http.get<ApiResponse<{ entries: LogEntry[] }>>('/api/logs?' + params.toString()).subscribe({
+      next: r => {
+        this.loadingLogs.set(false);
+        if (r.code === 200) this.logs.set(r.data?.entries || []);
+        else this.logError.set(r.msg || '读取日志失败');
+      },
+      error: e => {
+        this.loadingLogs.set(false);
+        this.logError.set(e.error?.msg || '读取日志失败');
+      },
+    });
+  }
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	composeTypes "github.com/compose-spec/compose-go/v2/types"
+	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 )
 
 type Risk struct {
@@ -43,26 +44,17 @@ func InspectRisks(project *composeTypes.Project, root string) []Risk {
 			if volume.Type != "bind" {
 				continue
 			}
-			if isSensitiveHostPath(volume.Source) {
+			if utiles.IsSensitiveHostPath(volume.Source) {
 				risks = append(risks, Risk{"high", prefix + ".volumes", "服务挂载了敏感宿主机路径"})
 			} else if !pathWithin(root, volume.Source) {
 				risks = append(risks, Risk{"warning", prefix + ".volumes", "服务挂载路径位于项目目录之外"})
 			}
-			if strings.Contains(filepath.ToSlash(volume.Source), "docker.sock") {
+			if utiles.IsDockerSocketPath(volume.Source) {
 				risks = append(risks, Risk{"high", prefix + ".volumes", "服务挂载了 Docker socket"})
 			}
 		}
 	}
 	return risks
-}
-
-func isSensitiveHostPath(path string) bool {
-	switch filepath.Clean(path) {
-	case "/", "/etc", "/proc", "/sys", "/var/run", "/var/run/docker.sock":
-		return true
-	default:
-		return strings.HasPrefix(filepath.ToSlash(path), "/etc/") || strings.HasPrefix(filepath.ToSlash(path), "/proc/") || strings.HasPrefix(filepath.ToSlash(path), "/sys/")
-	}
 }
 
 func pathWithin(root, path string) bool {

@@ -25,7 +25,7 @@ func (l *FilesLogic) Create(req *types.ComposeProjectCreateReq) (*types.Resp, er
 	logx.Infof("compose operation=create project=%s filename=%s", req.ProjectName, req.Filename)
 	if err := l.validateContent(req.Content); err != nil {
 		logx.Errorf("compose operation=create project=%s filename=%s failed=%v", req.ProjectName, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "创建 Compose 项目失败")), nil
 	}
 
 	id, version, err := composeProject.CreateProject(
@@ -36,7 +36,7 @@ func (l *FilesLogic) Create(req *types.ComposeProjectCreateReq) (*types.Resp, er
 	)
 	if err != nil {
 		logx.Errorf("compose operation=create project=%s filename=%s failed=%v", req.ProjectName, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "创建 Compose 项目失败")), nil
 	}
 	logx.Infof("compose operation=create project=%s filename=%s success project_id=%s", req.ProjectName, req.Filename, id)
 	return successResp(resp, map[string]interface{}{"projectId": id, "version": version}), nil
@@ -48,7 +48,7 @@ func (l *FilesLogic) List(req *types.ComposeProjectFileReq) (*types.Resp, error)
 	root, err := composeProject.FindProjectRoot(l.svcCtx, req.ProjectID)
 	if err != nil {
 		logx.Errorf("compose operation=file_list project=%s failed=%v", req.ProjectID, err)
-		return errorResp(resp, 404, err.Error()), nil
+		return errorResp(resp, 404, clientMsg(err, "Compose 项目不存在")), nil
 	}
 	files, err := composeProject.ListProjectFiles(root)
 	if err != nil {
@@ -65,7 +65,7 @@ func (l *FilesLogic) Read(req *types.ComposeProjectFileReq) (*types.Resp, error)
 	root, err := composeProject.FindProjectRoot(l.svcCtx, req.ProjectID)
 	if err != nil {
 		logx.Errorf("compose operation=file_read project=%s filename=%s failed=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 404, err.Error()), nil
+		return errorResp(resp, 404, clientMsg(err, "Compose 项目不存在")), nil
 	}
 	content, version, err := composeProject.ReadProjectFile(root, req.Filename)
 	if err != nil {
@@ -81,17 +81,17 @@ func (l *FilesLogic) Update(req *types.ComposeProjectFileUpdateReq) (*types.Resp
 	logx.Infof("compose operation=file_update project=%s filename=%s version=%s", req.ProjectID, req.Filename, req.Version)
 	if err := l.validateContent(req.Content); err != nil {
 		logx.Errorf("compose operation=file_update project=%s filename=%s failed=validation error=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "保存 Compose 文件失败")), nil
 	}
 	root, err := composeProject.FindProjectRoot(l.svcCtx, req.ProjectID)
 	if err != nil {
 		logx.Errorf("compose operation=file_update project=%s filename=%s failed=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 404, err.Error()), nil
+		return errorResp(resp, 404, clientMsg(err, "保存 Compose 文件失败")), nil
 	}
 	version, err := composeProject.SaveProjectFile(l.svcCtx, root, req.Filename, req.Content, req.Version)
 	if err != nil {
 		logx.Errorf("compose operation=file_update project=%s filename=%s failed=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 409, err.Error()), nil
+		return errorResp(resp, 409, clientMsg(err, "保存 Compose 文件失败")), nil
 	}
 	logx.Infof("compose operation=file_update project=%s filename=%s success version=%s", req.ProjectID, req.Filename, version)
 	return successResp(resp, map[string]interface{}{"version": version}), nil
@@ -106,7 +106,7 @@ func (l *FilesLogic) Validate(req *types.ComposeProjectValidateReq) (*types.Resp
 		root, err = composeProject.FindProjectRoot(l.svcCtx, req.ProjectID)
 		if err != nil {
 			logx.Errorf("compose operation=validate project=%s filename=%s failed=%v", req.ProjectID, req.Filename, err)
-			return errorResp(resp, 404, err.Error()), nil
+			return errorResp(resp, 404, clientMsg(err, "Compose 配置解析失败")), nil
 		}
 	} else if len(l.svcCtx.Config.Compose.ScanPaths) > 0 {
 		root = l.svcCtx.Config.Compose.ScanPaths[0]
@@ -116,12 +116,12 @@ func (l *FilesLogic) Validate(req *types.ComposeProjectValidateReq) (*types.Resp
 	}
 	if err := l.validateContent(req.Content); err != nil {
 		logx.Errorf("compose operation=validate project=%s filename=%s failed=validation error=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "Compose 内容不合法")), nil
 	}
 	project, err := composeProject.ParseComposeContent(root, req.Filename, []byte(req.Content))
 	if err != nil {
 		logx.Errorf("compose operation=validate project=%s filename=%s failed=parse error=%v", req.ProjectID, req.Filename, err)
-		return errorResp(resp, 400, err.Error()), nil
+		return errorResp(resp, 400, clientMsg(err, "Compose 内容不合法")), nil
 	}
 	logx.Infof("compose operation=validate project=%s filename=%s success services=%d", req.ProjectID, req.Filename, len(project.ServiceNames()))
 	return successResp(resp, map[string]interface{}{"valid": true, "name": project.Name, "services": project.ServiceNames()}), nil

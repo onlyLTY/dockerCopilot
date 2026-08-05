@@ -2,6 +2,8 @@ import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { ImageRow, ImageService } from '../../core/image.service';
 import { IconService } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
+import { SoftRefreshHandle, startSoftRefresh } from '../../core/soft-refresh';
+import { actionErrorMessage, actionLabel, runAction } from '../../core/run-action';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ConfirmService } from '../../core/confirm.service';
@@ -21,7 +23,7 @@ export class ImagesComponent {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
-  private softTimer: ReturnType<typeof setInterval> | null = null;
+  private softRefresh: SoftRefreshHandle | null = null;
   // 数据、加载态、错误态来自服务常驻缓存
   readonly images = computed(() => this.service.cache.data() || []);
   readonly loading = this.service.cache.loading;
@@ -40,29 +42,38 @@ export class ImagesComponent {
   constructor() {
     this.service.ensureLoaded();
     this.icons.ensureLoaded();
-    this.startSoftRefresh();
-    this.destroyRef.onDestroy(() => this.stopSoftRefresh());
+    this.softRefresh = startSoftRefresh({
+      intervalMs: 30_000,
+      refresh: () => this.service.refresh(),
+      shouldSkip: () => this.cleaning() || this.loading(),
+    });
+    this.destroyRef.onDestroy(() => this.softRefresh?.stop());
   }
   refresh() { this.service.refresh(); }
-
-  private startSoftRefresh(): void {
-    this.stopSoftRefresh();
-    this.softTimer = setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      if (this.cleaning() || this.loading()) return;
-      this.service.refresh();
-    }, 30_000);
-  }
-
-  private stopSoftRefresh(): void {
-    if (this.softTimer) {
-      clearInterval(this.softTimer);
-      this.softTimer = null;
-    }
-  }
   selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); }
   isUntagged(x: ImageRow) { return !x.tag || ['<none>', 'none'].includes(x.tag.toLowerCase()); }
-  async cleanup(kind: 'untagged' | 'unused') { const count = kind === 'untagged' ? this.untaggedCount() : this.unusedCount(); const label = kind === 'untagged' ? '无 Tag' : '未使用'; if (!count || !(await this.confirm.open({ title: `清理${label}镜像`, message: `确定清理 ${count} 个${label}镜像吗？`, confirmText: '确认清理', danger: true }))) return; this.cleaning.set(true); this.service.cleanup(kind).subscribe({ next: r => { this.cleaning.set(false); if (r.code === 200) { this.toast.success(`已清理 ${r.data?.deleted ?? ''} 个${label}镜像`); } else this.toast.error(`清理失败：${r.msg || '未知错误'}`); }, error: e => { this.cleaning.set(false); this.toast.error(`清理失败：${e.error?.msg || e.message || '请求错误'}`); } }); }
+  async cleanup(kind: 'untagged' | 'unused') {
+    const count = kind === 'untagged' ? this.untaggedCount() : this.unusedCount();
+    const label = kind === 'untagged' ? '无 Tag' : '未使用';
+    if (!count || !(await this.confirm.open({ title: `清理${label}镜像`, message: `确定清理 ${count} 个${label}镜像吗？`, confirmText: '确认清理', danger: true }))) return;
+    runAction({
+      request: this.service.cleanup(kind),
+      onStart: () => this.cleaning.set(true),
+      onFinally: () => this.cleaning.set(false),
+      onSuccess: r => this.toast.success(`已清理 ${(r.data as { deleted?: number } | undefined)?.deleted ?? ''} 个${label}镜像`),
+      onBizError: r => this.toast.error(`清理失败：${r.msg || '未知错误'}`),
+      onHttpError: e => this.toast.error(`清理失败：${actionErrorMessage(e)}`),
+    });
+  }
   icon(x: ImageRow) { return this.icons.resolve(x.name, this.iconMap()); } fallback(e: Event) { (e.target as HTMLImageElement).src = this.icons.actionIcon('images'); }
-  async remove(x: ImageRow, force: boolean) { const label = force ? '强制删除' : '删除'; if (!(await this.confirm.open({ title: `${label}镜像`, message: `${label}镜像 ${x.name}:${x.tag}？`, confirmText: label, danger: true, critical: force }))) return; this.service.remove(x.id, force).subscribe({ next: r => { if (r.code === 200) { this.toast.success(`${x.name} ${label}成功`); } else this.toast.error(`${x.name} ${label}失败：${r.msg || '未知错误'}`); }, error: e => this.toast.error(`${x.name} ${label}失败：${e.error?.msg || e.message || '请求错误'}`) }); }
+  async remove(x: ImageRow, force: boolean) {
+    const label = force ? '强制删除' : '删除';
+    if (!(await this.confirm.open({ title: `${label}镜像`, message: `${label}镜像 ${x.name}:${x.tag}？`, confirmText: label, danger: true, critical: force }))) return;
+    runAction({
+      request: this.service.remove(x.id, force),
+      onSuccess: () => this.toast.success(actionLabel(x.name, label, true)),
+      onBizError: r => this.toast.error(actionLabel(x.name, label, false, r.msg || '未知错误')),
+      onHttpError: e => this.toast.error(actionLabel(x.name, label, false, actionErrorMessage(e))),
+    });
+  }
 }

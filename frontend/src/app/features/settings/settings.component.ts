@@ -5,6 +5,7 @@ import { ToastService } from '../../core/toast.service';
 import { SectionToolbarComponent } from '../../shared/section-toolbar/section-toolbar.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 import { FormSelectComponent, FormSelectOption } from '../../shared/form-select/form-select.component';
+import { actionErrorMessage, runAction } from '../../core/run-action';
 
 /**
   * 设置页：提供定时任务配置（预设下拉）。
@@ -69,26 +70,32 @@ export class SettingsComponent {
   }
   saveUpdate() {
     if (!this.updateDirty() || this.updateSaving()) return;
-    this.updateSaving.set(true);
-    this.service.setUpdateInterval(this.updateDraft).subscribe({
-      next: r => {
-        this.updateSaving.set(false);
-        if (r.code === 200) { this.updateInterval.set(r.data.interval); this.updateDraft = r.data.interval; this.toast.success('更新检查频率已保存'); }
-        else this.toast.error(`保存失败：${r.msg || '未知错误'}`);
+    runAction({
+      request: this.service.setUpdateInterval(this.updateDraft),
+      onStart: () => this.updateSaving.set(true),
+      onFinally: () => this.updateSaving.set(false),
+      onSuccess: r => {
+        this.updateInterval.set(r.data.interval);
+        this.updateDraft = r.data.interval;
+        this.toast.success('更新检查频率已保存');
       },
-      error: e => { this.updateSaving.set(false); this.toast.error(`保存失败：${e.error?.msg || e.message || '请求错误'}`); },
+      onBizError: r => this.toast.error(`保存失败：${r.msg || '未知错误'}`),
+      onHttpError: e => this.toast.error(`保存失败：${actionErrorMessage(e)}`),
     });
   }
   saveBackup() {
     if (!this.backupDirty() || this.backupSaving()) return;
-    this.backupSaving.set(true);
-    this.service.setBackupInterval(this.backupDraft).subscribe({
-      next: r => {
-        this.backupSaving.set(false);
-        if (r.code === 200) { this.backupInterval.set(r.data.interval); this.backupDraft = r.data.interval; this.toast.success('自动备份频率已保存'); }
-        else this.toast.error(`保存失败：${r.msg || '未知错误'}`);
+    runAction({
+      request: this.service.setBackupInterval(this.backupDraft),
+      onStart: () => this.backupSaving.set(true),
+      onFinally: () => this.backupSaving.set(false),
+      onSuccess: r => {
+        this.backupInterval.set(r.data.interval);
+        this.backupDraft = r.data.interval;
+        this.toast.success('自动备份频率已保存');
       },
-      error: e => { this.backupSaving.set(false); this.toast.error(`保存失败：${e.error?.msg || e.message || '请求错误'}`); },
+      onBizError: r => this.toast.error(`保存失败：${r.msg || '未知错误'}`),
+      onHttpError: e => this.toast.error(`保存失败：${actionErrorMessage(e)}`),
     });
   }
 }

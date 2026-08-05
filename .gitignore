@@ -38,10 +38,16 @@ __pycache__/
 /gui-test-screenshots/
 # 本地测试用 Dockerfile（换国内 apk 源，仅本地使用，不入库）
 /docker/Dockerfile.localtest
-# 本地一键构建脚本
-/docker/docker-compose.yml
+# Windows 本地辅助脚本
 /docker/build-windows-test.ps1
-# 忽略数据目录及其中的所有文件
+# 本地/测试运行产生的数据、日志与 compose 工作区（勿入库）
 /docker/test/
+/data/
+/compose/
+# /logs/ 已在上方忽略
+# 从 docker-compose.yml 复制的本地文件（可含 secretKey，勿提交）
+/docker/docker-compose.local.yml
+# 本地 go run 配置（含 AccessSecret，勿提交）
+/backend/etc/dockerCopilot.local.yaml
 
 .zcode

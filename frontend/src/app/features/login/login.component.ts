@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { consumeSessionExpiredFlag } from '../../core/auth.interceptor';
 
 @Component({
   selector: 'dc-login',
@@ -10,13 +11,20 @@ import { AuthService } from '../../core/auth.service';
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   secretKey = '';
   readonly error = signal('');
   readonly submitting = signal(false);
+  readonly sessionHint = signal('');
+
+  ngOnInit(): void {
+    if (consumeSessionExpiredFlag()) {
+      this.sessionHint.set('登录已过期，请重新登录后继续操作');
+    }
+  }
 
   login(): void {
     if (this.submitting()) return;
@@ -31,6 +39,7 @@ export class LoginComponent {
       next: response => {
         this.submitting.set(false);
         if (response.code === 200) {
+          this.sessionHint.set('');
           this.router.navigateByUrl(this.safeReturnUrl());
           return;
         }
@@ -38,6 +47,14 @@ export class LoginComponent {
       },
       error: err => {
         this.submitting.set(false);
+        if (err?.status === 429) {
+          this.error.set(err.error?.msg || '登录尝试过于频繁，请稍后再试');
+          return;
+        }
+        if (err?.status === 0) {
+          this.error.set('无法连接服务器，请检查网络或后端是否启动');
+          return;
+        }
         this.error.set(err.error?.msg ?? '登录失败');
       },
     });
@@ -49,7 +66,7 @@ export class LoginComponent {
     if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.includes('://')) {
       return '/containers';
     }
-    if (raw === '/login' || raw.startsWith('/login?')) {
+    if (raw === '/login' || raw.startsWith('/login?') || raw.startsWith('/login/')) {
       return '/containers';
     }
     return raw;

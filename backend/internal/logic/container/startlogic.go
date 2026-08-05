@@ -27,8 +27,9 @@ func (l *StartLogic) Start(req *types.IdReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	err = utiles.StartContainer(l.svcCtx, req.Id)
 	if err != nil {
+		l.Errorf("启动容器失败 id=%s: %v", req.Id, err)
 		resp.Code = 400
-		resp.Msg = err.Error()
+		resp.Msg = "启动容器失败"
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}

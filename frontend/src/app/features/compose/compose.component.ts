@@ -12,6 +12,7 @@ import { ResourceCardComponent } from '../../shared/resource-card/resource-card.
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 import { ModalHeadingComponent } from '../../shared/modal-heading/modal-heading.component';
+import { actionErrorMessage, runAction } from '../../core/run-action';
 
 const defaultCompose = '';
 
@@ -72,13 +73,27 @@ export class ComposeComponent {
   selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); this.selected.set(new Set()); }
   openEditor(p: ComposeProject) { const normalized = { ...p, files: Array.isArray(p.files) ? p.files : [], containers: Array.isArray(p.containers) ? p.containers : [], ports: Array.isArray(p.ports) ? p.ports : [] }; this.editorProject.set(normalized); this.filename.set(''); this.content.set(''); this.version.set(''); this.fileLoading.set(false); this.fileError.set(''); this.preview.set(undefined); this.pullImages.set(false); this.message.set(''); this.messageType.set(''); const f = normalized.files.find(x => x.name === 'compose.yaml') || normalized.files[0]; if (f) this.openFile(f.name); else this.fileError.set('未找到 Compose 文件'); }
   openFile(n: string) { const ep = this.editorProject(); if (!ep) return; this.filename.set(n); this.content.set(''); this.version.set(''); this.fileError.set(''); this.fileLoading.set(true); this.service.file(ep.id, n).subscribe({ next: r => { if (this.editorProject()?.id !== ep.id || this.filename() !== n) return; this.fileLoading.set(false); if (r.code === 200) { this.content.set(r.data.content); this.version.set(r.data.version); this.message.set(''); } else { this.fileError.set(r.msg || '读取文件失败'); } }, error: e => { if (this.editorProject()?.id !== ep.id || this.filename() !== n) return; this.fileLoading.set(false); this.fileError.set(e.error?.msg || '读取文件失败'); } }); }
-  save() { const ep = this.editorProject(); if (!ep) return; this.service.update(ep.id, this.filename(), this.content(), this.version()).subscribe({ next: r => r.code === 200 ? (this.version.set(r.data.version), this.message.set('已保存')) : this.showError(r.msg, '保存文件'), error: e => this.showError(e.error?.msg || '保存失败', '保存文件') }); }
+  save() {
+    const ep = this.editorProject(); if (!ep) return;
+    runAction({
+      request: this.service.update(ep.id, this.filename(), this.content(), this.version()),
+      onSuccess: r => { this.version.set((r.data as { version: string }).version); this.message.set('已保存'); this.messageType.set(''); },
+      onBizError: r => this.showError(r.msg, '保存文件'),
+      onHttpError: e => this.showError(actionErrorMessage(e, '保存失败'), '保存文件'),
+    });
+  }
   validate() {
     const ep = this.editorProject(); if (!ep) return;
     this.content.set(this.normalizeCompose(this.content()));
-    this.service.validate(ep.id, this.filename(), this.content()).subscribe({
-      next: r => r.code === 200 ? (this.message.set('校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务'), this.messageType.set('')) : this.showError(r.msg, '校验'),
-      error: e => this.showError(e.error?.msg || '校验失败', '校验'),
+    runAction({
+      request: this.service.validate(ep.id, this.filename(), this.content()),
+      onSuccess: r => {
+        const n = Array.isArray((r.data as { services?: unknown[] } | undefined)?.services) ? (r.data as { services: unknown[] }).services.length : 0;
+        this.message.set('校验通过，包含 ' + n + ' 个服务');
+        this.messageType.set('');
+      },
+      onBizError: r => this.showError(r.msg, '校验'),
+      onHttpError: e => this.showError(actionErrorMessage(e, '校验失败'), '校验'),
     });
   }
   redeploy() {
@@ -118,13 +133,13 @@ export class ComposeComponent {
   }
   private confirmDeployment(project: ComposeProject, filename: string, preview: Record<string, any>, pullImages = false) {
     if (this.deployBusy()) return;
-    this.deployBusy.set(true);
     const risks = Array.isArray(preview['risks']) ? preview['risks'] as any[] : [];
-    this.service.deploy(project.id, filename, String(preview['confirmToken']), risks.length > 0, pullImages).subscribe({
-      next: r => {
-        this.deployBusy.set(false);
-        if (r.code !== 200) { this.showError(r.msg, '部署'); return; }
-        const taskID = (r.data as any)?.['taskID'];
+    runAction({
+      request: this.service.deploy(project.id, filename, String(preview['confirmToken']), risks.length > 0, pullImages),
+      onStart: () => this.deployBusy.set(true),
+      onFinally: () => this.deployBusy.set(false),
+      onSuccess: r => {
+        const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
         if (taskID) {
           this.tasks.track(String(taskID), '部署 ' + (project.name || project.id), true);
           this.closeEditor();
@@ -132,24 +147,40 @@ export class ComposeComponent {
           this.toast.success('部署命令已完成');
         }
       },
-      error: e => { this.deployBusy.set(false); this.showError(e.error?.msg || '部署失败', '部署'); },
+      onBizError: r => this.showError(r.msg, '部署'),
+      onHttpError: e => this.showError(actionErrorMessage(e, '部署失败'), '部署'),
     });
   }
   newProject() { this.projectName.set(''); this.projectContent.set(defaultCompose); this.createError.set(''); this.createValidated.set(false); this.showCreate.set(true); }
-  validateCreate() { const n = this.projectName().trim(); if (!n) { this.setCreateError('请输入项目名称', 'error'); return; } this.projectContent.set(this.normalizeCompose(this.projectContent())); this.service.validate('', 'compose.yaml', this.projectContent()).subscribe({ next: r => { if (r.code === 200) { this.createValidated.set(true); this.setCreateError('格式校验通过，包含 ' + (Array.isArray(r.data?.services) ? r.data.services.length : 0) + ' 个服务', 'success'); } else this.setCreateError(this.formatComposeError(r.msg), 'error'); }, error: e => this.setCreateError(this.formatComposeError(e.error?.msg || '格式校验失败'), 'error') }); }
+  validateCreate() {
+    const n = this.projectName().trim();
+    if (!n) { this.setCreateError('请输入项目名称', 'error'); return; }
+    this.projectContent.set(this.normalizeCompose(this.projectContent()));
+    runAction({
+      request: this.service.validate('', 'compose.yaml', this.projectContent()),
+      onSuccess: r => {
+        const count = Array.isArray((r.data as { services?: unknown[] } | undefined)?.services) ? (r.data as { services: unknown[] }).services.length : 0;
+        this.createValidated.set(true);
+        this.setCreateError('格式校验通过，包含 ' + count + ' 个服务', 'success');
+      },
+      onBizError: r => this.setCreateError(this.formatComposeError(r.msg), 'error'),
+      onHttpError: e => this.setCreateError(this.formatComposeError(actionErrorMessage(e, '格式校验失败')), 'error'),
+    });
+  }
   deployNewProject() { this.createProject(true); }
   createProject(deployAfterCreate = false) {
     const n = this.projectName().trim(); if (!n) { this.setCreateError('请输入项目名称', 'error'); return; }
     this.projectContent.set(this.normalizeCompose(this.projectContent()));
-    this.creating.set(true);
-    this.service.createProject(n, 'compose.yaml', this.projectContent()).subscribe({
-      next: r => {
-        this.creating.set(false);
-        if (r.code !== 200) { this.setCreateError(this.formatComposeError(r.msg || '创建项目失败'), 'error'); return; }
+    runAction({
+      request: this.service.createProject(n, 'compose.yaml', this.projectContent()),
+      onStart: () => this.creating.set(true),
+      onFinally: () => this.creating.set(false),
+      onSuccess: r => {
         if (!deployAfterCreate) { this.closeCreate(); this.toast.success('项目已创建'); return; }
-        this.createAndPreview(r.data.projectId);
+        this.createAndPreview((r.data as { projectId: string }).projectId);
       },
-      error: e => { this.creating.set(false); this.setCreateError(this.formatComposeError(e.error?.msg || '创建项目失败'), 'error'); },
+      onBizError: r => this.setCreateError(this.formatComposeError(r.msg || '创建项目失败'), 'error'),
+      onHttpError: e => this.setCreateError(this.formatComposeError(actionErrorMessage(e, '创建项目失败')), 'error'),
     });
   }
   private createAndPreview(projectId: string) {

@@ -58,3 +58,14 @@
   font-size: 13px;
   color: var(--muted);
 }
+
+.login-card .message.error {
+  color: var(--red);
+}
+
+.login-card .message.info {
+  color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 10%, transparent);
+  border-radius: 8px;
+  padding: 8px 10px;
+}

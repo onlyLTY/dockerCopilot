@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
+	"sync"
+	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/internal/config"
@@ -11,8 +14,6 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest"
-	"sync"
-	"time"
 )
 
 type ServiceContext struct {
@@ -26,6 +27,7 @@ type ServiceContext struct {
 	IndexCheckMiddleware       rest.Middleware
 	ProgressStore              ProgressStoreType
 	progressPath               string
+	progressPersistTimer       *time.Timer
 	DockerClient               *client.Client
 	mu                         sync.Mutex
 	ComposeMu                  sync.Mutex
@@ -38,6 +40,15 @@ type ServiceContext struct {
 	backupTask cronTask
 	cronMu     sync.Mutex
 }
+
+const (
+	// progressPersistDelay 进行中任务合并写盘间隔，降低高频进度更新的磁盘压力。
+	progressPersistDelay = 300 * time.Millisecond
+	// maxDoneProgress 已完成任务最多保留条数（按 UpdatedAt 淘汰最旧）。
+	maxDoneProgress = 100
+	// maxDoneProgressAge 已完成任务最长保留时间；与前端 DONE_KEEP 同为 1 小时量级时可再调。
+	maxDoneProgressAge = 24 * time.Hour
+)
 
 // cronTask 封装单个可动态重新调度的定时任务。
 type cronTask struct {
@@ -53,6 +64,8 @@ type TaskProgress struct {
 	Name       string `json:"name"`
 	DetailMsg  string `json:"detailMsg"`
 	IsDone     bool   `json:"isDone"`
+	// UpdatedAt 最近一次进度变更时间（Unix 毫秒）。用于按时间淘汰与前端展示。
+	UpdatedAt int64 `json:"updatedAt"`
 }
 
 type ProgressStoreType map[string]TaskProgress
@@ -71,16 +84,25 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 	progressPath := progressStorePath()
 	progressStore := loadProgressStore(progressPath)
-	interrupted := false
+	nowMs := time.Now().UnixMilli()
+	needsPersist := false
 	for taskID, progress := range progressStore {
-		if progress.IsDone {
-			continue
+		changed := false
+		if progress.UpdatedAt == 0 {
+			progress.UpdatedAt = nowMs
+			changed = true
 		}
-		progress.Message = "服务重启导致任务中断"
-		progress.DetailMsg = "后端服务在任务完成前重启，任务未继续执行"
-		progress.IsDone = true
-		progressStore[taskID] = progress
-		interrupted = true
+		if !progress.IsDone {
+			progress.Message = "服务重启导致任务中断"
+			progress.DetailMsg = "后端服务在任务完成前重启，任务未继续执行"
+			progress.IsDone = true
+			progress.UpdatedAt = nowMs
+			changed = true
+		}
+		if changed {
+			progressStore[taskID] = progress
+			needsPersist = true
+		}
 	}
 	ctx := &ServiceContext{
 		Config:             c,
@@ -91,8 +113,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		DockerClient:       cli,
 		updatingContainers: make(map[string]string),
 	}
-	if interrupted {
-		ctx.persistProgress()
+	before := len(ctx.ProgressStore)
+	ctx.pruneProgressLocked()
+	if needsPersist || len(ctx.ProgressStore) != before {
+		// 启动时补时间戳/中断标记/淘汰后立即落盘，不走 debounce
+		ctx.persistProgressLocked()
 	}
 	return ctx
 }
@@ -124,7 +149,8 @@ func loadProgressStore(path string) ProgressStoreType {
 	return store
 }
 
-func (ctx *ServiceContext) persistProgress() {
+// persistProgressLocked 同步写入进度文件。调用方必须已持有 ctx.mu。
+func (ctx *ServiceContext) persistProgressLocked() {
 	content, err := json.MarshalIndent(ctx.ProgressStore, "", "  ")
 	if err != nil {
 		logx.Errorf("无法序列化任务进度: %v", err)
@@ -160,30 +186,82 @@ func (ctx *ServiceContext) persistProgress() {
 	}
 }
 
+// FlushProgress 取消待写定时器并立即落盘（测试或优雅退出时可用）。
+func (ctx *ServiceContext) FlushProgress() {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	if ctx.progressPersistTimer != nil {
+		ctx.progressPersistTimer.Stop()
+		ctx.progressPersistTimer = nil
+	}
+	ctx.persistProgressLocked()
+}
+
+func (ctx *ServiceContext) scheduleProgressPersistLocked() {
+	if ctx.progressPersistTimer != nil {
+		return
+	}
+	ctx.progressPersistTimer = time.AfterFunc(progressPersistDelay, func() {
+		ctx.mu.Lock()
+		defer ctx.mu.Unlock()
+		ctx.progressPersistTimer = nil
+		ctx.persistProgressLocked()
+	})
+}
+
 func (ctx *ServiceContext) UpdateProgress(taskID string, progress TaskProgress) {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
+	if progress.UpdatedAt == 0 {
+		progress.UpdatedAt = time.Now().UnixMilli()
+	}
 	ctx.ProgressStore[taskID] = progress
 	ctx.pruneProgressLocked()
-	ctx.persistProgress()
-}
-
-// pruneProgressLocked 限制已完成任务数量，避免 taskProgress.json 无限增长。
-// 调用方必须已持有 ctx.mu。
-func (ctx *ServiceContext) pruneProgressLocked() {
-	const maxDone = 100
-	doneIDs := make([]string, 0)
-	for id, p := range ctx.ProgressStore {
-		if p.IsDone {
-			doneIDs = append(doneIDs, id)
+	// 终态立即落盘，避免重启丢失；进行中合并写盘
+	if progress.IsDone {
+		if ctx.progressPersistTimer != nil {
+			ctx.progressPersistTimer.Stop()
+			ctx.progressPersistTimer = nil
 		}
-	}
-	if len(doneIDs) <= maxDone {
+		ctx.persistProgressLocked()
 		return
 	}
-	extra := len(doneIDs) - maxDone
+	ctx.scheduleProgressPersistLocked()
+}
+
+// pruneProgressLocked 限制已完成任务数量与年龄，避免 taskProgress.json 无限增长。
+// 按 UpdatedAt 升序淘汰最旧；无时间戳的视为最旧。调用方必须已持有 ctx.mu。
+func (ctx *ServiceContext) pruneProgressLocked() {
+	type doneItem struct {
+		id        string
+		updatedAt int64
+	}
+	now := time.Now().UnixMilli()
+	cutoff := now - maxDoneProgressAge.Milliseconds()
+	done := make([]doneItem, 0)
+	for id, p := range ctx.ProgressStore {
+		if !p.IsDone {
+			continue
+		}
+		// 超龄直接删
+		if p.UpdatedAt > 0 && p.UpdatedAt < cutoff {
+			delete(ctx.ProgressStore, id)
+			continue
+		}
+		done = append(done, doneItem{id: id, updatedAt: p.UpdatedAt})
+	}
+	if len(done) <= maxDoneProgress {
+		return
+	}
+	sort.Slice(done, func(i, j int) bool {
+		if done[i].updatedAt == done[j].updatedAt {
+			return done[i].id < done[j].id
+		}
+		return done[i].updatedAt < done[j].updatedAt
+	})
+	extra := len(done) - maxDoneProgress
 	for i := 0; i < extra; i++ {
-		delete(ctx.ProgressStore, doneIDs[i])
+		delete(ctx.ProgressStore, done[i].id)
 	}
 }
 

@@ -2,7 +2,6 @@ package image
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/docker/docker/api/types/filters"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
@@ -35,8 +34,9 @@ func (l *PruneLogic) Prune(req *types.ImagePruneReq) (*types.Resp, error) {
 	}
 	report, err := l.svcCtx.DockerClient.ImagesPrune(l.ctx, pruneFilters)
 	if err != nil {
+		l.Errorf("清理镜像失败 kind=%s: %v", req.Kind, err)
 		resp.Code = 500
-		resp.Msg = fmt.Sprintf("清理镜像失败: %v", err)
+		resp.Msg = "清理镜像失败"
 		return resp, nil
 	}
 	deleted := len(report.ImagesDeleted)

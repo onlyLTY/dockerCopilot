@@ -16,8 +16,8 @@ const (
 	defaultLogDir = "./logs"
 	defaultLimit  = 100
 	maxLimit      = 500
-	maxTotalBytes = 1024 * 1024
-	logSeparator  = "--------------------------------"
+	// 扫描体积上限：按级别过滤时可能需要多读一些文件才能凑满 limit
+	maxTotalBytes = 2 * 1024 * 1024
 )
 
 type Entry struct {
@@ -33,42 +33,72 @@ func Directory() string {
 	return defaultLogDir
 }
 
-func ReadRecent(limit int) ([]Entry, error) {
+// ReadRecent 返回最近的日志条目（最新在前）。
+// level 为空或 "all" 时不过滤；为 debug/info/warn/error 时在服务端按级别筛选后再截断，
+// 因此 level=error&limit=100 表示「最近最多 100 条 error」，而非「混合 100 条里的 error」。
+func ReadRecent(limit int, level string) ([]Entry, error) {
 	if limit <= 0 {
 		limit = defaultLimit
 	}
 	if limit > maxLimit {
 		limit = maxLimit
 	}
+	level = normalizeLevelFilter(level)
+
 	files, err := logFiles(Directory())
 	if err != nil {
 		return nil, err
 	}
-	entries := make([]Entry, 0, limit)
-	var totalBytes int64
-	for index := len(files) - 1; index >= 0; index-- {
-		file := files[index]
+
+	// files 已按 mtime 新→旧；从新文件开始读，收集匹配项直到凑满 limit 或扫过体积上限
+	matched := make([]Entry, 0, limit)
+	var scanned int64
+	for _, file := range files {
+		if len(matched) >= limit {
+			break
+		}
 		info, err := os.Stat(file.path)
 		if err != nil {
 			continue
 		}
-		if totalBytes+info.Size() > maxTotalBytes {
+		// 已扫体积达到上限则停止（避免为凑满 error 读完整盘）
+		if scanned > 0 && scanned+info.Size() > maxTotalBytes && len(matched) > 0 {
 			break
 		}
-		totalBytes += info.Size()
+		scanned += info.Size()
 		fileEntries, err := readFile(file.path)
 		if err != nil {
 			continue
 		}
-		entries = append(entries, fileEntries...)
+		// 单文件内通常旧→新，反转后与「新优先」一致再筛选
+		for i, j := 0, len(fileEntries)-1; i < j; i, j = i+1, j-1 {
+			fileEntries[i], fileEntries[j] = fileEntries[j], fileEntries[i]
+		}
+		for _, e := range fileEntries {
+			if level != "" && e.Level != level {
+				continue
+			}
+			matched = append(matched, e)
+			if len(matched) >= limit {
+				break
+			}
+		}
 	}
-	if len(entries) > limit {
-		entries = entries[len(entries)-limit:]
+	return matched, nil
+}
+
+func normalizeLevelFilter(level string) string {
+	level = strings.ToLower(strings.TrimSpace(level))
+	switch level {
+	case "", "all", "*":
+		return ""
+	case "debug", "info", "warn", "error":
+		return level
+	case "warning":
+		return "warn"
+	default:
+		return ""
 	}
-	for i, j := 0, len(entries)-1; i < j; i, j = i+1, j-1 {
-		entries[i], entries[j] = entries[j], entries[i]
-	}
-	return entries, nil
 }
 
 type logFile struct {
@@ -95,6 +125,7 @@ func logFiles(dir string) ([]logFile, error) {
 		}
 		files = append(files, logFile{path: filepath.Join(dir, entry.Name()), mod: info.ModTime()})
 	}
+	// 新 → 旧
 	sort.Slice(files, func(i, j int) bool { return files[i].mod.After(files[j].mod) })
 	return files, nil
 }
@@ -128,6 +159,7 @@ func readEntries(reader io.Reader) ([]Entry, error) {
 	scanner := bufio.NewScanner(reader)
 	buffer := make([]byte, 64*1024)
 	scanner.Buffer(buffer, 256*1024)
+	const logSeparator = "--------------------------------"
 	var block []string
 	flush := func() {
 		if len(block) == 0 {
@@ -191,7 +223,6 @@ func parseLine(line string) Entry {
 			message = line
 		}
 		return Entry{Timestamp: timestamp, Level: level, Message: message}
-
 	}
 	parts := strings.SplitN(line, "\t", 3)
 	if len(parts) == 3 {
@@ -217,7 +248,6 @@ func normalizeLevel(value string) string {
 
 func firstString(value map[string]interface{}, keys ...string) string {
 	for _, key := range keys {
-
 		if text, ok := value[key].(string); ok {
 			return text
 		}

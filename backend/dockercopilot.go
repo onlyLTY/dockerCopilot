@@ -232,6 +232,7 @@ func SetupLog(logDir, level string) error {
 		return fmt.Errorf("failed to create log directory: %v", err)
 	}
 
+	// go-zero 默认 Rotation=daily：按天滚动文件名，KeepDays 天后删除旧文件；Compress 压缩历史。
 	logConf := logx.LogConf{
 		ServiceName: "dockerCopilot",
 		Mode:        "file",
@@ -239,6 +240,7 @@ func SetupLog(logDir, level string) error {
 		Level:       logxConfigLevel(level),
 		KeepDays:    7,
 		Compress:    true,
+		Rotation:    "daily",
 	}
 
 	return logx.SetUp(logConf)

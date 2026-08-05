@@ -28,8 +28,9 @@ func (l *ListBackupsLogic) ListBackups() (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	backupList, err := utiles.BackupList(l.svcCtx)
 	if err != nil {
+		l.Errorf("获取备份列表失败: %v", err)
 		resp.Code = 500
-		resp.Msg = err.Error()
+		resp.Msg = "获取备份列表失败"
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}

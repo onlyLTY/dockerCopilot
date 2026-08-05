@@ -55,5 +55,6 @@ func progressData(progress svc.TaskProgress) map[string]interface{} {
 		"name":       progress.Name,
 		"detailMsg":  progress.DetailMsg,
 		"isDone":     progress.IsDone,
+		"updatedAt":  progress.UpdatedAt,
 	}
 }

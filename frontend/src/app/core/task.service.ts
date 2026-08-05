@@ -29,6 +29,8 @@ interface ProgressData {
   name: string;
   detailMsg: string;
   isDone: boolean;
+  /** Unix 毫秒；旧后端可能缺失 */
+  updatedAt?: number;
 }
 
 interface ProgressListResponse {
@@ -94,6 +96,7 @@ export class TaskService {
         const local = new Map(this.tasks().map(item => [item.taskID, item]));
         const merged = response.data.map(progress => {
           const existing = local.get(progress.taskID);
+          const serverUpdated = typeof progress.updatedAt === 'number' && progress.updatedAt > 0 ? progress.updatedAt : now;
           if (existing) {
             local.delete(progress.taskID);
             return {
@@ -103,7 +106,7 @@ export class TaskService {
               detailMsg: progress.detailMsg || existing.detailMsg,
               isDone: progress.isDone,
               failed: progress.isDone && (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
-              updatedAt: existing.updatedAt || now,
+              updatedAt: Math.max(existing.updatedAt || 0, serverUpdated),
             };
           }
           return {
@@ -115,8 +118,8 @@ export class TaskService {
             isDone: progress.isDone,
             failed: progress.isDone && (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
             refresh: false,
-            createdAt: now,
-            updatedAt: now,
+            createdAt: serverUpdated,
+            updatedAt: serverUpdated,
           };
         });
         this.tasks.set([...merged, ...local.values()]);
@@ -254,7 +257,8 @@ export class TaskService {
         failureTitle = d.name || t.title;
         failureMessage = d.detailMsg || d.message || '任务执行失败';
       }
-      return { ...t, percentage: d.percentage, message: d.message || t.message, detailMsg: d.detailMsg || '', isDone: d.isDone, failed, updatedAt: Date.now() };
+      const updatedAt = typeof d.updatedAt === 'number' && d.updatedAt > 0 ? d.updatedAt : Date.now();
+      return { ...t, percentage: d.percentage, message: d.message || t.message, detailMsg: d.detailMsg || '', isDone: d.isDone, failed, updatedAt };
     }));
     if (doneNow) {
       this.unknownCounts.delete(taskID);

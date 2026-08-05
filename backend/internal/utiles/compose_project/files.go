@@ -77,7 +77,7 @@ func findProjectRoot(root, id string) (string, error) {
 		return "", err
 	}
 	if found == "" {
-		return "", fmt.Errorf("project not found")
+		return "", fmt.Errorf("Compose 项目不存在")
 	}
 	return found, nil
 }
@@ -190,7 +190,8 @@ func ParseComposeContent(root, filename string, content []byte) (*composeTypes.P
 	}
 	var raw map[string]interface{}
 	if err := yaml.Unmarshal(content, &raw); err != nil {
-		return nil, fmt.Errorf("YAML 解析失败: %w", err)
+		// 不把底层 yaml 细节回传给前端，日志由调用方记录
+		return nil, fmt.Errorf("YAML 解析失败，请检查语法")
 	}
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("Compose 文件不能为空")

@@ -1,4 +1,4 @@
-# 使用 Alpine 作为基础镜像
+# 使用 Alpine 作为基础镜像（健康检查依赖 wget，tzdata 用于 TZ）
 FROM alpine
 LABEL authors="onlyLTY"
 WORKDIR /app
@@ -10,19 +10,18 @@ COPY build/docker/etc/. ./etc
 COPY build/docker/web/. ./web
 COPY backend/start.sh ./start.sh
 
-RUN apk add --no-cache tzdata \
+RUN apk add --no-cache tzdata wget \
     && chmod +x start.sh \
     && chmod +x dockerCopilot
 
-# 设置环境变量
+# secretKey 必须在运行时通过环境变量注入（compose 已强制要求）
 ENV secretKey="" \
     WORKDIR="/app" \
     DOCKER_HOST="unix:///var/run/docker.sock" \
     BACKUP_DIR="/data/backups" \
     TZ="Asia/Shanghai"
 
-VOLUME ["/data"]
+VOLUME ["/data", "/compose", "/app/logs"]
 
 EXPOSE 12712
-# 设置启动命令
 CMD ["./start.sh"]
