@@ -18,9 +18,9 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	if serviceContext == nil {
 		return fmt.Errorf("服务上下文不可用")
 	}
-	if serviceContext.DockerClient == nil {
+	if err := requireDocker(serviceContext); err != nil {
 		serviceContext.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "更新失败", DetailMsg: "Docker 客户端不可用", IsDone: true})
-		return fmt.Errorf("Docker 客户端不可用")
+		return err
 	}
 	ctx := context.Background()
 	serviceContext.UpdateProgress(taskID, svc.TaskProgress{

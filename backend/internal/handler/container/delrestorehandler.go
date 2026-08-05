@@ -8,7 +8,6 @@ import (
 	"github.com/onlyLTY/dockerCopilot/internal/logic/container"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
-	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 func DelRestoreHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
@@ -31,10 +30,6 @@ func DelRestoreHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := container.NewDelRestoreLogic(r.Context(), svcCtx)
 		resp, err := l.DelRestore(&req)
-		if err != nil {
-			httpx.WriteJson(w, resp.Code, resp)
-		} else {
-			httpx.WriteJson(w, resp.Code, resp)
-		}
+			writeLogicResp(w, r, resp, err)
 	}
 }

@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
@@ -16,11 +17,7 @@ type StartLogic struct {
 }
 
 func NewStartLogic(ctx context.Context, svcCtx *svc.ServiceContext) *StartLogic {
-	return &StartLogic{
-		Logger: logx.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
+	return &StartLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
 func (l *StartLogic) Start(req *types.IdReq) (resp *types.Resp, err error) {
@@ -28,13 +25,7 @@ func (l *StartLogic) Start(req *types.IdReq) (resp *types.Resp, err error) {
 	err = utiles.StartContainer(l.svcCtx, req.Id)
 	if err != nil {
 		l.Errorf("启动容器失败 id=%s: %v", req.Id, err)
-		resp.Code = 400
-		resp.Msg = "启动容器失败"
-		resp.Data = map[string]interface{}{}
-		return resp, err
+		return fail(resp, err, 400, "启动容器失败")
 	}
-	resp.Code = 200
-	resp.Msg = "success"
-	resp.Data = map[string]interface{}{}
-	return resp, nil
+	return ok(resp, nil), nil
 }

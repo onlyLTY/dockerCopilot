@@ -61,3 +61,22 @@ func TestValidateCriticalRisks(t *testing.T) {
 		t.Fatalf("host network alone should not be critical-blocked: %v", err)
 	}
 }
+
+func TestIsCriticalRiskByKind(t *testing.T) {
+	if !IsCriticalRisk(Risk{Kind: RiskKindPrivileged, Level: "high"}) {
+		t.Fatal("privileged kind should be critical")
+	}
+	if !IsCriticalRisk(Risk{Kind: RiskKindDockerSocket, Level: "high"}) {
+		t.Fatal("docker socket kind should be critical")
+	}
+	if !IsCriticalRisk(Risk{Kind: RiskKindSensitivePath, Level: "high"}) {
+		t.Fatal("sensitive path kind should be critical")
+	}
+	if IsCriticalRisk(Risk{Kind: RiskKindHostNetwork, Level: "high"}) {
+		t.Fatal("host network should not be critical")
+	}
+	// 文案变更不应影响判定
+	if IsCriticalRisk(Risk{Kind: RiskKindHostNetwork, Message: "服务启用了 privileged", Level: "high"}) {
+		t.Fatal("critical check must use Kind, not Message")
+	}
+}

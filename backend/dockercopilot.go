@@ -11,15 +11,17 @@ import (
 	"strings"
 
 	"github.com/onlyLTY/dockerCopilot/internal/config"
+	"github.com/onlyLTY/dockerCopilot/internal/datadir"
+	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/handler"
 	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/proc"
 	"github.com/zeromicro/go-zero/rest"
 	"github.com/zeromicro/go-zero/rest/httpx"
-	"github.com/zeromicro/x/errors"
 	xhttp "github.com/zeromicro/x/http"
 )
 
@@ -77,29 +79,40 @@ func main() {
 	if len(c.CorsOrigins) > 0 {
 		serverOptions = append(serverOptions, rest.WithCors(c.CorsOrigins...))
 	}
-	server := rest.MustNewServer(c.RestConf, serverOptions...)
-	defer server.Stop()
-	ctx := svc.NewServiceContext(c)
+server := rest.MustNewServer(c.RestConf, serverOptions...)
+		defer server.Stop()
+		ctx := svc.NewServiceContext(c)
+		// go-zero 在 SIGTERM/SIGINT 时先 WrapUp 再 Shutdown；Linux 容器内生效。
+		// Windows 本地 go run 的 polyfill 不会自动触发，进程退出前仍靠 defer Close。
+		proc.AddWrapUpListener(func() {
+			ctx.FlushProgress()
+		})
+		proc.AddShutdownListener(func() {
+			ctx.Close()
+		})
+		defer ctx.Close()
 
-	// Ensure data directory and config exist (Auto-init)
-	dataDir := "/data/icon/icons"
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		logx.Errorf("Failed to create data directory: %v", err)
-	}
-	if err := os.MkdirAll("/data/backups", 0755); err != nil {
-		logx.Errorf("Failed to create backup directory: %v", err)
-	}
+		// Ensure data directory and config exist (Auto-init)；根目录可由 DATA_DIR 覆盖
+		if err := os.MkdirAll(datadir.IconDir(), 0755); err != nil {
+			logx.Errorf("Failed to create icon directory: %v", err)
+		}
+		if err := os.MkdirAll(datadir.BackupsDir(), 0755); err != nil {
+			logx.Errorf("Failed to create backup directory: %v", err)
+		}
+		if err := os.MkdirAll(datadir.ConfigDir(), 0755); err != nil {
+			logx.Errorf("Failed to create config directory: %v", err)
+		}
 
-	imageLogosPath := "/data/icon/imageLogos.js"
-	if _, err := os.Stat(imageLogosPath); os.IsNotExist(err) {
-		defaultConfig := []byte(`// 自定义镜像logo配置
+		imageLogosPath := datadir.IconConfigPath()
+		if _, err := os.Stat(imageLogosPath); os.IsNotExist(err) {
+			defaultConfig := []byte(`// 自定义镜像logo配置
 export const customImageLogos = {
 };
 `)
-		if err := os.WriteFile(imageLogosPath, defaultConfig, 0644); err != nil {
-			logx.Errorf("Failed to create default imageLogos.js: %v", err)
+			if err := os.WriteFile(imageLogosPath, defaultConfig, 0644); err != nil {
+				logx.Errorf("Failed to create default imageLogos.js: %v", err)
+			}
 		}
-	}
 
 	list, err := utiles.GetImagesList(ctx)
 	if err != nil {
@@ -138,47 +151,82 @@ export const customImageLogos = {
 	if err := ctx.StartBackupCron(settingstore.AutoBackupCron(backupInterval), backupJob); err != nil {
 		logx.Errorf("启动自动备份定时任务出错: %v", err)
 	}
-	httpx.SetErrorHandler(func(err error) (int, any) {
-		switch e := err.(type) {
-		case *errors.CodeMsg:
-			return http.StatusOK, xhttp.BaseResponse[types.Nil]{
-				Code: e.Code,
-				Msg:  e.Msg,
+// 统一错误出口：只认 errorx.CodeError；其它错误只记日志，不回传内部细节。
+		httpx.SetErrorHandler(func(err error) (int, any) {
+			if ce, ok := errorx.AsCodeError(err); ok {
+				return http.StatusOK, xhttp.BaseResponse[types.Nil]{
+					Code: ce.Code,
+					Msg:  ce.Msg,
+				}
 			}
-		default:
-			// 不向客户端回传原始错误（可能含路径/Docker 细节），仅记日志
 			logx.Errorf("unhandled error: %v", err)
 			return http.StatusOK, xhttp.BaseResponse[types.Nil]{
-				Code: 50000,
+				Code: errorx.CodeInternalUnhandled,
 				Msg:  "服务内部错误",
 			}
-		}
-	})
-	handler.RegisterHandlers(server, ctx)
-	RegisterHandlers(server)
-	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
-	logx.Info("程序版本" + config.Version)
-	server.Start()
-}
-func RegisterHandlers(engine *rest.Server) {
-	// 自定义上传图标：从 /data/icon/icons 目录提供
-	// GET / 已由 handler.RegisterHandlers 中的 webindexHandler 注册，勿重复添加
-	iconFileServer := http.StripPrefix("/src/config/image/", http.FileServer(http.Dir("/data/icon/icons")))
-	engine.AddRoutes(
-		[]rest.Route{
-			{
-				Method: http.MethodGet,
-				Path:   "/src/config/image/:file",
-				Handler: func(w http.ResponseWriter, r *http.Request) {
-					iconFileServer.ServeHTTP(w, r)
+		})
+handler.RegisterHandlers(server, ctx)
+		RegisterHandlers(server, ctx)
+		fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
+		logx.Info("程序版本" + config.Version)
+		server.Start()
+	}
+
+	func RegisterHandlers(engine *rest.Server, serverCtx *svc.ServiceContext) {
+		// 存活+依赖探测：不鉴权，供 compose healthcheck / 编排使用
+		engine.AddRoutes(
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/healthz",
+					Handler: healthzHandler(serverCtx),
 				},
 			},
-		},
-	)
+		)
 
-	// 前端静态资源（含 /manager 下任意深度的子目录，如 assets/icons、assets/imageIcons）
-	// 统一交由 NotFoundHandler 中的前端处理器兜底，支持任意目录深度与前端路由回退。
-}
+		// 自定义上传图标：从 DATA_DIR/icon/icons 提供
+		// GET / 已由 handler.RegisterHandlers 中的 webindexHandler 注册，勿重复添加
+		iconFileServer := http.StripPrefix("/src/config/image/", http.FileServer(http.Dir(datadir.IconDir())))
+		engine.AddRoutes(
+			[]rest.Route{
+				{
+					Method: http.MethodGet,
+					Path:   "/src/config/image/:file",
+					Handler: func(w http.ResponseWriter, r *http.Request) {
+						iconFileServer.ServeHTTP(w, r)
+					},
+				},
+			},
+		)
+
+		// 前端静态资源（含 /manager 下任意深度的子目录）由 NotFoundHandler 兜底。
+	}
+
+	// healthzHandler 返回进程存活与 Docker 引擎连通性。
+	// 200：进程正常且能 Ping 到 Docker；503：进程在但 Docker 不可用。
+	func healthzHandler(serverCtx *svc.ServiceContext) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			status := http.StatusOK
+			body := map[string]interface{}{
+				"status":  "ok",
+				"version": config.Version,
+				"docker":  "ok",
+			}
+			if serverCtx == nil || serverCtx.DockerClient == nil {
+				status = http.StatusServiceUnavailable
+				body["status"] = "degraded"
+				body["docker"] = "unavailable"
+			} else {
+				pingCtx := r.Context()
+				if _, err := serverCtx.DockerClient.Ping(pingCtx); err != nil {
+					status = http.StatusServiceUnavailable
+					body["status"] = "degraded"
+					body["docker"] = "unreachable"
+				}
+			}
+			httpx.WriteJson(w, status, body)
+		}
+	}
 
 // newFrontendHandler 提供 Angular 前端（运行时从 webDir 磁盘目录读取）。
 // 命中真实静态文件时按原样返回（带正确的 Content-Type），
@@ -208,12 +256,18 @@ func newFrontendHandler() http.Handler {
 	})
 }
 
+// logxConfigLevel 将应用日志级别映射到 go-zero logx 档位。
+// go-zero 仅有 debug/info/error/severe，无独立 warn：用户选 warn 时按 error 写入（比 info 更少）。
 func logxConfigLevel(level string) string {
-	if level == "warn" {
-		return "error"
+		switch strings.ToLower(strings.TrimSpace(level)) {
+		case "debug", "info", "error", "severe":
+			return strings.ToLower(strings.TrimSpace(level))
+		case "warn", "warning":
+			return "error"
+		default:
+			return "info"
+		}
 	}
-	return level
-}
 
 // ensureLogDirectory 检查并创建日志目录
 func ensureLogDirectory(logDir string) error {

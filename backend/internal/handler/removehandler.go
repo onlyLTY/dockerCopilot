@@ -19,10 +19,6 @@ func removeHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := logic.NewRemoveLogic(r.Context(), svcCtx)
 		resp, err := l.Remove(&req)
-		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
-		}
+		WriteLogicResp(w, r, resp, err)
 	}
 }

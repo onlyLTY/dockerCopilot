@@ -24,11 +24,13 @@ backend/
 
 ## 核心开发规范
 
-1. **Spec-First**：API 变更优先改 `dockercopilot.api`，再 `goctl api go -api dockercopilot.api -dir .` 生成框架代码。
-2. **手写路由**：扩展路由与中间件在 `internal/handler/routes_manual.go`（`RegisterManualHandlers`）。`routes.go` 为 goctl 业务路由；重新生成后务必保留对 `RegisterManualHandlers` 的调用。
-3. **错误处理**：对客户端返回可读业务文案（Compose 使用 `clientMsg`），底层错误只写日志。
-4. **日志**：`SetupLog` 使用 go-zero file 模式，**按天轮转**（`Rotation=daily`），`KeepDays=7` 并压缩历史；不是无限追加单个文件。
-5. **编译与验证**：`go test ./...` 与 `go build ./...`。
+1. **Spec-First**：API 变更优先改 `dockercopilot.api`；types 可用 goctl 生成。`routes.go` 以手写维护为主，**不要**让 goctl 空 stub 直接挂路由。
+2. **Handler 约定（goctl 风格）**：`Parse` → `NewXxxLogic` → `writeLogicResp` / `handler.WriteLogicResp`。Compose 复杂操作可聚合在 `ActionsLogic` / `FilesLogic`，但 **Handler 符号名** 与 api 中 `@handler` 对齐（如 `ComposeDeployHandler`）。
+3. **错误处理**：业务错误统一用 `internal/errorx.CodeError`；全局 `SetErrorHandler` 只认该类型。Logic 失败时填好 `resp.Code/Msg` 并返回 err，由 handler 写出 HTTP 200 + body。
+4. **Docker 客户端**：调用 Engine 前使用 `svcCtx.RequireDocker()` / `utiles` 内 `requireDocker`；不可用时业务码 **503**（`errorx.ErrDockerUnavailable`），禁止对 nil client 直接解引用。
+5. **手写路由**：中间件与 settings/logs 等在 `routes_manual.go`。重新 goctl 后务必保留 `RegisterManualHandlers` 调用，并核对 Compose/镜像 Handler 未退回空 stub。
+6. **日志**：`SetupLog` 使用 go-zero file 模式，**按天轮转**（`Rotation=daily`），`KeepDays=7` 并压缩历史。
+7. **编译与验证**：`go test ./...` 与 `go build ./...`。
 
 ## 启动与运行
 
@@ -49,8 +51,9 @@ go build ./...
 go test ./...
 ```
 
-- `etc/dockerCopilot.yaml`：通用/容器用，`Auth.AccessSecret: ${secretKey}`
+- `etc/dockerCopilot.yaml`：通用/容器用，`Auth.AccessSecret: ${secretKey}`；`Timeout` 默认 10 分钟；`AccessExpire` 默认 7 天
 - `etc/dockerCopilot.local.yaml`：本机开发，AccessSecret 可写明文；`Compose.AllowHighRisk` 控制极高危部署门禁
+- 进程退出：`proc` WrapUp 刷任务进度，Shutdown/`defer` 停 cron 并关闭 Docker 客户端
 
 ## 核心接口说明
 
@@ -70,7 +73,8 @@ go test ./...
 
 - `GET|POST /api/compose/projects`
 - `POST /api/compose/projects/:id/deploy` 与 `deploy/preview`
-- 文件读写、cleanup 等
+- 文件读写、cleanup、`POST /api/compose/validate`
+- 实现在 `handler/compose` 的 actions/files/list 手写 handler；goctl 空 stub 已移除，重新生成后勿把 stub 再挂回 `routes.go`
 
 ### 镜像 / 端口 / 图标 / 进度 / 版本
 
@@ -84,3 +88,11 @@ go test ./...
 
 - `/api/settings` 及 update-check / auto-backup / log-level / proxy
 - `GET /api/logs`
+
+### 健康检查
+
+- `GET /healthz` — 不鉴权；进程存活 + Docker `Ping`（不可达 503）
+
+### 数据目录
+
+默认根路径 `/data`，可用环境变量 `DATA_DIR` 覆盖。备份/图标/设置/任务进度均相对该根目录；亦支持 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖。

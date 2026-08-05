@@ -18,10 +18,6 @@ func RenameHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := container.NewRenameLogic(r.Context(), svcCtx)
 		resp, err := l.Rename(&req)
-		if err != nil {
-			httpx.WriteJson(w, resp.Code, resp)
-		} else {
-			httpx.WriteJson(w, resp.Code, resp)
-		}
+			writeLogicResp(w, r, resp, err)
 	}
 }

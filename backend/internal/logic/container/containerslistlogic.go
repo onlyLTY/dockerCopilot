@@ -42,10 +42,7 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 	list, err := utiles.GetContainerList(l.svcCtx)
 	if err != nil {
 		l.Errorf("获取容器列表失败: %v", err)
-		resp.Code = 500
-		resp.Msg = "获取容器列表失败"
-		resp.Data = map[string]interface{}{}
-		return resp, err
+		return fail(resp, err, 500, "获取容器列表失败")
 	}
 	resp.Msg = "success"
 	resp.Code = 200

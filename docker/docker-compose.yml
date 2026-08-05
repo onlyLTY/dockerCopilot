@@ -31,7 +31,8 @@ services:
       # HTTPS_PROXY: ${HTTPS_PROXY:-}
       # NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1}
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:12712/manager"]
+      # /healthz 会 Ping Docker；引擎不可达时返回 503，编排可据此判定不健康
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:12712/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3

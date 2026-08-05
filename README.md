@@ -38,8 +38,7 @@ Docker Copilot 是一个面向 Docker Engine 的 Web 管理平台，用于在浏
 cp backend/etc/dockerCopilot.yaml backend/etc/dockerCopilot.local.yaml
 # 编辑 local：AccessSecret 改成明文（如 test123456），Compose.ScanPaths 改成本机目录
 
-cd backend
-go run dockercopilot.go -f etc/dockerCopilot.local.yaml
+cd backend && go run dockercopilot.go -f etc/dockerCopilot.local.yaml
 ```
 
 仍可用主配置 + 环境变量：
@@ -52,7 +51,8 @@ go run dockercopilot.go -f etc/dockerCopilot.yaml
 
 - 默认监听 `12712`
 - 本地未用 `-ldflags` 注入版本时，会尝试读取仓库根目录的 `version` 文件（可用 `VERSION_FILE` 指定）
-- 图标/任务进度等部分路径在代码里仍默认 `/data/...`；本机若无此目录，可自建或仅调不依赖它们的接口
+- 数据根目录默认 `/data`；本地可设 `DATA_DIR=./data`（或任意目录），备份/图标/设置/任务进度均落在其下。仍可用 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖
+- 健康检查：`GET /healthz`（不鉴权；会 Ping Docker，不可达时返回 503）
 
 验证：
 
@@ -219,7 +219,7 @@ Compose:
 
 - 使用 `secretKey` 登录并签发 JWT；除登录外管理 API 默认需认证
 - 登录按客户端 IP 限制失败次数；会话过期（401）时提示并保留 `returnUrl` 回到原页面
-- Token 有效期由 `Auth.AccessExpire` 配置（默认 30 天）；共享设备请自行缩短并保护 `secretKey`
+- Token 有效期由 `Auth.AccessExpire` 配置（默认 7 天）；共享设备请自行缩短并保护 `secretKey`
 - 浅色/深色主题、紧凑模式、移动端菜单
 - 全局安全响应头（CSP / X-Frame-Options 等）
 

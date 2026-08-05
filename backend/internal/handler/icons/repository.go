@@ -9,11 +9,13 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/onlyLTY/dockerCopilot/internal/datadir"
 )
 
 var iconConfigMu sync.Mutex
-var iconDirectory = func() string { return "/data/icon/icons" }
-var iconConfigPath = func() string { return "/data/icon/imageLogos.js" }
+var iconDirectory = func() string { return datadir.IconDir() }
+var iconConfigPath = func() string { return datadir.IconConfigPath() }
 var invalidRepositoryChars = regexp.MustCompile(`[^a-z0-9._:/-]+`)
 var trailingComma = regexp.MustCompile(`,\s*}`)
 

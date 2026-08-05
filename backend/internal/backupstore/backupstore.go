@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onlyLTY/dockerCopilot/internal/datadir"
 	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -19,7 +20,7 @@ func Directory() string {
 	if dir := os.Getenv("BACKUP_DIR"); dir != "" {
 		return dir
 	}
-	return "/data/backups"
+	return datadir.BackupsDir()
 }
 
 func GetRetention() (int, error) {

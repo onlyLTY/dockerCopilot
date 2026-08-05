@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
@@ -55,10 +55,10 @@ func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.Resp, err error) {
 }
 
 func (l *LoginLogic) getJwtToken(secretKey string, iat, seconds int64) (string, error) {
-	claims := make(jwt.MapClaims)
-	claims["iat"] = iat
-	claims["exp"] = iat + seconds
-	token := jwt.New(jwt.SigningMethodHS256)
-	token.Claims = claims
+	claims := jwt.MapClaims{
+		"iat": iat,
+		"exp": iat + seconds,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secretKey))
 }

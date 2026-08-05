@@ -3,76 +3,67 @@ package compose
 import (
 	"context"
 
+	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	composeProject "github.com/onlyLTY/dockerCopilot/internal/utiles/compose_project"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type ProjectsListLogic struct {
+// ComposeProjectsLogic 项目列表（goctl 命名；实现与旧 ProjectsListLogic 合并为一套）。
+type ComposeProjectsLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 }
 
-func NewProjectsListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ProjectsListLogic {
-	return &ProjectsListLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
+func NewComposeProjectsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ComposeProjectsLogic {
+	return &ComposeProjectsLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
-func (l *ProjectsListLogic) List() (*types.Resp, error) {
+func (l *ComposeProjectsLogic) ComposeProjects() (*types.Resp, error) {
 	resp := &types.Resp{}
-	if l.svcCtx.DockerClient == nil {
+	if err := l.svcCtx.RequireDocker(); err != nil {
 		logx.Errorf("compose operation=project_list failed=docker service unavailable")
-		resp.Code = 503
-		resp.Msg = "Docker 服务不可用"
-		resp.Data = map[string]interface{}{}
-		return resp, nil
+		return errorResp(resp, errorx.CodeDockerUnavailable, "Docker 服务不可用"), err
 	}
 	data, err := composeProject.ScanProjects(l.ctx, l.svcCtx)
 	if err != nil {
-		resp.Code = 500
-		resp.Msg = "读取 Compose 项目失败"
-		resp.Data = map[string]interface{}{}
+		if errorx.IsDockerUnavailable(err) {
+			return errorResp(resp, errorx.CodeDockerUnavailable, "Docker 服务不可用"), err
+		}
 		logx.Errorf("compose operation=project_list failed=scan error=%v", err)
-		return resp, err
+		return errorResp(resp, 500, "读取 Compose 项目失败"), err
 	}
 	logx.Infof("compose operation=project_list success")
-	resp.Code = 200
-	resp.Msg = "success"
-	resp.Data = data
-	return resp, nil
+	return successResp(resp, data), nil
 }
 
-type PortsListLogic struct {
+// PortsLogic 端口汇总。
+type PortsLogic struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 }
 
-func NewPortsListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PortsListLogic {
-	return &PortsListLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
+func NewPortsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PortsLogic {
+	return &PortsLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
-func (l *PortsListLogic) List() (*types.Resp, error) {
+func (l *PortsLogic) Ports() (*types.Resp, error) {
 	resp := &types.Resp{}
-	if l.svcCtx.DockerClient == nil {
+	if err := l.svcCtx.RequireDocker(); err != nil {
 		logx.Errorf("compose operation=ports_list failed=docker service unavailable")
-		resp.Code = 503
-		resp.Msg = "Docker 服务不可用"
-		resp.Data = map[string]interface{}{}
-		return resp, nil
+		return errorResp(resp, errorx.CodeDockerUnavailable, "Docker 服务不可用"), err
 	}
 	data, err := composeProject.ListPorts(l.ctx, l.svcCtx)
 	if err != nil {
-		resp.Code = 500
-		resp.Msg = "读取端口使用情况失败"
-		resp.Data = map[string]interface{}{}
+		if errorx.IsDockerUnavailable(err) {
+			return errorResp(resp, errorx.CodeDockerUnavailable, "Docker 服务不可用"), err
+		}
 		logx.Errorf("compose operation=ports_list failed=list error=%v", err)
-		return resp, err
+		return errorResp(resp, 500, "读取端口使用情况失败"), err
 	}
 	logx.Infof("compose operation=ports_list success")
-	resp.Code = 200
-	resp.Msg = "success"
-	resp.Data = data
-	return resp, nil
+	return successResp(resp, data), nil
 }

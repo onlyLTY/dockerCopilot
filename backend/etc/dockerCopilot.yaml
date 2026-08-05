@@ -1,14 +1,16 @@
 Name: dockerCopilot          # 服务名，仅用于日志/监控标识
 Host: 0.0.0.0                # 监听地址。0.0.0.0=所有网卡，容器里必须这样
 Port: 12712                  # 服务端口
-Timeout: 3600000     # 请求超时(毫秒)=3600秒=60分钟
+# HTTP 请求超时(毫秒)。容器更新/Compose 部署/备份恢复等长任务已异步化，
+# 同步接口（列表、备份、程序下载等）一般远低于此；过长会拖住卡死连接。
+Timeout: 600000      # 10 分钟
 Log:
   Encoding: plain            # 日志格式。plain=纯文本，可选 json
   # 实际文件日志由程序 SetupLog 配置：Mode=file、按天轮转(daily)、保留 7 天、压缩历史。
   # 目录默认 ./logs（容器内 /app/logs）。
 Auth:
   AccessSecret: ${secretKey} # JWT 签名密钥，来自环境变量 secretKey（就是你登录用的那个）
-  AccessExpire: 2592000      # token 有效期(秒)，2592000=30天
+  AccessExpire: 604800       # token 有效期(秒)，604800=7天；共享设备可再缩短
 CorsOrigins: []              # 允许的跨域来源。空=不额外放行；填了才会开 CORS
 Compose:                     # Compose 项目管理相关
   ScanPaths:

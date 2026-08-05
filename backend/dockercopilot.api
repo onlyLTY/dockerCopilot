@@ -1,51 +1,11 @@
 syntax = "v1"
 
-type DoLoginReq {
-	SecretKey string `form:"secret_key,optional"`
-}
-
 type LoginReq {
 	SecretKey string `form:"secretKey" validate:"required"`
 }
 
-type VerifyJwtReq {
-	Jwt string `form:"jwt" validate:"required"`
-}
-
 type GetProgressReq {
 	TaskId string `path:"taskid" validate:"required"`
-}
-
-type StartContainerReq {
-	Name string `json:"name" validate:"required"`
-}
-
-type StopContainerReq {
-	Name string `json:"name" validate:"required"`
-}
-
-type RenameContainerReq {
-	OldName string `json:"oldName" validate:"required"`
-	NewName string `json:"newName" validate:"required"`
-}
-
-type CreateContainerReq {
-	OldName         string `json:"old_name,optional"`
-	NewName         string `json:"new_name" validate:"required"`
-	ImageNameAndTag string `json:"image_name_and_tag" validate:"required"`
-}
-
-type RemoveContainerReq {
-	Name string `json:"name" validate:"required"`
-}
-
-type getNewImageReq {
-	ImageNameAndTag string `json:"image_name_and_tag" validate:"required"`
-}
-
-type MsgResp {
-	Status string `json:"status"`
-	Msg    string `json:"msg"`
 }
 
 type Resp {
@@ -109,6 +69,13 @@ type ComposeDeployReq {
 	Filename        string `json:"filename" validate:"required"`
 	ConfirmToken    string `json:"confirmToken,optional"`
 	ConfirmWarnings bool   `json:"confirmWarnings,optional"`
+	PullImages      bool   `json:"pullImages,optional"`
+}
+
+type ComposeProjectValidateReq {
+	ProjectID string `json:"projectId" validate:"required"`
+	Filename  string `json:"filename" validate:"required"`
+	Content   string `json:"content" validate:"required"`
 }
 
 type ComposeDeployPreviewReq {
@@ -246,6 +213,9 @@ service dockerCopilot {
 	@handler composeCleanup
 	post /compose/projects/cleanup (ComposeCleanupReq) returns (Resp)
 
+	@handler composeValidate
+	post /compose/validate (ComposeProjectValidateReq) returns (Resp)
+
 	@handler ports
 	get /ports returns (Resp)
 }
@@ -293,4 +263,3 @@ service dockerCopilot {
 	@handler delete
 	delete / returns (Resp)
 }
-

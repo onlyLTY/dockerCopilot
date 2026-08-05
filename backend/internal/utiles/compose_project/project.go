@@ -37,6 +37,9 @@ type projectFiles struct {
 }
 
 func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.ComposeProjectsResponse, error) {
+	if err := svcCtx.RequireDocker(); err != nil {
+		return nil, err
+	}
 	groups, err := discoverFiles(svcCtx)
 	if err != nil {
 		return nil, err
@@ -111,6 +114,9 @@ func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.Co
 }
 
 func ListPorts(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.PortsResponse, error) {
+	if err := svcCtx.RequireDocker(); err != nil {
+		return nil, err
+	}
 	containers, err := svcCtx.DockerClient.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
 		return nil, err

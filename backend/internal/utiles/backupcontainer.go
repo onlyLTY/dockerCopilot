@@ -12,6 +12,9 @@ import (
 )
 
 func BackupContainer(ctx *svc.ServiceContext) error {
+	if err := requireDocker(ctx); err != nil {
+		return err
+	}
 	containerList, err := GetContainerList(ctx)
 	if err != nil {
 		return err

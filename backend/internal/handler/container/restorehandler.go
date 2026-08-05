@@ -19,10 +19,6 @@ func RestoreHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := container.NewRestoreLogic(r.Context(), svcCtx)
 		resp, err := l.Restore(&req)
-		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
-		}
+			writeLogicResp(w, r, resp, err)
 	}
 }

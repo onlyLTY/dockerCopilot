@@ -1,5 +1,6 @@
 # 使用 Alpine 作为基础镜像（健康检查依赖 wget，tzdata 用于 TZ）
-FROM alpine
+# 钉版本以保证构建可复现；升级时同步改此处与安全公告
+FROM alpine:3.21
 LABEL authors="onlyLTY"
 WORKDIR /app
 

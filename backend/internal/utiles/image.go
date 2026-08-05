@@ -10,6 +10,9 @@ import (
 )
 
 func GetImagesList(ctx *svc.ServiceContext) ([]types.Image, error) {
+	if err := requireDocker(ctx); err != nil {
+		return nil, err
+	}
 	var imagesList []types.Image
 	dockerImages, err := ctx.DockerClient.ImageList(context.Background(), image.ListOptions{})
 	if err != nil {

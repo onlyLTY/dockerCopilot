@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/onlyLTY/dockerCopilot/internal/datadir"
 )
 
 // 更新检查频率的预设选项。key 为前端下拉选项值，cron 为对应的 cron 表达式（分 时 日 月 周）。
@@ -50,7 +52,7 @@ const (
 
 var settingsMu sync.Mutex
 
-// Settings 应用级设置，持久化到 /data/config/appSettings.json
+// Settings 应用级设置，持久化到 {DATA_DIR}/config/appSettings.json（默认 /data）。
 type Settings struct {
 	UpdateCheckInterval     string   `json:"updateCheckInterval"`
 	AutoBackupInterval      string   `json:"autoBackupInterval"`
@@ -64,12 +66,12 @@ type Settings struct {
 	ProxySettingsConfigured bool     `json:"proxySettingsConfigured,omitempty"`
 }
 
-// SettingsPath 设置文件路径。可用 APP_SETTINGS_PATH 覆盖，便于测试。
+// SettingsPath 设置文件路径。可用 APP_SETTINGS_PATH 覆盖，便于测试；否则 {DATA_DIR}/config/appSettings.json。
 func SettingsPath() string {
 	if p := os.Getenv("APP_SETTINGS_PATH"); p != "" {
 		return p
 	}
-	return "/data/config/appSettings.json"
+	return datadir.AppSettingsPath()
 }
 
 func load() Settings {
@@ -329,6 +331,7 @@ func SetRetention(value int) (int, error) {
 }
 
 // LogLevelOptions 返回可选的日志级别。
+// 说明：应用层保留 warn；写入 go-zero logx 时 warn 会映射为 error（logx 无独立 warn 档）。
 func LogLevelOptions() []string {
 	return []string{"debug", "info", "warn", "error"}
 }

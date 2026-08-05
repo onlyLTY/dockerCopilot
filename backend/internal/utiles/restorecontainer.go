@@ -16,6 +16,9 @@ import (
 )
 
 func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) error {
+	if err := requireDocker(ctx); err != nil {
+		return err
+	}
 	var backupList []string
 	fullPath, err := ResolveBackupPath(filename)
 	if err != nil {

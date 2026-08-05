@@ -34,6 +34,9 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 		name = req.Id
 	}
 	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "任务已提交", DetailMsg: "", IsDone: false})
+	if err := l.svcCtx.RequireDocker(); err != nil {
+		return fail(resp, err, 503, "Docker 服务不可用")
+	}
 	if !l.svcCtx.TryStartContainerUpdate(req.Id, taskID) {
 		resp.Code = 409
 		resp.Msg = "该容器正在更新"
@@ -51,11 +54,7 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 		}()
 		imageNameAndTag := req.ImageNameAndTag
 		if imageNameAndTag == "" {
-			if l.svcCtx.DockerClient == nil {
-				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "更新失败", DetailMsg: "Docker 客户端不可用", IsDone: true})
-				return
-			}
-			inspected, inspectErr := l.svcCtx.DockerClient.ContainerInspect(context.Background(), req.Id)
+			inspected, inspectErr := utiles.GetContainerInspect(l.svcCtx, req.Id)
 			if inspectErr != nil || inspected.Config == nil || inspected.Config.Image == "" {
 				message := "无法从容器获取镜像名称"
 				if inspectErr != nil {

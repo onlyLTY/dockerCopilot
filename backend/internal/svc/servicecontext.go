@@ -10,35 +10,43 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/internal/config"
+	"github.com/onlyLTY/dockerCopilot/internal/datadir"
+	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/module"
 	"github.com/robfig/cron/v3"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/zeromicro/go-zero/rest"
 )
 
 type ServiceContext struct {
-	Config                     config.Config
-	CookieCheckMiddleware      rest.Middleware
-	Jwtuuid                    string
-	BearerTokenCheckMiddleware rest.Middleware
-	JwtSecret                  string
-	PortainerJwt               string
-	HubImageInfo               *module.ImageUpdateData
-	IndexCheckMiddleware       rest.Middleware
-	ProgressStore              ProgressStoreType
-	progressPath               string
-	progressPersistTimer       *time.Timer
-	DockerClient               *client.Client
-	mu                         sync.Mutex
-	ComposeMu                  sync.Mutex
-	ComposeTokens              map[string]ComposeToken
-	updateMu                   sync.Mutex
-	updatingContainers         map[string]string
+	Config               config.Config
+	HubImageInfo         *module.ImageUpdateData
+	ProgressStore        ProgressStoreType
+	progressPath         string
+	progressPersistTimer *time.Timer
+	DockerClient         *client.Client
+	mu                   sync.Mutex
+	ComposeMu            sync.Mutex
+	ComposeTokens        map[string]ComposeToken
+	updateMu             sync.Mutex
+	updatingContainers   map[string]string
 
 	// 定时任务：更新检查与自动备份各持有一个 cronTask，job 由 main 注入（避免 svc 反向依赖 utiles）
 	updateTask cronTask
 	backupTask cronTask
 	cronMu     sync.Mutex
+}
+
+// RequireDocker 在调用 Engine API 前检查客户端；不可用时返回 errorx.ErrDockerUnavailable（业务码 503）。
+func (ctx *ServiceContext) RequireDocker() error {
+	if ctx == nil || ctx.DockerClient == nil {
+		return errorx.ErrDockerUnavailable
+	}
+	return nil
+}
+
+// HasDocker 是否已持有可用的 Docker 客户端（不代表此刻一定能 Ping 通）。
+func (ctx *ServiceContext) HasDocker() bool {
+	return ctx != nil && ctx.DockerClient != nil
 }
 
 const (
@@ -78,10 +86,12 @@ type ComposeToken struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		logx.Errorf("Unable to create docker client: %s", err)
-	}
+cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		if err != nil {
+			// 不 Panic：后续 API 经 RequireDocker 返回 503，/healthz 报 degraded
+			logx.Errorf("Unable to create docker client: %s", err)
+			cli = nil
+		}
 	progressPath := progressStorePath()
 	progressStore := loadProgressStore(progressPath)
 	nowMs := time.Now().UnixMilli()
@@ -126,7 +136,7 @@ func progressStorePath() string {
 	if path := os.Getenv("TASK_PROGRESS_PATH"); path != "" {
 		return path
 	}
-	return "/data/config/taskProgress.json"
+	return datadir.TaskProgressPath()
 }
 
 func loadProgressStore(path string) ProgressStoreType {
@@ -349,18 +359,54 @@ func (ctx *ServiceContext) rescheduleLocked(t *cronTask, spec string) error {
 }
 
 // scheduleLocked 移除旧任务并按 spec 添加新任务；spec 为空表示关闭（仅移除）。需持有 cronMu。
-func (ctx *ServiceContext) scheduleLocked(t *cronTask, spec string) error {
-	if t.jobID != 0 {
-		t.cron.Remove(t.jobID)
-		t.jobID = 0
-	}
-	if spec == "" {
+	func (ctx *ServiceContext) scheduleLocked(t *cronTask, spec string) error {
+		if t.jobID != 0 {
+			t.cron.Remove(t.jobID)
+			t.jobID = 0
+		}
+		if spec == "" {
+			return nil
+		}
+		id, err := t.cron.AddFunc(spec, t.job)
+		if err != nil {
+			return err
+		}
+		t.jobID = id
 		return nil
 	}
-	id, err := t.cron.AddFunc(spec, t.job)
-	if err != nil {
-		return err
+
+	// StopCrons 停止更新检查与自动备份调度器，阻塞至已触发的任务结束（cron.Stop）。
+	func (ctx *ServiceContext) StopCrons() {
+		ctx.cronMu.Lock()
+		defer ctx.cronMu.Unlock()
+		stopOne := func(t *cronTask) {
+			if t.cron == nil {
+				return
+			}
+			if t.jobID != 0 {
+				t.cron.Remove(t.jobID)
+				t.jobID = 0
+			}
+			// Stop 返回的 context 在运行中的 job 结束后 Done
+			stopCtx := t.cron.Stop()
+			<-stopCtx.Done()
+			t.cron = nil
+		}
+		stopOne(&ctx.updateTask)
+		stopOne(&ctx.backupTask)
 	}
-	t.jobID = id
-	return nil
-}
+
+	// Close 优雅收尾：停 cron、刷进度、关 Docker 客户端。可重复调用。
+	func (ctx *ServiceContext) Close() {
+		if ctx == nil {
+			return
+		}
+		ctx.StopCrons()
+		ctx.FlushProgress()
+		if ctx.DockerClient != nil {
+			if err := ctx.DockerClient.Close(); err != nil {
+				logx.Errorf("关闭 Docker 客户端失败: %v", err)
+			}
+			ctx.DockerClient = nil
+		}
+	}

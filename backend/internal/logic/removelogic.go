@@ -3,8 +3,10 @@ package logic
 import (
 	"context"
 
+	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
+	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -24,7 +26,23 @@ func NewRemoveLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RemoveLogi
 }
 
 func (l *RemoveLogic) Remove(req *types.RemoveImageReq) (resp *types.Resp, err error) {
-	// todo: add your logic here and delete this line
-
-	return
+	resp = &types.Resp{}
+	err = utiles.RemoveImage(l.svcCtx, req.Id, req.Force)
+	if err != nil {
+		l.Errorf("删除镜像失败 id=%s: %v", req.Id, err)
+		if errorx.IsDockerUnavailable(err) {
+			resp.Code = errorx.CodeDockerUnavailable
+			resp.Msg = "Docker 服务不可用"
+			resp.Data = map[string]interface{}{}
+			return resp, err
+		}
+		resp.Code = 409
+		resp.Msg = "删除镜像失败，镜像可能正在使用或已被删除"
+		resp.Data = map[string]interface{}{}
+		return resp, nil
+	}
+	resp.Code = 200
+	resp.Msg = "success"
+	resp.Data = map[string]interface{}{}
+	return resp, nil
 }

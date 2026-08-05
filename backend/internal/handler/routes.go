@@ -56,62 +56,69 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		rest.WithPrefix("/api"),
 	)
 
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/compose/projects",
-				Handler: compose.ComposeProjectsHandler(serverCtx),
+// Compose / 端口：goctl 命名 Handler，业务在 ActionsLogic/FilesLogic/listlogic。
+		// 重新 goctl 生成后：保留本段 Handler 符号名，勿改回空 stub logic。
+		server.AddRoutes(
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/compose/projects",
+					Handler: compose.ComposeProjectsHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/compose/projects",
+					Handler: compose.ComposeProjectCreateHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/compose/projects/:id/deploy",
+					Handler: compose.ComposeDeployHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/compose/projects/:id/deploy/preview",
+					Handler: compose.ComposeDeployPreviewHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/compose/projects/:id/files",
+					Handler: compose.ComposeProjectFilesHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/compose/projects/:id/files/:filename",
+					Handler: compose.ComposeProjectFileHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPut,
+					Path:    "/compose/projects/:id/files/:filename",
+					Handler: compose.ComposeProjectFileUpdateHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/compose/projects/cleanup",
+					Handler: compose.ComposeCleanupHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/compose/projects/cleanup/preview",
+					Handler: compose.ComposeCleanupPreviewHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/compose/validate",
+					Handler: compose.ComposeValidateHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/ports",
+					Handler: compose.PortsHandler(serverCtx),
+				},
 			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/compose/projects",
-				Handler: compose.ComposeProjectCreateHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/compose/projects/:id/deploy",
-				Handler: compose.ComposeDeployHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/compose/projects/:id/deploy/preview",
-				Handler: compose.ComposeDeployPreviewHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/compose/projects/:id/files",
-				Handler: compose.ComposeProjectFilesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/compose/projects/:id/files/:filename",
-				Handler: compose.ComposeProjectFileHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/compose/projects/:id/files/:filename",
-				Handler: compose.ComposeProjectFileUpdateHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/compose/projects/cleanup",
-				Handler: compose.ComposeCleanupHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/compose/projects/cleanup/preview",
-				Handler: compose.ComposeCleanupPreviewHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/ports",
-				Handler: compose.PortsHandler(serverCtx),
-			},
-		},
-		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/api"),
-	)
+			rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+			rest.WithPrefix("/api"),
+		)
 
 	server.AddRoutes(
 		[]rest.Route{

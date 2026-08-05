@@ -5,13 +5,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/onlyLTY/dockerCopilot/internal/datadir"
 )
 
 func BackupDirectory() string {
 	if dir := os.Getenv("BACKUP_DIR"); dir != "" {
 		return dir
 	}
-	return "/data/backups"
+	return datadir.BackupsDir()
 }
 
 func ResolveBackupPath(filename string) (string, error) {

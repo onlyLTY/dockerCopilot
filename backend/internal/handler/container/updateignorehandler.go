@@ -17,10 +17,6 @@ func UpdateIgnoreHandler(svcCtx *svc.ServiceContext, ignored bool) http.HandlerF
 			return
 		}
 		resp, err := container.NewUpdateIgnoreLogic(r.Context(), svcCtx).Set(&req, ignored)
-		if err != nil {
-			httpx.WriteJson(w, resp.Code, resp)
-			return
-		}
-		httpx.OkJsonCtx(r.Context(), w, resp)
+		writeLogicResp(w, r, resp, err)
 	}
 }

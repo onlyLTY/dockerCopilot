@@ -2,10 +2,10 @@ package container
 
 import (
 	"context"
-	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
+	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -17,11 +17,7 @@ type StopLogic struct {
 }
 
 func NewStopLogic(ctx context.Context, svcCtx *svc.ServiceContext) *StopLogic {
-	return &StopLogic{
-		Logger: logx.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
+	return &StopLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
 func (l *StopLogic) Stop(req *types.IdReq) (resp *types.Resp, err error) {
@@ -29,13 +25,7 @@ func (l *StopLogic) Stop(req *types.IdReq) (resp *types.Resp, err error) {
 	err = utiles.StopContainer(l.svcCtx, req.Id)
 	if err != nil {
 		l.Errorf("停止容器失败 id=%s: %v", req.Id, err)
-		resp.Code = 400
-		resp.Msg = "停止容器失败"
-		resp.Data = map[string]interface{}{}
-		return resp, err
+		return fail(resp, err, 400, "停止容器失败")
 	}
-	resp.Code = 200
-	resp.Msg = "success"
-	resp.Data = map[string]interface{}{}
-	return resp, nil
+	return ok(resp, nil), nil
 }

@@ -12,7 +12,9 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-func CreateProjectHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+// 文件类接口：goctl 风格命名 + FilesLogic 聚合实现。
+
+func ComposeProjectCreateHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
 		var req types.ComposeProjectCreateReq
@@ -35,17 +37,17 @@ func CreateProjectHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 		resp, err := compose.NewFilesLogic(r.Context(), svcCtx).Create(&req)
 		audit("create", r, resp, started)
-		writeResponse(r, w, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }
 
-func ListFilesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func ComposeProjectFilesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return fileRequestHandler(svcCtx, "file_list", func(l *compose.FilesLogic, req *types.ComposeProjectFileReq) (*types.Resp, error) {
 		return l.List(req)
 	})
 }
 
-func ReadFileHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func ComposeProjectFileHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return fileRequestHandler(svcCtx, "file_read", func(l *compose.FilesLogic, req *types.ComposeProjectFileReq) (*types.Resp, error) {
 		return l.Read(req)
 	})
@@ -62,11 +64,11 @@ func fileRequestHandler(svcCtx *svc.ServiceContext, operation string, fn func(*c
 		}
 		resp, err := fn(compose.NewFilesLogic(r.Context(), svcCtx), &req)
 		audit(operation, r, resp, started)
-		writeResponse(r, w, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }
 
-func UpdateFileHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func ComposeProjectFileUpdateHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
 		var req types.ComposeProjectFileUpdateReq
@@ -77,11 +79,11 @@ func UpdateFileHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 		resp, err := compose.NewFilesLogic(r.Context(), svcCtx).Update(&req)
 		audit("file_update", r, resp, started)
-		writeResponse(r, w, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }
 
-func ValidateHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func ComposeValidateHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
 		var req types.ComposeProjectValidateReq
@@ -92,14 +94,23 @@ func ValidateHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 		resp, err := compose.NewFilesLogic(r.Context(), svcCtx).Validate(&req)
 		audit("validate", r, resp, started)
-		writeResponse(r, w, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }
 
-func writeResponse(r *http.Request, w http.ResponseWriter, resp *types.Resp, err error) {
-	if err != nil {
-		httpx.WriteJson(w, resp.Code, resp)
-		return
-	}
-	httpx.OkJsonCtx(r.Context(), w, resp)
+// 兼容旧名
+func CreateProjectHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return ComposeProjectCreateHandler(svcCtx)
+}
+func ListFilesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return ComposeProjectFilesHandler(svcCtx)
+}
+func ReadFileHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return ComposeProjectFileHandler(svcCtx)
+}
+func UpdateFileHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return ComposeProjectFileUpdateHandler(svcCtx)
+}
+func ValidateHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return ComposeValidateHandler(svcCtx)
 }

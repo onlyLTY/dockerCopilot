@@ -19,10 +19,6 @@ func StopHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := container.NewStopLogic(r.Context(), svcCtx)
 		resp, err := l.Stop(&req)
-		if err != nil {
-			httpx.WriteJson(w, resp.Code, resp)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
-		}
+			writeLogicResp(w, r, resp, err)
 	}
 }
