@@ -81,6 +81,27 @@ func pathWithin(root, path string) bool {
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
+// IsCriticalRisk 判定是否为极高危（默认即使 confirmWarnings 也不允许，需 AllowHighRisk）。
+func IsCriticalRisk(risk Risk) bool {
+	msg := strings.ToLower(risk.Message)
+	return strings.Contains(msg, "docker socket") ||
+		strings.Contains(msg, "privileged") ||
+		strings.Contains(msg, "敏感宿主机路径")
+}
+
+// ValidateCriticalRisks 极高危硬拦：仅当 allowCritical 为 true（通常来自配置 AllowHighRisk）才放行。
+func ValidateCriticalRisks(project *composeTypes.Project, root string, allowCritical bool) error {
+	if allowCritical {
+		return nil
+	}
+	for _, risk := range InspectRisks(project, root) {
+		if IsCriticalRisk(risk) {
+			return fmt.Errorf("存在极高危配置，需在服务端开启 AllowHighRisk 后才能部署: %s", risk.Message)
+		}
+	}
+	return nil
+}
+
 func ValidateRisks(project *composeTypes.Project, root string, allowHighRisk bool) error {
 	risks := InspectRisks(project, root)
 	for _, risk := range risks {

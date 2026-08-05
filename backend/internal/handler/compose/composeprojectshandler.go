@@ -13,9 +13,13 @@ func ComposeProjectsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := compose.NewComposeProjectsLogic(r.Context(), svcCtx)
 		resp, err := l.ComposeProjects()
 		if err != nil {
+			if resp != nil {
+				httpx.WriteJson(w, resp.Code, resp)
+				return
+			}
 			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			return
 		}
+		httpx.OkJsonCtx(r.Context(), w, resp)
 	}
 }

@@ -12,12 +12,18 @@ import (
 	icons "github.com/onlyLTY/dockerCopilot/internal/handler/icons"
 	progress "github.com/onlyLTY/dockerCopilot/internal/handler/progress"
 	version "github.com/onlyLTY/dockerCopilot/internal/handler/version"
+	"github.com/onlyLTY/dockerCopilot/internal/middleware"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 )
 
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
+	// 全局安全响应头（go-zero rest.Middleware）
+	server.Use(middleware.SecurityHeaders)
+
+	loginLimit := middleware.NewLoginRateLimit()
+
 	server.AddRoutes(
 		[]rest.Route{
 			{
@@ -28,6 +34,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		},
 	)
 
+	server.AddRoutes(
+		rest.WithMiddleware(loginLimit.Handle,
+			rest.Route{
+				Method:  http.MethodPost,
+				Path:    "/auth",
+				Handler: auth.LoginHandler(serverCtx),
+			},
+		),
+		rest.WithPrefix("/api"),
+	)
+
+	// 镜像管理必须挂 JWT + /api，与前端 /api/images 路径一致。
 	server.AddRoutes(
 		[]rest.Route{
 			{
@@ -46,16 +64,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: pruneImagesHandler(serverCtx),
 			},
 		},
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodPost,
-				Path:    "/auth",
-				Handler: auth.LoginHandler(serverCtx),
-			},
-		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api"),
 	)
 
@@ -178,15 +187,30 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/container/listBackups",
 				Handler: container.ListBackupsHandler(serverCtx),
 			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/containers",
-				Handler: container.ContainersListHandler(serverCtx),
+{
+					Method:  http.MethodGet,
+					Path:    "/containers",
+					Handler: container.ContainersListHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/containers/check-update",
+					Handler: container.CheckUpdateHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/container/:id/update-ignore",
+					Handler: container.UpdateIgnoreHandler(serverCtx, true),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/container/:id/update-ignore",
+					Handler: container.UpdateIgnoreHandler(serverCtx, false),
+				},
 			},
-		},
-		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/api"),
-	)
+			rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+			rest.WithPrefix("/api"),
+		)
 
 	server.AddRoutes(
 		[]rest.Route{
@@ -212,6 +236,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	server.AddRoutes(
 		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/progress/list",
+				Handler: progress.ListProgressHandler(serverCtx),
+			},
 			{
 				Method:  http.MethodGet,
 				Path:    "/progress/:taskid",

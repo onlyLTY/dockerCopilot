@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { ImageRow, ImageService } from '../../core/image.service';
 import { IconService } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
@@ -16,7 +16,12 @@ import { PageHeadingComponent } from '../../shared/page-heading/page-heading.com
   templateUrl: './images.component.html',
 })
 export class ImagesComponent {
-  private readonly service = inject(ImageService); private readonly icons = inject(IconService); private readonly toast = inject(ToastService); private readonly confirm = inject(ConfirmService);
+  private readonly service = inject(ImageService);
+  private readonly icons = inject(IconService);
+  private readonly toast = inject(ToastService);
+  private readonly confirm = inject(ConfirmService);
+  private readonly destroyRef = inject(DestroyRef);
+  private softTimer: ReturnType<typeof setInterval> | null = null;
   // 数据、加载态、错误态来自服务常驻缓存
   readonly images = computed(() => this.service.cache.data() || []);
   readonly loading = this.service.cache.loading;
@@ -32,8 +37,29 @@ export class ImagesComponent {
     { key: 'unused', value: this.unusedCount(), label: '未使用', tone: 'amber' },
     { key: 'untagged', value: this.untaggedCount(), label: '无 Tag', tone: 'red' },
   ]);
-  constructor() { this.service.ensureLoaded(); this.icons.ensureLoaded(); }
+  constructor() {
+    this.service.ensureLoaded();
+    this.icons.ensureLoaded();
+    this.startSoftRefresh();
+    this.destroyRef.onDestroy(() => this.stopSoftRefresh());
+  }
   refresh() { this.service.refresh(); }
+
+  private startSoftRefresh(): void {
+    this.stopSoftRefresh();
+    this.softTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (this.cleaning() || this.loading()) return;
+      this.service.refresh();
+    }, 30_000);
+  }
+
+  private stopSoftRefresh(): void {
+    if (this.softTimer) {
+      clearInterval(this.softTimer);
+      this.softTimer = null;
+    }
+  }
   selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); }
   isUntagged(x: ImageRow) { return !x.tag || ['<none>', 'none'].includes(x.tag.toLowerCase()); }
   async cleanup(kind: 'untagged' | 'unused') { const count = kind === 'untagged' ? this.untaggedCount() : this.unusedCount(); const label = kind === 'untagged' ? '无 Tag' : '未使用'; if (!count || !(await this.confirm.open({ title: `清理${label}镜像`, message: `确定清理 ${count} 个${label}镜像吗？`, confirmText: '确认清理', danger: true }))) return; this.cleaning.set(true); this.service.cleanup(kind).subscribe({ next: r => { this.cleaning.set(false); if (r.code === 200) { this.toast.success(`已清理 ${r.data?.deleted ?? ''} 个${label}镜像`); } else this.toast.error(`清理失败：${r.msg || '未知错误'}`); }, error: e => { this.cleaning.set(false); this.toast.error(`清理失败：${e.error?.msg || e.message || '请求错误'}`); } }); }

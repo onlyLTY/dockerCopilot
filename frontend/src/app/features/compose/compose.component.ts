@@ -50,6 +50,7 @@ export class ComposeComponent {
     };
   });
   readonly loading = this.service.cache.loading;
+  readonly error = this.service.cache.error;
   readonly iconMap = computed(() => this.icons.cache.data() || {});
   readonly filter = signal('all');
   readonly filteredProjects = computed(() => (this.data()?.projects || []).filter(p => this.filter() === 'all' || p.status === this.filter()));

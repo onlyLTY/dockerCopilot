@@ -6,10 +6,14 @@
     </div>
     <h1 class="mt-35 mb-7 mx-0 fs-24">登录管理台</h1>
     <p class="m-0 fs-14">输入服务端配置的 secretKey 继续</p>
-    <label class="d-block mt-24 fs-12">Secret Key<input class="d-block mt-8 p-12" type="password" [(ngModel)]="secretKey" (keyup.enter)="login()" autocomplete="current-password"></label>
-    <button class="btn text-white bg-blue w-full mt-16" (click)="login()">进入管理台</button>
+    <label class="d-block mt-24 fs-12">Secret Key
+      <input class="d-block mt-8 p-12" type="password" [(ngModel)]="secretKey" (keyup.enter)="login()" autocomplete="current-password" [disabled]="submitting()">
+    </label>
+    <button class="btn text-white bg-blue w-full mt-16" (click)="login()" [disabled]="submitting()">
+      {{ submitting() ? '登录中…' : '进入管理台' }}
+    </button>
     @if (error()) {
-      <div class="message error mt-12 fs-12">{{ error() }}</div>
+      <div class="message error mt-12 fs-12" role="alert">{{ error() }}</div>
     }
   </div>
 </div>

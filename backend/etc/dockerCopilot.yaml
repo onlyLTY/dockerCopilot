@@ -16,5 +16,5 @@ Compose:                     # Compose 项目管理相关
   MaxDepth: 3                # 扫描子目录最大深度
   MaxFileSize: 10485760      # 单个 compose 文件大小上限(字节)=10MB
   MaxFiles: 20               # 单项目最多识别的文件数
-  AllowHighRisk: false       # 是否允许高危操作（如危险命令）。默认关，建议保持
+  AllowHighRisk: false  # 是否允许「极高危」Compose 配置真正部署到宿主机。默认 false（推荐）。为 false 时，即使前端勾选「确认警告」也会被服务端拒绝。
   CommandTimeoutSec: 300     # compose 命令执行超时(秒)=5分钟

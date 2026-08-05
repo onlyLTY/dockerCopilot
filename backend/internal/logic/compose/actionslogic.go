@@ -71,6 +71,11 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 		logx.Errorf("compose operation=deploy project=%s filename=%s failed=version conflict", req.ProjectID, req.Filename)
 		return errorResp(resp, 409, "Compose 文件已变化，请重新生成预览"), nil
 	}
+	// 极高危（docker.sock / privileged / 敏感路径）仅 AllowHighRisk 可放行；其余 high 仍可由 confirmWarnings 确认。
+	if err := composeProject.ValidateCriticalRisks(project, root, l.svcCtx.Config.Compose.AllowHighRisk); err != nil {
+		logx.Errorf("compose operation=deploy project=%s filename=%s failed=critical risk error=%v", req.ProjectID, req.Filename, err)
+		return errorResp(resp, 400, err.Error()), nil
+	}
 	if err := composeProject.ValidateRisks(project, root, req.ConfirmWarnings || l.svcCtx.Config.Compose.AllowHighRisk); err != nil {
 		logx.Errorf("compose operation=deploy project=%s filename=%s failed=risk error=%v", req.ProjectID, req.Filename, err)
 		return errorResp(resp, 400, err.Error()), nil

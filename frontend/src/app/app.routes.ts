@@ -1,27 +1,53 @@
 import { Routes } from '@angular/router';
-import { ComposeComponent } from './features/compose/compose.component';
-import { ContainersComponent } from './features/containers/containers.component';
-import { ImagesComponent } from './features/images/images.component';
-import { BackupsComponent } from './features/backups/backups.component';
-import { PortsComponent } from './features/ports/ports.component';
-import { IconsComponent } from './features/icons/icons.component';
-import { TasksComponent } from './features/tasks/tasks.component';
-import { MeComponent } from './features/me/me.component';
-import { LoginComponent } from './features/login/login.component';
 import { authGuard } from './core/auth.guard';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent },
+  {
+    path: 'login',
+    loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'containers' },
-  { path: 'containers', component: ContainersComponent, canActivate: [authGuard] },
-  { path: 'images', component: ImagesComponent, canActivate: [authGuard] },
-  { path: 'compose', component: ComposeComponent, canActivate: [authGuard] },
-  { path: 'backups', component: BackupsComponent, canActivate: [authGuard] },
-  { path: 'ports', component: PortsComponent, canActivate: [authGuard] },
-  { path: 'about', component: MeComponent, canActivate: [authGuard] },
+  {
+    path: 'containers',
+    loadComponent: () => import('./features/containers/containers.component').then(m => m.ContainersComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'images',
+    loadComponent: () => import('./features/images/images.component').then(m => m.ImagesComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'compose',
+    loadComponent: () => import('./features/compose/compose.component').then(m => m.ComposeComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'backups',
+    loadComponent: () => import('./features/backups/backups.component').then(m => m.BackupsComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'ports',
+    loadComponent: () => import('./features/ports/ports.component').then(m => m.PortsComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'about',
+    loadComponent: () => import('./features/me/me.component').then(m => m.MeComponent),
+    canActivate: [authGuard],
+  },
   { path: 'me', redirectTo: 'about', pathMatch: 'full' },
   { path: 'settings', redirectTo: 'about', pathMatch: 'full' },
-  { path: 'icons', component: IconsComponent, canActivate: [authGuard] },
-  { path: 'tasks', component: TasksComponent, canActivate: [authGuard] },
+  {
+    path: 'icons',
+    loadComponent: () => import('./features/icons/icons.component').then(m => m.IconsComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'tasks',
+    loadComponent: () => import('./features/tasks/tasks.component').then(m => m.TasksComponent),
+    canActivate: [authGuard],
+  },
   { path: '**', redirectTo: 'containers' },
 ];

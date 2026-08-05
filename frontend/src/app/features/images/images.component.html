@@ -8,7 +8,9 @@
 
 <dc-stats [items]="stats()" [columns]="4" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
 
-@if (filteredImages().length) {
+@if (loading() || error() || !filteredImages().length) {
+  <dc-page-state [loading]="loading()" [error]="error()" [retryable]="!!error()" emptyText="暂无镜像" (retry)="refresh()"></dc-page-state>
+} @else {
   <section class="responsive-card-grid resource-grid page-scroll-area d-grid image-grid gap-16 mb-24">
     @for (image of filteredImages(); track image.id) {
       <dc-resource-card>
@@ -37,6 +39,4 @@
       </dc-resource-card>
     }
   </section>
-} @else {
-  <dc-page-state [loading]="loading()" [error]="error()" emptyText="暂无镜像"></dc-page-state>
 }

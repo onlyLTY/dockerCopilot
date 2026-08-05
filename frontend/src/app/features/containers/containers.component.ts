@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { from, forkJoin, of } from 'rxjs';
 import { catchError, map, mergeMap, toArray } from 'rxjs/operators';
 import { ContainerService, ContainerRow } from '../../core/container.service';
@@ -19,7 +20,13 @@ import { PageHeadingComponent } from '../../shared/page-heading/page-heading.com
   templateUrl: './containers.component.html',
 })
 export class ContainersComponent {
-  private readonly service = inject(ContainerService); private readonly icons = inject(IconService); private readonly toast = inject(ToastService); private readonly tasks = inject(TaskService); private readonly confirm = inject(ConfirmService);
+  private readonly service = inject(ContainerService);
+  private readonly icons = inject(IconService);
+  private readonly toast = inject(ToastService);
+  private readonly tasks = inject(TaskService);
+  private readonly confirm = inject(ConfirmService);
+  private readonly destroyRef = inject(DestroyRef);
+  private softTimer: ReturnType<typeof setInterval> | null = null;
   // 数据、加载态、错误态均来自服务里的常驻缓存，页面切换不再重复请求
   readonly containers = computed(() => this.service.cache.data() || []);
   readonly loading = this.service.cache.loading;
@@ -28,9 +35,13 @@ export class ContainersComponent {
   readonly selected = signal<Set<string>>(new Set());
   readonly selectionMode = signal(false);
   readonly busy = signal(false);
+  /** 批量操作进行中的动作标签（启动/停止/更新），用于工具栏按钮文案 */
+  readonly bulkAction = signal<string | null>(null);
   readonly checking = signal(false);
   readonly activeUpdateIds = signal<Set<string>>(new Set());
   readonly updateIgnoreBusyIds = signal<Set<string>>(new Set());
+  /** 单容器启停/重启进行中，按 id 记录当前动作标签，用于禁用按钮并展示「启动中」等文案 */
+  readonly actionBusy = signal<Map<string, string>>(new Map());
   readonly filter = signal('all');
   readonly runningCount = computed(() => this.containers().filter(x => this.isRunning(x)).length);
   readonly updateCount = computed(() => this.containers().filter(x => x.haveUpdate).length);
@@ -58,14 +69,45 @@ export class ContainersComponent {
   constructor() {
     this.service.ensureLoaded();
     this.icons.ensureLoaded();
-    this.tasks.completed.subscribe(({ resourceID }) => {
+    this.tasks.completed.pipe(takeUntilDestroyed()).subscribe(({ resourceID }) => {
       if (!resourceID) return;
       const next = new Set(this.activeUpdateIds());
       next.delete(resourceID);
       this.activeUpdateIds.set(next);
     });
+    this.startSoftRefresh();
+    this.destroyRef.onDestroy(() => this.stopSoftRefresh());
   }
   refresh(): void { this.service.refresh(); }
+
+  private startSoftRefresh(): void {
+    this.stopSoftRefresh();
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (this.busy() || this.checking() || this.loading()) return;
+      this.service.refresh();
+    };
+    this.softTimer = setInterval(tick, 20_000);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.onVisibility);
+    }
+  }
+
+  private readonly onVisibility = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !this.loading()) {
+      this.service.refresh();
+    }
+  };
+
+  private stopSoftRefresh(): void {
+    if (this.softTimer) {
+      clearInterval(this.softTimer);
+      this.softTimer = null;
+    }
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.onVisibility);
+    }
+  }
   selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); this.selected.set(new Set()); }
   // 手动检查更新：异步任务，登记进度；完成后刷新容器列表以更新“有更新”标识
   checkUpdate(): void {
@@ -116,18 +158,29 @@ export class ContainersComponent {
   toggleAll() { const visible = this.filteredContainers(); const current = this.selected(); const allVisible = visible.length > 0 && visible.every(x => current.has(x.id)); this.selected.set(allVisible ? new Set([...current].filter(id => !visible.some(x => x.id === id))) : new Set([...current, ...visible.map(x => x.id)])); }
 
   // ===== 单个操作 =====
+  isActionBusy(id: string): boolean { return this.actionBusy().has(id); }
+  actionBusyLabel(id: string): string | undefined { return this.actionBusy().get(id); }
   private run(x: ContainerRow, fn: (id: string) => any, label: string, async = false) {
+    if (this.actionBusy().has(x.id)) return;
+    this.actionBusy.update(m => new Map(m).set(x.id, label));
     fn(x.id).subscribe({
       next: (r: any) => {
+        this.clearActionBusy(x.id);
         if (r.code === 200) { async ? this.toast.info(`${x.name} ${label}任务已提交`) : this.toast.success(`${x.name} ${label}成功`); }
         else this.toast.error(`${x.name} ${label}失败：${r.msg || '未知错误'}`);
       },
-      error: (e: any) => this.toast.error(`${x.name} ${label}失败：${e.error?.msg || e.message || '请求错误'}`),
+      error: (e: any) => {
+        this.clearActionBusy(x.id);
+        this.toast.error(`${x.name} ${label}失败：${e.error?.msg || e.message || '请求错误'}`);
+      },
     });
   }
   start(x: ContainerRow) { this.run(x, id => this.service.start(id), '启动'); }
   stop(x: ContainerRow) { this.run(x, id => this.service.stop(id), '停止'); }
   restart(x: ContainerRow) { this.run(x, id => this.service.restart(id), '重启'); }
+  private clearActionBusy(id: string): void {
+    this.actionBusy.update(m => { const next = new Map(m); next.delete(id); return next; });
+  }
   // 更新是异步任务：拿到 taskID 后登记进度，弹窗展示进度
   update(x: ContainerRow) {
     if (this.activeUpdateIds().has(x.id)) return;
@@ -167,11 +220,24 @@ export class ContainersComponent {
     const targets = this.filteredContainers().filter(x => this.selected().has(x.id));
     if (!targets.length || this.busy()) return;
     this.busy.set(true);
+    this.bulkAction.set(label);
+    // 批量期间锁定各卡片按钮，并给出即时反馈
+    this.actionBusy.update(m => {
+      const next = new Map(m);
+      targets.forEach(x => next.set(x.id, label));
+      return next;
+    });
     forkJoin(targets.map(x => fn(x.id).pipe(
       map((r: any) => ({ name: x.name, ok: r.code === 200, msg: r.msg })),
       catchError((e: any) => of({ name: x.name, ok: false, msg: e.error?.msg || e.message || '请求错误' })),
     ))).subscribe(results => {
       this.busy.set(false);
+      this.bulkAction.set(null);
+      this.actionBusy.update(m => {
+        const next = new Map(m);
+        targets.forEach(x => next.delete(x.id));
+        return next;
+      });
       const ok = results.filter(r => r.ok).length; const fail = results.length - ok;
       if (fail === 0) async ? this.toast.info(`已提交 ${ok} 个容器的${label}任务`) : this.toast.success(`已${label} ${ok} 个容器`);
       else { const first = results.find(r => !r.ok); this.toast.error(`${label}完成 ${ok} 个，失败 ${fail} 个${first ? '：' + first.msg : ''}`); }
@@ -191,6 +257,7 @@ export class ContainersComponent {
   private submitUpdates(targets: ContainerRow[]): void {
     if (!targets.length || this.busy()) return;
     this.busy.set(true);
+    this.bulkAction.set('更新');
     targets.forEach(x => this.markUpdateActive(x.id));
     from(targets).pipe(
       mergeMap(x => this.service.update(x.id, x.usingImage, x.name).pipe(
@@ -200,6 +267,7 @@ export class ContainersComponent {
       toArray(),
     ).subscribe(results => {
       this.busy.set(false);
+      this.bulkAction.set(null);
       results.forEach(r => { if (r.ok && r.taskID) this.tasks.track(String(r.taskID), '更新 ' + r.container.name, true, r.container.id); else this.markUpdateInactive(r.container.id); });
       const ok = results.filter(r => r.ok).length; const fail = results.length - ok;
       if (fail === 0) this.toast.info(`已提交 ${ok} 个容器的更新任务`);

@@ -146,14 +146,17 @@ service dockerCopilot {
 }
 
 @server (
-	prefix: /api
-	group:  progress
-	jwt:    Auth
-)
-service dockerCopilot {
-	@handler GetProgress
-	get /progress/:taskid (GetProgressReq) returns (Resp)
-}
+		prefix: /api
+		group:  progress
+		jwt:    Auth
+	)
+	service dockerCopilot {
+		@handler ListProgress
+		get /progress/list returns (Resp)
+
+		@handler GetProgress
+		get /progress/:taskid (GetProgressReq) returns (Resp)
+	}
 
 @server (
 	prefix: /api
@@ -176,11 +179,20 @@ service dockerCopilot {
 	@handler rename
 	post /container/:id/rename (ContainerRenameReq) returns (Resp)
 
-	@handler update
-	post /container/:id/update (ContainerUpdateReq) returns (Resp)
+@handler update
+		post /container/:id/update (ContainerUpdateReq) returns (Resp)
 
-	@handler backup
-	get /container/backup returns (Resp)
+		@handler checkUpdate
+		post /containers/check-update returns (Resp)
+
+		@handler updateIgnore
+		post /container/:id/update-ignore (IdReq) returns (Resp)
+
+		@handler restoreUpdateIgnore
+		delete /container/:id/update-ignore (IdReq) returns (Resp)
+
+		@handler backup
+		get /container/backup returns (Resp)
 
 	@handler backup2compose
 	get /container/backup2compose returns (Resp)
@@ -238,16 +250,20 @@ service dockerCopilot {
 	get /ports returns (Resp)
 }
 
-service dockerCopilot {
-	@handler imagesList
-	get /images returns (Resp)
+@server (
+		prefix: /api
+		jwt:    Auth
+	)
+	service dockerCopilot {
+		@handler imagesList
+		get /images returns (Resp)
 
-	@handler pruneImages
-	post /images/prune (ImagePruneReq) returns (Resp)
+		@handler pruneImages
+		post /images/prune (ImagePruneReq) returns (Resp)
 
-	@handler remove
-	delete /image/:id (RemoveImageReq) returns (Resp)
-}
+		@handler remove
+		delete /image/:id (RemoveImageReq) returns (Resp)
+	}
 
 @server (
 	prefix: /api

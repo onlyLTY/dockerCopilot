@@ -13,7 +13,9 @@
 
 <dc-stats [items]="stats()" [columns]="2" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
 
-@if (groups().length) {
+@if (loading() || error() || !groups().length) {
+  <dc-page-state [loading]="loading()" [error]="error()" [retryable]="!!error()" emptyText="暂无端口使用" (retry)="refresh()"></dc-page-state>
+} @else {
   <section class="responsive-card-grid resource-grid page-scroll-area d-grid port-grid gap-16 mb-24">
     @for (g of groups(); track g.containerName) {
       <dc-resource-card>
@@ -32,6 +34,4 @@
       </dc-resource-card>
     }
   </section>
-} @else {
-  <dc-page-state [loading]="loading()" [error]="error()" emptyText="暂无端口使用"></dc-page-state>
 }

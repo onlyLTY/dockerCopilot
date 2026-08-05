@@ -11,7 +11,9 @@
 
 <dc-stats [items]="stats()" [columns]="5" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
 
-@if (filteredProjects().length) {
+@if (loading() || error() || !filteredProjects().length) {
+  <dc-page-state [loading]="loading()" [error]="error()" [retryable]="!!error()" emptyText="暂无项目" (retry)="refresh()"></dc-page-state>
+} @else {
   <section class="responsive-card-grid resource-grid page-scroll-area d-grid project-grid gap-16 mb-24">
     @for (project of filteredProjects(); track project.id) {
       <dc-resource-card>
@@ -32,8 +34,6 @@
       </dc-resource-card>
     }
   </section>
-} @else {
-  <dc-page-state [loading]="loading()" [error]="messageType() === 'error' ? message() : ''" emptyText="暂无项目"></dc-page-state>
 }
 
 @if (composeDialog() !== 'closed') {

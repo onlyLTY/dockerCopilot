@@ -41,22 +41,67 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	list, err := utiles.GetContainerList(l.svcCtx)
 	if err != nil {
+		l.Errorf("获取容器列表失败: %v", err)
 		resp.Code = 500
-		resp.Msg = err.Error()
+		resp.Msg = "获取容器列表失败"
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
 	resp.Msg = "success"
 	resp.Code = 200
-	var containerInfoList []Info
 	list = utiles.CheckImageUpdate(l.svcCtx, list)
-	for _, v := range list {
+
+	// 有限并发 Inspect，降低 N+1 串行延迟；响应字段与原先一致
+	const inspectWorkers = 8
+	type inspectResult struct {
+		idx         int
+		createImage string
+	}
+	createImages := make([]string, len(list))
+	jobs := make(chan int, len(list))
+	results := make(chan inspectResult, len(list))
+	workers := inspectWorkers
+	if workers > len(list) {
+		workers = len(list)
+	}
+	if workers < 1 {
+		workers = 1
+	}
+	for w := 0; w < workers; w++ {
+		go func() {
+			for i := range jobs {
+				createImage := ""
+				if list[i].Image != "" {
+					createImage = list[i].Image
+				} else {
+					createImage = list[i].ImageID
+				}
+				containerInspect, inspectErr := utiles.GetContainerInspect(l.svcCtx, list[i].ID)
+				if inspectErr != nil {
+					l.Errorf("inspect 容器失败 id=%s: %v", list[i].ID, inspectErr)
+				} else if containerInspect.Config != nil && containerInspect.Config.Image != "" {
+					createImage = containerInspect.Config.Image
+				}
+				results <- inspectResult{idx: i, createImage: createImage}
+			}
+		}()
+	}
+	for i := range list {
+		jobs <- i
+	}
+	close(jobs)
+	for range list {
+		r := <-results
+		createImages[r.idx] = r.createImage
+	}
+
+	containerInfoList := make([]Info, 0, len(list))
+	for i, v := range list {
 		var containerInfo Info
 		containerInfo.Id = v.ID
 		containerInfo.Status = v.State
 		if len(v.Names) > 0 {
-			ContainerName := v.Names[0][1:]
-			containerInfo.Name = ContainerName
+			containerInfo.Name = v.Names[0][1:]
 		} else {
 			containerInfo.Name = "get container name error"
 			l.Error("get container name error" + v.ID)
@@ -67,12 +112,9 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 			containerInfo.UsingImage = v.ImageID
 			l.Error("image dont have name" + v.ID)
 		}
-		containerInspect, inspectErr := utiles.GetContainerInspect(l.svcCtx, v.ID)
-		if inspectErr != nil {
+		containerInfo.CreateImage = createImages[i]
+		if containerInfo.CreateImage == "" {
 			containerInfo.CreateImage = containerInfo.UsingImage
-			l.Error("get image name error" + v.ID + ": " + inspectErr.Error())
-		} else {
-			containerInfo.CreateImage = containerInspect.Config.Image
 		}
 		t := time.Unix(v.Created, 0)
 		containerInfo.CreateTime = t.Format("2006-01-02 15:04:05")

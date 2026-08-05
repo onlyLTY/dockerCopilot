@@ -38,8 +38,9 @@ func (l *ImagesListLogic) ImagesList() (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	list, err := utiles.GetImagesList(l.svcCtx)
 	if err != nil {
+		l.Errorf("获取镜像列表失败: %v", err)
 		resp.Code = 500
-		resp.Msg = err.Error()
+		resp.Msg = "获取镜像列表失败"
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}

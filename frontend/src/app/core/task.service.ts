@@ -38,14 +38,14 @@ interface ProgressListResponse {
 }
 
 const STORAGE_KEY = 'dc-tasks';
-const POLL_INTERVAL = 1500;   // 轮询间隔（毫秒）
+const POLL_INTERVAL = 1500;   // 批量轮询间隔（毫秒）
 const DONE_KEEP = 60 * 60 * 1000; // 已完成任务保留 1 小时后可被清理
 
 /**
  * 任务服务：后端进度持久化在 taskProgress.json，前端 localStorage 保存展示元数据。
  * - track()：发起异步操作（更新/恢复/部署）拿到 taskID 后登记，开始轮询。
- * - 轮询 /api/progress/:taskid 更新进度；isDone 后停止轮询并联动刷新相关缓存。
- * - 启动或登录后从 /api/progress 合并后端任务，刷新页面后仍保留本地展示信息。
+ * - 使用单一定时器 + /api/progress/list 批量刷新，避免 N 任务 N 请求。
+ * - isDone 后停止轮询并联动刷新相关缓存。
  */
 @Injectable({ providedIn: 'root' })
 export class TaskService {
@@ -59,8 +59,8 @@ export class TaskService {
   readonly hasActive = computed(() => this.activeCount() > 0);
   /** 当前在弹窗中查看的任务 ID（空表示不显示进度弹窗） */
   readonly viewing = signal<string>('');
-  private timers = new Map<string, ReturnType<typeof setTimeout>>();
-  private polling = new Set<string>();
+  private batchTimer: ReturnType<typeof setTimeout> | null = null;
+  private batchPolling = false;
   private unknownCounts = new Map<string, number>();
   private persistedLoaded = false;
 
@@ -68,7 +68,7 @@ export class TaskService {
     effect(() => {
       if (this.auth.authenticated()) this.loadPersisted();
     });
-    this.tasks().forEach(t => { if (!t.isDone) this.startPolling(t.taskID); });
+    if (this.tasks().some(t => !t.isDone)) this.scheduleBatch();
   }
 
   /** 登记一个异步任务并开始轮询；refresh 表示完成后要联动刷新资源缓存 */
@@ -81,7 +81,7 @@ export class TaskService {
     this.tasks.update(list => [item, ...list]);
     this.persist();
     this.viewing.set(taskID);
-    this.startPolling(taskID);
+    this.scheduleBatch(true);
   }
 
   private loadPersisted(): void {
@@ -121,7 +121,7 @@ export class TaskService {
         });
         this.tasks.set([...merged, ...local.values()]);
         this.persist();
-        this.tasks().filter(item => !item.isDone).forEach(item => this.startPolling(item.taskID));
+        if (this.tasks().some(item => !item.isDone)) this.scheduleBatch(true);
       },
       error: () => { this.persistedLoaded = false; },
     });
@@ -134,16 +134,17 @@ export class TaskService {
 
   /** 删除单个任务（停止其轮询） */
   remove(taskID: string): void {
-    this.stopPolling(taskID);
+    this.unknownCounts.delete(taskID);
     this.tasks.update(list => list.filter(t => t.taskID !== taskID));
     if (this.viewing() === taskID) this.viewing.set('');
     this.persist();
+    if (!this.tasks().some(t => !t.isDone)) this.stopBatch();
   }
 
   /** 清空全部任务 */
   clearAll(): void {
-    this.timers.forEach(t => clearTimeout(t));
-    this.timers.clear();
+    this.stopBatch();
+    this.unknownCounts.clear();
     this.tasks.set([]);
     this.viewing.set('');
     this.persist();
@@ -151,53 +152,94 @@ export class TaskService {
 
   /** 清除已完成的任务，保留进行中的 */
   clearDone(): void {
-    this.tasks().filter(t => t.isDone).forEach(t => this.stopPolling(t.taskID));
     this.tasks.update(list => list.filter(t => !t.isDone));
     if (this.viewing() && !this.tasks().some(t => t.taskID === this.viewing())) this.viewing.set('');
     this.persist();
+    if (!this.tasks().some(t => !t.isDone)) this.stopBatch();
   }
 
-  private startPolling(taskID: string): void {
-    if (this.timers.has(taskID) || this.polling.has(taskID)) return;
-    this.poll(taskID);
+  private scheduleBatch(immediate = false): void {
+    if (this.batchPolling) return;
+    if (this.batchTimer) {
+      if (!immediate) return;
+      clearTimeout(this.batchTimer);
+      this.batchTimer = null;
+    }
+    const delay = immediate ? 0 : POLL_INTERVAL;
+    this.batchTimer = setTimeout(() => {
+      this.batchTimer = null;
+      this.pollBatch();
+    }, delay);
   }
 
-  private schedulePolling(taskID: string): void {
-    if (this.timers.has(taskID) || this.polling.has(taskID)) return;
-    const item = this.tasks().find(t => t.taskID === taskID);
-    if (!item || item.isDone) return;
-    this.timers.set(taskID, setTimeout(() => {
-      this.timers.delete(taskID);
-      this.poll(taskID);
-    }, POLL_INTERVAL));
+  private stopBatch(): void {
+    if (this.batchTimer) {
+      clearTimeout(this.batchTimer);
+      this.batchTimer = null;
+    }
+    this.batchPolling = false;
   }
 
-  private stopPolling(taskID: string): void {
-    const timer = this.timers.get(taskID);
-    if (timer) { clearTimeout(timer); this.timers.delete(taskID); }
-    this.polling.delete(taskID);
-    this.unknownCounts.delete(taskID);
-  }
+  private pollBatch(): void {
+    const active = this.tasks().filter(t => !t.isDone);
+    if (!active.length) {
+      this.stopBatch();
+      return;
+    }
+    if (this.batchPolling) return;
+    this.batchPolling = true;
 
-  private poll(taskID: string): void {
-    if (this.polling.has(taskID)) return;
-    this.polling.add(taskID);
     const finish = () => {
-      this.polling.delete(taskID);
-      this.schedulePolling(taskID);
+      this.batchPolling = false;
+      if (this.tasks().some(t => !t.isDone)) this.scheduleBatch();
     };
-    this.http.get<ApiResponse<ProgressData>>('/api/progress/' + encodeURIComponent(taskID)).subscribe({
-      next: r => {
-        if (r.code !== 200 || !r.data) {
-          this.markUnknown(taskID, r.msg);
+
+    this.http.get<ProgressListResponse>('/api/progress/list').subscribe({
+      next: response => {
+        if (response.code === 200 && Array.isArray(response.data)) {
+          const byId = new Map(response.data.map(p => [p.taskID, p]));
+          for (const item of active) {
+            const progress = byId.get(item.taskID);
+            if (progress) {
+              this.unknownCounts.delete(item.taskID);
+              this.apply(item.taskID, progress);
+            } else {
+              this.markUnknown(item.taskID, response.msg || '任务不存在或已过期');
+            }
+          }
         } else {
-          this.unknownCounts.delete(taskID);
-          this.apply(taskID, r.data);
+          // list 失败时退化为逐个拉取（最多 3 个并发感，串行即可保持简单）
+          this.pollActiveIndividually(active.map(t => t.taskID), finish);
+          return;
         }
         finish();
       },
-      error: () => finish(),
+      error: () => {
+        this.pollActiveIndividually(active.map(t => t.taskID), finish);
+      },
     });
+  }
+
+  private pollActiveIndividually(ids: string[], done: () => void): void {
+    let pending = ids.length;
+    if (!pending) { done(); return; }
+    const step = () => {
+      pending--;
+      if (pending <= 0) done();
+    };
+    for (const taskID of ids) {
+      this.http.get<ApiResponse<ProgressData>>('/api/progress/' + encodeURIComponent(taskID)).subscribe({
+        next: r => {
+          if (r.code !== 200 || !r.data) this.markUnknown(taskID, r.msg);
+          else {
+            this.unknownCounts.delete(taskID);
+            this.apply(taskID, r.data);
+          }
+          step();
+        },
+        error: () => step(),
+      });
+    }
   }
 
   private apply(taskID: string, d: ProgressData): void {
@@ -215,7 +257,7 @@ export class TaskService {
       return { ...t, percentage: d.percentage, message: d.message || t.message, detailMsg: d.detailMsg || '', isDone: d.isDone, failed, updatedAt: Date.now() };
     }));
     if (doneNow) {
-      this.stopPolling(taskID);
+      this.unknownCounts.delete(taskID);
       if (failedNow) this.toast.error(failureTitle || '任务失败', failureMessage);
       if (refreshNeeded) this.bus.refresh(['containers', 'ports', 'images', 'compose']);
       this.completed.next({ taskID, resourceID: this.tasks().find(t => t.taskID === taskID)?.resourceID, refresh: refreshNeeded });
@@ -233,7 +275,7 @@ export class TaskService {
       changed = true;
       return { ...t, isDone: true, failed: true, message: msg || '任务不存在或已过期', detailMsg: msg || '', updatedAt: Date.now() };
     }));
-    this.stopPolling(taskID);
+    this.unknownCounts.delete(taskID);
     if (changed) {
       this.toast.error('任务失败', msg || '任务不存在或已过期');
       this.completed.next({ taskID, resourceID: this.tasks().find(t => t.taskID === taskID)?.resourceID, refresh: false });

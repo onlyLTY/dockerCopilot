@@ -1,7 +1,7 @@
 // 页面状态（读取中 / 空 / 错误）
 
 /* ===== 页面状态 =====
-   读取中 / 空状态。始终横跨整行并居中（放在网格外层容器的最外层）。 */
+   读取中 / 空 / 错误。始终横跨整行并居中（放在网格外层容器的最外层）。 */
 .page-state {
   grid-column: 1 / -1; width: 100%; min-height: 200px;
 }
@@ -10,6 +10,22 @@
   border: 3px solid var(--line); border-top-color: var(--blue);
   animation: dc-spin 0.7s linear infinite;
 }
-
+.page-state-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+.page-state-text {
+  max-width: min(520px, 90vw);
+  text-align: center;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.page-state-error {
+  font-weight: 600;
+}
+.page-state-retry {
+  margin-top: 4px;
+  min-width: 112px;
+}
 
 @keyframes dc-spin { to { transform: rotate(360deg); } }

@@ -3,10 +3,13 @@
     <span class="page-state-spinner" aria-hidden="true"></span>
     <span class="page-state-text">读取中…</span>
   } @else if (error()) {
-    <span class="text-red" aria-hidden="true">⚠</span>
-    <span class="page-state-text">{{ error() }}</span>
+    <span class="page-state-icon text-red" aria-hidden="true">⚠</span>
+    <span class="page-state-text page-state-error text-red">{{ error() }}</span>
+    @if (retryable()) {
+      <button type="button" class="btn text-white bg-blue page-state-retry" (click)="retry.emit()">重试</button>
+    }
   } @else {
-    <span class="text-blue" aria-hidden="true">○</span>
+    <span class="page-state-icon text-blue" aria-hidden="true">○</span>
     <span class="page-state-text">{{ emptyText() }}</span>
   }
 </div>

@@ -56,6 +56,8 @@ Compose 文件位于仓库的 `docker/` 目录，默认挂载源使用 `../`，�
 
 直接挂载 Docker socket 等价于授予容器较高的宿主机 Docker 管理权限。请限制管理端口来源，只在可信环境使用；生产环境可考虑使用 Docker socket 代理或其他访问控制方案。
 
+Compose 部署另有服务端风险门禁：默认禁止 `privileged`、挂载 `docker.sock` 及敏感宿主机路径等极高危配置。若业务必须部署此类项目，见下文「Compose 风险控制与 `AllowHighRisk`」。
+
 ## 功能概览
 
 ### 认证与界面
@@ -102,7 +104,29 @@ Compose 文件位于仓库的 `docker/` 目录，默认挂载源使用 `../`，�
 - 预览并清理未使用的 Compose 项目。
 - 汇总 Compose 项目的容器和端口信息。
 
+#### Compose 风险控制与 `AllowHighRisk`
 
+部署 Compose 前会检查服务配置中的风险项，并在预览中列出。风险分两档处理：
+
+| 级别 | 典型配置 | 默认行为 |
+| --- | --- | --- |
+| 普通高危 | `network_mode: host`、`cap_add`、`devices`、项目外挂载等 | 预览提示；界面确认警告（`confirmWarnings`）后可部署 |
+| 极高危 | `privileged: true`、挂载 `docker.sock`、挂载 `/` `/etc` `/proc` `/sys` 等敏感路径 | **默认直接拒绝**；仅服务端开启 `AllowHighRisk` 后才可部署 |
+
+配置项位于 `backend/etc/dockerCopilot.yaml`（镜像内对应 `etc/dockerCopilot.yaml`）：
+
+```yaml
+Compose:
+  AllowHighRisk: false   # 默认关闭；仅在可信环境、确需特权/docker.sock 时改为 true
+```
+
+说明：
+
+- `AllowHighRisk` **不能**仅靠前端勾选确认绕过；必须改服务端配置。
+- 修改后需**重启** Docker Copilot 容器/进程才会生效。
+- 开启后仍会走部署预览与确认流程，只是不再硬拦极高危项。
+- 因应用已挂载 Docker socket，开启极高危部署相当于允许管理台进一步创建接近宿主机权限的容器，请配合限制监听地址（如 `DOCKER_BIND_ADDRESS=127.0.0.1`）并只在可信网络使用。
+- 备份恢复同样会拒绝含 `privileged`、docker.sock 或敏感挂载的容器配置，避免恶意/被篡改备份提权。
 
 ### 端口、任务与日志
 

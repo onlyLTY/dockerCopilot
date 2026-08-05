@@ -40,6 +40,9 @@ type UnauthorizedResponse struct {
 }
 
 func main() {
+	// 本地/未 ldflags 注入时，从 version 文件解析版本；正式包已由 -X 写入则保持不变
+	config.ResolveVersion()
+
 	if err := settingstore.ApplyProxySettings(); err != nil {
 		logx.Errorf("应用代理设置失败: %v", err)
 	}
@@ -143,9 +146,11 @@ export const customImageLogos = {
 				Msg:  e.Msg,
 			}
 		default:
+			// 不向客户端回传原始错误（可能含路径/Docker 细节），仅记日志
+			logx.Errorf("unhandled error: %v", err)
 			return http.StatusOK, xhttp.BaseResponse[types.Nil]{
 				Code: 50000,
-				Msg:  err.Error(),
+				Msg:  "服务内部错误",
 			}
 		}
 	})

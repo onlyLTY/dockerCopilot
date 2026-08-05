@@ -8,7 +8,9 @@
 
 <dc-stats [items]="stats()" [columns]="3" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
 
-@if (filteredFiles().length) {
+@if (loading() || error() || !filteredFiles().length) {
+  <dc-page-state [loading]="loading()" [error]="error()" [retryable]="!!error()" emptyText="暂无备份" (retry)="refresh()"></dc-page-state>
+} @else {
   <section class="backup-list page-scroll-area">
     @for (group of groups(); track group.date) {
       <section class="backup-group m-0 mb-16">
@@ -36,6 +38,4 @@
       </section>
     }
   </section>
-} @else {
-  <dc-page-state [loading]="loading()" [error]="error()" emptyText="暂无备份"></dc-page-state>
 }

@@ -164,7 +164,27 @@ func (ctx *ServiceContext) UpdateProgress(taskID string, progress TaskProgress) 
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
 	ctx.ProgressStore[taskID] = progress
+	ctx.pruneProgressLocked()
 	ctx.persistProgress()
+}
+
+// pruneProgressLocked 限制已完成任务数量，避免 taskProgress.json 无限增长。
+// 调用方必须已持有 ctx.mu。
+func (ctx *ServiceContext) pruneProgressLocked() {
+	const maxDone = 100
+	doneIDs := make([]string, 0)
+	for id, p := range ctx.ProgressStore {
+		if p.IsDone {
+			doneIDs = append(doneIDs, id)
+		}
+	}
+	if len(doneIDs) <= maxDone {
+		return
+	}
+	extra := len(doneIDs) - maxDone
+	for i := 0; i < extra; i++ {
+		delete(ctx.ProgressStore, doneIDs[i])
+	}
 }
 
 func (ctx *ServiceContext) GetProgress(taskID string) (TaskProgress, bool) {

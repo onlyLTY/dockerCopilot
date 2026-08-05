@@ -41,3 +41,23 @@ func TestInspectRisks(t *testing.T) {
 		t.Fatalf("expected two risks, got %d", len(risks))
 	}
 }
+
+func TestValidateCriticalRisks(t *testing.T) {
+	privileged := &composeTypes.Project{Services: composeTypes.Services{
+		"app": {Name: "app", Privileged: true},
+	}}
+	if err := ValidateCriticalRisks(privileged, "/compose/app", false); err == nil {
+		t.Fatal("expected privileged to be blocked without AllowHighRisk")
+	}
+	if err := ValidateCriticalRisks(privileged, "/compose/app", true); err != nil {
+		t.Fatalf("AllowHighRisk should permit privileged: %v", err)
+	}
+
+	hostNetOnly := &composeTypes.Project{Services: composeTypes.Services{
+		"app": {Name: "app", NetworkMode: "host"},
+	}}
+	// host 网络属于 high 但非 critical，可由 confirmWarnings 覆盖
+	if err := ValidateCriticalRisks(hostNetOnly, "/compose/app", false); err != nil {
+		t.Fatalf("host network alone should not be critical-blocked: %v", err)
+	}
+}

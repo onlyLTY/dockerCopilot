@@ -12,7 +12,8 @@ export interface IconMap { [name: string]: string; }
 export class IconService {
   private readonly http = inject(HttpClient);
   private readonly bus = inject(CacheBus);
-  private readonly store = new CacheStore<IconMap>(() => this.list(), '读取图标失败');
+  // 图标变更低频：不按 TTL 自动过期，容器页预加载后端口/镜像页可复用，仅增删时 refresh/invalidate
+  private readonly store = new CacheStore<IconMap>(() => this.list(), '读取图标失败', { ttlMs: 0 });
   readonly cache: CacheView<IconMap> = this.store;
 
   constructor() { this.bus.register('icons', this.store); }

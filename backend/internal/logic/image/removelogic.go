@@ -33,8 +33,9 @@ func (l *RemoveLogic) Remove(req *types.RemoveImageReq) (resp *types.Resp, err e
 	}
 	err = utiles.RemoveImage(l.svcCtx, req.Id, req.Force)
 	if err != nil {
+		l.Errorf("删除镜像失败 id=%s: %v", req.Id, err)
 		resp.Code = 409
-		resp.Msg = err.Error()
+		resp.Msg = "删除镜像失败，镜像可能正在使用或已被删除"
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}

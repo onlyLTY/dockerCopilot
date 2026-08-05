@@ -13,17 +13,20 @@
 }
 .toast-mark {
   width: 20px; height: 20px; border-radius: 50%;
-  color: var(--white); flex: none;
+  color: #fff; flex: none;
 }
 .toast-text { flex: 1; word-break: break-word; }
 .toast-text strong { color: inherit; font-weight: 750; }
-.toast-text span { color: inherit; line-height: 1.45; }
-.toast.success { border-color: color-mix(in srgb, var(--green) 28%, transparent); color: var(--green); }
+.toast-text span { color: var(--muted); line-height: 1.45; }
+.toast.success { border-color: color-mix(in srgb, var(--green) 28%, transparent); }
 .toast.success .toast-mark { background: var(--green); }
-.toast.error { border-color: color-mix(in srgb, var(--red) 18%, transparent); color: var(--red); }
+.toast.success .toast-text strong { color: var(--green); }
+.toast.error { border-color: color-mix(in srgb, var(--red) 28%, transparent); }
 .toast.error .toast-mark { background: var(--red); }
-.toast.info { border-color: color-mix(in srgb, var(--blue) 22%, transparent); color: var(--blue); }
+.toast.error .toast-text strong { color: var(--red); }
+.toast.info { border-color: color-mix(in srgb, var(--blue) 28%, transparent); }
 .toast.info .toast-mark { background: var(--blue); }
+.toast.info .toast-text strong { color: var(--blue); }
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-8px); }

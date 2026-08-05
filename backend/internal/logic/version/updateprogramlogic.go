@@ -28,8 +28,9 @@ func (l *UpdateProgramLogic) UpdateProgram() (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	err = utiles.UpdateProgram(l.svcCtx)
 	if err != nil {
+		l.Errorf("程序更新失败: %v", err)
 		resp.Code = 500
-		resp.Msg = err.Error()
+		resp.Msg = "程序更新失败"
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
