@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
 interface ApiResponse<T> { code: number; msg: string; data: T; }
@@ -10,7 +10,10 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   readonly authenticated = signal(!!localStorage.getItem('docker-copilot-token'));
   login(secretKey: string): Observable<ApiResponse<LoginData>> {
-    return this.http.post<ApiResponse<LoginData>>('/api/auth', { secretKey }).pipe(
+    // 后端 LoginReq 使用 form:"secretKey"，需 application/x-www-form-urlencoded
+    const body = new HttpParams().set('secretKey', secretKey);
+    const headers = new HttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded' });
+    return this.http.post<ApiResponse<LoginData>>('/api/auth', body, { headers }).pipe(
       tap(response => {
         if (response.data?.jwt) {
           localStorage.setItem('docker-copilot-token', response.data.jwt);

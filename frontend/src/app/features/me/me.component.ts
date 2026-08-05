@@ -1,8 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
 import { SettingsService } from '../../core/settings.service';
-import { BackupService } from '../../core/backup.service';
 import { VersionService, VersionInfo } from '../../core/version.service';
 import { ToastService } from '../../core/toast.service';
 import { ApiResponse } from '../../core/compose.service';
@@ -15,7 +13,6 @@ import { FormSelectComponent, FormSelectOption } from '../../shared/form-select/
 import { FormExpansionComponent } from '../../shared/form-expansion/form-expansion.component';
 
 interface LogEntry { timestamp: string; level: string; message: string; }
-interface LogLevelData { level: string; options: string[]; }
 
 @Component({
   selector: 'dc-me',
@@ -25,7 +22,6 @@ interface LogLevelData { level: string; options: string[]; }
 })
 export class MeComponent {
   private readonly settings = inject(SettingsService);
-  private readonly backups = inject(BackupService);
   private readonly versions = inject(VersionService);
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
@@ -97,32 +93,50 @@ export class MeComponent {
   closeSettings() { if (!this.saving()) this.showSettings.set(false); }
 
   private loadSettings() {
-    this.settings.load();
-    this.settings.getUpdateSettings().subscribe({ next: r => { if (r.code === 200) { this.updateOptions.set(r.data.options || []); this.updateDraft = this.runtime().updateInterval || r.data.interval; } } });
-    this.settings.getBackupSettings().subscribe({ next: r => { if (r.code === 200) { this.backupOptions.set(r.data.options || []); this.backupDraft = this.runtime().backupInterval || r.data.interval; } } });
-    this.settings.getLogSettings().subscribe({ next: r => { if (r.code === 200) { this.logOptions.set(r.data.options || this.logOptions()); this.logDraft = this.runtime().logLevel || r.data.level; } } });
-    this.backups.settings().subscribe({ next: r => { if (r.code === 200) { this.retentionDraft = r.data.retention; this.settings.setRuntime({ retention: r.data.retention }); } } });
-    this.settings.getProxySettings().subscribe({ next: r => { if (r.code === 200 && r.data) this.proxyDraft = { ...r.data }; } });
+    this.settings.getAll().subscribe({
+      next: r => {
+        if (r.code !== 200 || !r.data) return;
+        const data = r.data;
+        this.settings.setRuntime({
+          updateInterval: data.updateCheck?.interval ?? '',
+          backupInterval: data.autoBackup?.interval ?? '',
+          logLevel: data.logLevel?.level ?? 'info',
+          retention: data.retention ?? 10,
+        });
+        this.updateOptions.set(data.updateCheck?.options || []);
+        this.backupOptions.set(data.autoBackup?.options || []);
+        this.logOptions.set(data.logLevel?.options || this.logOptions());
+        this.updateDraft = data.updateCheck?.interval || '';
+        this.backupDraft = data.autoBackup?.interval || '';
+        this.logDraft = data.logLevel?.level || 'info';
+        this.retentionDraft = data.retention ?? 10;
+        if (data.proxy) this.proxyDraft = { ...data.proxy };
+      },
+    });
   }
 
   saveSettings() {
     const value = Number(this.retentionDraft);
     if (!Number.isInteger(value) || value < 1 || value > 100) { this.toast.error('保留数量必须是 1-100 的整数'); return; }
     this.saving.set(true);
-    forkJoin([
-      this.settings.setUpdateInterval(this.updateDraft),
-      this.settings.setBackupInterval(this.backupDraft),
-      this.settings.setLogLevel(this.logDraft),
-      this.backups.updateSettings(value),
-      this.settings.setProxySettings(this.proxyDraft),
-    ]).subscribe({ next: results => this.finishSave(value, results.some(r => r.code !== 200)), error: () => this.finishSave(value, true) });
+    this.settings.saveAll({
+      updateCheckInterval: this.updateDraft,
+      autoBackupInterval: this.backupDraft,
+      logLevel: this.logDraft,
+      retention: value,
+      proxy: this.proxyDraft,
+    }).subscribe({
+      next: r => this.finishSave(value, r.code !== 200, r.msg),
+      error: () => this.finishSave(value, true),
+    });
   }
 
-  private finishSave(value: number, failed: boolean) {
+  private finishSave(value: number, failed: boolean, msg?: string) {
     this.saving.set(false);
-    if (failed) { this.toast.error('部分设置保存失败'); return; }
+    if (failed) { this.toast.error(msg || '设置保存失败'); return; }
     this.settings.setRuntime({ updateInterval: this.updateDraft, backupInterval: this.backupDraft, logLevel: this.logDraft, retention: value });
-    this.showSettings.set(false); this.toast.success('设置已保存，代理设置将在重启服务后生效');
+    this.showSettings.set(false);
+    this.toast.success(msg || '设置已保存，代理设置将在重启服务后生效');
   }
 
   openLogs() {

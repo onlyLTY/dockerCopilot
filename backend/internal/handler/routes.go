@@ -238,4 +238,67 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api"),
 	)
+
+	// 手写设置/日志路由（非 goctl 生成）。下次 goctl 覆盖本文件后请保留本块。
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/settings",
+				Handler: GetAppSettingsHandler,
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/settings",
+				Handler: UpdateAppSettingsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/settings/update-check",
+				Handler: container.GetUpdateSettingsHandler,
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/settings/update-check",
+				Handler: container.UpdateUpdateSettingsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/settings/auto-backup",
+				Handler: container.GetAutoBackupSettingsHandler,
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/settings/auto-backup",
+				Handler: container.UpdateAutoBackupSettingsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/settings/log-level",
+				Handler: GetLogLevelHandler,
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/settings/log-level",
+				Handler: UpdateLogLevelHandler,
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/settings/proxy",
+				Handler: GetProxySettingsHandler,
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/settings/proxy",
+				Handler: UpdateProxySettingsHandler,
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/logs",
+				Handler: GetLogsHandler,
+			},
+		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/api"),
+	)
 }

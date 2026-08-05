@@ -157,15 +157,8 @@ export const customImageLogos = {
 }
 func RegisterHandlers(engine *rest.Server) {
 	// 自定义上传图标：从 /data/icon/icons 目录提供
+	// GET / 已由 handler.RegisterHandlers 中的 webindexHandler 注册，勿重复添加
 	iconFileServer := http.StripPrefix("/src/config/image/", http.FileServer(http.Dir("/data/icon/icons")))
-	engine.AddRoutes([]rest.Route{{
-		Method: http.MethodGet,
-		Path:   "/",
-		Handler: func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "/manager", http.StatusMovedPermanently)
-		},
-	}})
-
 	engine.AddRoutes(
 		[]rest.Route{
 			{

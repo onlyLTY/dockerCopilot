@@ -27,7 +27,17 @@
           },
           "defaultConfiguration": "production"
         },
-        "serve": { "builder": "@angular-devkit/build-angular:dev-server", "configurations": { "production": { "buildTarget": "docker-copilot-angular:build:production" }, "development": { "buildTarget": "docker-copilot-angular:build:development" } }, "defaultConfiguration": "development" }
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "servePath": "/manager"
+          },
+          "configurations": {
+            "production": { "buildTarget": "docker-copilot-angular:build:production" },
+            "development": { "buildTarget": "docker-copilot-angular:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
       }
     }
   },

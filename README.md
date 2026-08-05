@@ -148,7 +148,8 @@ cd frontend && npm run build
 
 ```bash
 cd backend
-go test ./...
+$env:secretKey="test123456"
+go run dockercopilot.go -f etc/dockerCopilot.yaml
 ```
 
 后端启动前需要准备配置文件 `backend/etc/dockerCopilot.yaml`、前端 `web/` 目录和可写的数据/日志目录。服务默认监听 `12712`，配置中的 `Auth.AccessSecret` 使用环境变量 `secretKey` 展开。
