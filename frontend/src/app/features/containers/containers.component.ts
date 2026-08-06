@@ -1,4 +1,5 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, HostListener, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { from, forkJoin, of } from 'rxjs';
 import { catchError, map, mergeMap, toArray } from 'rxjs/operators';
@@ -14,18 +15,24 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
+import { ModalHeadingComponent } from '../../shared/modal-heading/modal-heading.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'dc-containers',
   standalone: true,
   imports: [
+    FormsModule,
     PageStateComponent,
     IconComponent,
     ResourceCardComponent,
     StatsComponent,
     PageHeadingComponent,
+    ModalHeadingComponent,
+    MatTooltipModule,
   ],
   templateUrl: './containers.component.html',
+  styleUrl: './containers.component.scss',
 })
 export class ContainersComponent {
   private readonly service = inject(ContainerService);
@@ -47,6 +54,11 @@ export class ContainersComponent {
   readonly checking = signal(false);
   readonly activeUpdateIds = signal<Set<string>>(new Set());
   readonly updateIgnoreBusyIds = signal<Set<string>>(new Set());
+  readonly detail = signal<ContainerRow | undefined>(undefined);
+  readonly detailName = signal('');
+  readonly detailImage = signal('');
+  readonly renameBusy = signal(false);
+  readonly detailUpdateBusy = signal(false);
   /** 单容器启停/重启进行中，按 id 记录当前动作标签，用于禁用按钮并展示「启动中」等文案 */
   readonly actionBusy = signal<Map<string, string>>(new Map());
   readonly filter = signal('all');
@@ -132,6 +144,107 @@ export class ContainersComponent {
       onHttpError: e => this.toast.error(`检查更新失败：${actionErrorMessage(e)}`),
     });
   }
+  @HostListener('document:keydown.escape') onEscape(): void {
+    if (this.detail()) this.closeDetail();
+  }
+
+  openDetail(x: ContainerRow): void {
+    this.detail.set(x);
+    this.detailName.set(x.name);
+    this.detailImage.set(x.createImage || x.usingImage);
+    this.renameBusy.set(false);
+    this.detailUpdateBusy.set(false);
+  }
+
+  closeDetail(): void {
+    if (this.renameBusy() || this.detailUpdateBusy()) return;
+    this.detail.set(undefined);
+  }
+
+  closeDetailOnBackdrop(e: Event): void {
+    if (e.target === e.currentTarget) this.closeDetail();
+  }
+
+  private detailContainer(): ContainerRow | undefined {
+    const current = this.detail();
+    return current ? this.containers().find(x => x.id === current.id) || current : undefined;
+  }
+
+  renameDetail(): void {
+    const x = this.detailContainer();
+    const name = this.detailName().trim();
+    if (!x || this.renameBusy() || !name) {
+      if (!name) this.toast.error('容器名称不能为空');
+      return;
+    }
+    if (name === x.name) return;
+    runAction({
+      request: this.service.rename(x.id, name),
+      onStart: () => this.renameBusy.set(true),
+      onFinally: () => this.renameBusy.set(false),
+      onSuccess: () => {
+        this.detail.update(item => (item ? { ...item, name } : item));
+        this.toast.success(`${x.name} 重命名成功`);
+      },
+      onBizError: r => this.toast.error(`重命名失败：${r.msg || '未知错误'}`),
+      onHttpError: e => this.toast.error(`重命名失败：${actionErrorMessage(e)}`),
+    });
+  }
+
+  updateDetail(): void {
+    const x = this.detailContainer();
+    const name = this.detailName().trim();
+    const image = this.detailImage().trim();
+    if (!x || this.detailUpdateBusy() || !name || !image) {
+      if (!name) this.toast.error('容器名称不能为空');
+      else if (!image) this.toast.error('镜像名称和标签不能为空');
+      return;
+    }
+    if (this.activeUpdateIds().has(x.id)) return;
+    runAction({
+      request: this.service.update(x.id, image, name),
+      onStart: () => {
+        this.detailUpdateBusy.set(true);
+        this.markUpdateActive(x.id);
+      },
+      onSuccess: (r: any) => {
+        const taskID = r.data?.taskID;
+        if (taskID) {
+          this.tasks.track(String(taskID), '更新 ' + name, true, x.id);
+          this.detail.set(undefined);
+        } else {
+          this.detailUpdateBusy.set(false);
+          this.markUpdateInactive(x.id);
+          this.toast.info(`${name} 更新任务已提交`);
+        }
+      },
+      onBizError: r => {
+        this.detailUpdateBusy.set(false);
+        this.markUpdateInactive(x.id);
+        this.toast.error(`${x.name} 更新失败：${r.msg || '未知错误'}`);
+      },
+      onHttpError: e => {
+        this.detailUpdateBusy.set(false);
+        this.markUpdateInactive(x.id);
+        this.toast.error(`${x.name} 更新失败：${actionErrorMessage(e)}`);
+      },
+    });
+  }
+
+  detailStartStop(): void {
+    const x = this.detailContainer();
+    if (!x) return;
+    this.isRunning(x) ? this.stop(x) : this.start(x);
+    this.closeDetail();
+  }
+
+  detailRestart(): void {
+    const x = this.detailContainer();
+    if (!x) return;
+    this.restart(x);
+    this.closeDetail();
+  }
+
   hasUpdate(x: ContainerRow) {
     return !!x.haveUpdate;
   }
@@ -248,8 +361,14 @@ export class ContainersComponent {
   restart(x: ContainerRow) {
     this.run(x, id => this.service.restart(id), '重启');
   }
-  async remove(x: ContainerRow) {
-    if (this.actionBusy().has(x.id)) return;
+  async detailRemove(): Promise<void> {
+    const x = this.detailContainer();
+    if (!x) return;
+    if (await this.remove(x)) this.detail.set(undefined);
+  }
+
+  async remove(x: ContainerRow): Promise<boolean> {
+    if (this.actionBusy().has(x.id)) return false;
     const running = this.isRunning(x);
     const label = running ? '强制删除' : '删除';
     if (
@@ -263,8 +382,9 @@ export class ContainersComponent {
         critical: running,
       }))
     )
-      return;
+      return false;
     this.run(x, id => this.service.remove(id, running), label);
+    return true;
   }
   private clearActionBusy(id: string): void {
     this.actionBusy.update(m => {

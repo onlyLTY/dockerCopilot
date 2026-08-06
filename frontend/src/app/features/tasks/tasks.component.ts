@@ -6,6 +6,7 @@ import { ConfirmService } from '../../core/confirm.service';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 /**
  * 任务页：查看容器更新 / 备份恢复 / 部署等异步任务的列表与进度，
@@ -20,6 +21,7 @@ import { ResourceCardComponent } from '../../shared/resource-card/resource-card.
     StatsComponent,
     PageHeadingComponent,
     ResourceCardComponent,
+    MatTooltipModule,
   ],
   templateUrl: './tasks.component.html',
 })

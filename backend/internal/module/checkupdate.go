@@ -83,7 +83,7 @@ func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 	}
 	token, err := GetToken(image, "")
 	if err != nil {
-		logx.Error("获取token失败或者无需获取token，继续尝试检查" + err.Error())
+		logx.Errorf("获取令牌失败，继续检查：%v", err)
 	}
 	digestURL, err := BuildManifestURL(image)
 	if err != nil {

@@ -10,6 +10,7 @@ export interface ContainerRow {
   name: string;
   status: string;
   usingImage: string;
+  createImage?: string;
   createTime: string;
   runningTime: string;
   haveUpdate: boolean;
@@ -62,6 +63,14 @@ export class ContainerService {
       this.http.post<ApiResponse<unknown>>(
         '/api/container/' + encodeURIComponent(id) + '/restart',
         {},
+      ),
+    );
+  }
+  rename(id: string, newName: string) {
+    return this.done(
+      this.http.post<ApiResponse<unknown>>(
+        '/api/container/' + encodeURIComponent(id) + '/rename',
+        { newName },
       ),
     );
   }

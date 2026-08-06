@@ -71,6 +71,7 @@
   border: 0;
   resize: none;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 22px 22px 22px 60px;
   font:
     14px/1.65 'SFMono-Regular',
@@ -81,6 +82,9 @@
   z-index: 0;
   box-sizing: border-box;
   line-height: 1.65;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
   tab-size: 2;
   background: var(--editor-bg);
   color: var(--editor-fg);
@@ -144,6 +148,6 @@
   .code-editor {
     height: min(420px, 52vh);
     min-height: 220px;
-    padding: 14px;
+    padding: 14px 14px 14px 60px;
   }
 }

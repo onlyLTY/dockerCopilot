@@ -28,7 +28,7 @@ type DelContainerBackupReq {
 
 type ContainerRenameReq {
 	IdReq
-	NewName string `form:"newName" validate:"required"`
+	NewName string `json:"newName" form:"newName" validate:"required"`
 }
 
 type RemoveImageReq {
@@ -47,8 +47,8 @@ type ImagePruneReq {
 
 type ContainerUpdateReq {
 	IdReq
-	ImageNameAndTag string `form:"imageNameAndTag" validate:"required"`
-	ContainerName   string `form:"containerName,optional"`
+	ImageNameAndTag string `json:"imageNameAndTag,optional" form:"imageNameAndTag,optional"`
+	ContainerName   string `json:"containerName,optional" form:"containerName,optional"`
 }
 
 type UpdateBackupSettingsReq {

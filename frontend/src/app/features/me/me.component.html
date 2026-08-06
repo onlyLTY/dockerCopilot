@@ -251,7 +251,7 @@
         @if (!loadingLogs() && !logError()) {
           <dc-stats
             [items]="logLevelStats()"
-            [columns]="5"
+            [columns]="4"
             [activeKey]="logLevelFilter()"
             (selectedChange)="selectLogLevel($event)"
           ></dc-stats>

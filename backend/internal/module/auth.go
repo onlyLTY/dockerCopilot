@@ -2,7 +2,6 @@ package module
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,45 +22,69 @@ const (
 )
 
 func GetToken(image types.Image, registryAuth string) (string, error) {
-	logx.Infof("image name %s", image.ImageName)
+	logx.Infof("镜像名称 %s", image.ImageName)
 	normalizedRef, err := ref.ParseNormalizedNamed(image.ImageName)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("解析镜像失败：%s：%w", image.ImageName, err)
 	}
 
 	URL := GetChallengeURL(normalizedRef)
+	registry := URL.Host
 
 	var req *http.Request
 	if req, err = GetChallengeRequest(URL); err != nil {
-		return "", err
+		return "", fmt.Errorf("创建认证请求失败：镜像=%s，仓库=%s：%w", image.ImageName, registry, err)
 	}
 
 	client := &http.Client{}
 	var res *http.Response
 	if res, err = client.Do(req); err != nil {
-		return "", err
+		return "", fmt.Errorf("请求镜像仓库失败：镜像=%s，仓库=%s：%w", image.ImageName, registry, err)
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			logx.Error("GetToken关闭Body失败" + err.Error())
+			logx.Error("关闭获取令牌响应失败：" + err.Error())
 		}
 	}(res.Body)
-	v := res.Header.Get(ChallengeHeader)
+	v := strings.TrimSpace(res.Header.Get(ChallengeHeader))
+	if v == "" && res.StatusCode >= http.StatusOK && res.StatusCode < http.StatusMultipleChoices {
+		return "", nil
+	}
 
 	challenge := strings.ToLower(v)
 	if strings.HasPrefix(challenge, "basic") {
 		if registryAuth == "" {
-			return "", fmt.Errorf("no credentials available")
+			return "", fmt.Errorf("缺少仓库凭据：镜像=%s，仓库=%s", image.ImageName, registry)
 		}
 
 		return fmt.Sprintf("Basic %s", registryAuth), nil
 	}
 	if strings.HasPrefix(challenge, "bearer") {
-		return GetBearerHeader(challenge, normalizedRef, registryAuth)
+		token, err := GetBearerHeader(challenge, normalizedRef, registryAuth)
+		if err != nil {
+			return "", fmt.Errorf("获取令牌失败：镜像=%s，仓库=%s：%w", image.ImageName, registry, err)
+		}
+		return token, nil
 	}
 
-	return "", errors.New("unsupported challenge type from registry")
+	challengeType := "未知"
+	if fields := strings.Fields(v); len(fields) > 0 {
+		switch strings.ToLower(fields[0]) {
+		case "basic":
+			challengeType = "基础认证"
+		case "bearer":
+			challengeType = "令牌认证"
+		case "digest":
+			challengeType = "摘要认证"
+		default:
+			challengeType = "未知认证"
+		}
+	}
+	return "", fmt.Errorf(
+		"仓库认证类型不支持：镜像=%s:%s，仓库=%s，状态码=%d，类型=%s",
+		image.ImageName, image.ImageTag, registry, res.StatusCode, challengeType,
+	)
 }
 
 func GetChallengeRequest(URL url.URL) (*http.Request, error) {
@@ -84,19 +107,19 @@ func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) 
 
 	var r *http.Request
 	if r, err = http.NewRequest("GET", authURL.String(), nil); err != nil {
-		return "", err
+		return "", fmt.Errorf("创建令牌请求失败：%w", err)
 	}
 
 	if registryAuth != "" {
 		logx.Info("私有镜像，无法获取是否有更新")
 		r.Header.Add("Authorization", fmt.Sprintf("Basic %s", registryAuth))
 	} else {
-		logx.Info("No credentials found.")
+		logx.Info("未找到仓库凭据")
 	}
 
 	var authResponse *http.Response
 	if authResponse, err = client.Do(r); err != nil {
-		return "", err
+		return "", fmt.Errorf("请求令牌服务失败：%w", err)
 	}
 
 	body, _ := io.ReadAll(authResponse.Body)
@@ -104,7 +127,7 @@ func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) 
 
 	err = json.Unmarshal(body, tokenResponse)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("解析令牌响应失败：%w", err)
 	}
 
 	return fmt.Sprintf("Bearer %s", tokenResponse.Token), nil
@@ -125,7 +148,7 @@ func GetAuthURL(challenge string, imageRef ref.Named) (*url.URL, error) {
 	}
 	if values["realm"] == "" || values["service"] == "" {
 
-		return nil, fmt.Errorf("challenge header did not include all values needed to construct an auth url")
+		return nil, fmt.Errorf("认证信息缺少必要参数")
 	}
 
 	authURL, _ := url.Parse(values["realm"])

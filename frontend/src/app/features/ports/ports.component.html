@@ -42,11 +42,19 @@
             (error)="fallback($event)"
           />
         </div>
-        <div resource-card-title class="fs-16">{{ g.containerName }}</div>
+        <div
+          resource-card-title
+          class="fs-16"
+          [matTooltip]="g.containerName"
+        >
+          {{ g.containerName }}
+        </div>
         <div resource-card-info class="fs-12 text-muted">
-          <span class="d-block text-ellipsis">{{
-            g.project ? '项目：' + g.project : '独立容器'
-          }}</span>
+          <span
+            class="d-block text-ellipsis"
+            [matTooltip]="g.project ? '项目：' + g.project : '独立容器'"
+            >{{ g.project ? '项目：' + g.project : '独立容器' }}</span
+          >
         </div>
         <div
           resource-card-content
@@ -56,9 +64,7 @@
         >
           @for (p of g.ports; track $index) {
             <span class="d-inline-block flex-none text-nowrap rounded-7 py-5 px-4 fs-12"
-              >{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{
-                p.protocol.toUpperCase()
-              }}</span
+              >{{ p.hostPort }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span
             >
           }
         </div>

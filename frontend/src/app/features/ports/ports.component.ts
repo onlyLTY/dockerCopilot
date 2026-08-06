@@ -7,6 +7,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface PortLine {
   hostPort: string;
@@ -30,6 +31,7 @@ interface PortGroup {
     ResourceCardComponent,
     StatsComponent,
     PageHeadingComponent,
+    MatTooltipModule,
   ],
   templateUrl: './ports.component.html',
 })
@@ -48,14 +50,17 @@ export class PortsComponent {
   readonly error = this.service.cache.error;
   readonly iconMap = computed(() => this.icons.cache.data() || {});
   readonly filter = signal('all');
+  readonly publishedPorts = computed(() =>
+    this.data().ports.filter(p => p.published && !!p.hostPort.trim()),
+  );
   readonly stats = computed<readonly StatItem[]>(() => [
-    { key: 'all', value: this.data().ports.length, label: '端口映射' },
+    { key: 'all', value: this.publishedPorts().length, label: '端口映射' },
     { key: 'conflict', value: this.data().conflicts.length, label: '端口冲突', tone: 'red' },
   ]);
-  // 按容器聚合：一个容器一张卡片，仅展示端口
+  // 按容器聚合：一个容器一张卡片，仅展示已发布端口
   readonly groups = computed<PortGroup[]>(() => {
     const map = new Map<string, PortGroup>();
-    for (const p of this.data().ports) {
+    for (const p of this.publishedPorts()) {
       const key = p.containerID || p.containerName;
       if (!map.has(key))
         map.set(key, {

@@ -10,6 +10,7 @@ import { ConfirmService } from '../../core/confirm.service';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
 import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'dc-images',
@@ -20,6 +21,7 @@ import { PageHeadingComponent } from '../../shared/page-heading/page-heading.com
     ResourceCardComponent,
     StatsComponent,
     PageHeadingComponent,
+    MatTooltipModule,
   ],
   templateUrl: './images.component.html',
 })

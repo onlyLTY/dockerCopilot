@@ -37,7 +37,13 @@
             </label>
           }
         </div>
-        <div resource-card-title class="fs-16">{{ item[0] }}</div>
+        <div
+          resource-card-title
+          class="fs-16"
+          [matTooltip]="item[0]"
+        >
+          {{ item[0] }}
+        </div>
         <div resource-card-actions>
           <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="edit(item[0])">
             <dc-icon name="edit"></dc-icon>替换

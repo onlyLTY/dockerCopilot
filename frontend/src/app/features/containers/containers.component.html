@@ -1,70 +1,75 @@
 <dc-page-heading title="容器管理" subtitle="管理您的 Docker 容器，包括启动、停止、重启、删除等操作">
-  <div page-heading-actions>
-    @if (selectionMode()) {
-      <label class="select-all heading-select-all"
-        ><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()" />全选</label
-      >
-      <span class="heading-selected text-muted fs-10">已选{{ selectedCount() }}</span>
+  <div page-heading-actions class="container-heading-actions">
+    <div class="container-heading-row">
       <button
-        class="btn text-secondary-text bg-secondary-bg gap-8 text-green"
-        [disabled]="!selectedCount() || busy()"
-        (click)="bulkStart()"
-        title="批量启动容器"
+        class="btn text-secondary-text bg-secondary-bg gap-8"
+        (click)="toggleSelection()"
+        title="批量选择容器"
       >
-        <dc-icon name="start"></dc-icon>{{ bulkAction() === '启动' ? '启动中…' : '启动' }}
+        <dc-icon name="edit"></dc-icon>{{ selectionMode() ? '退出批量' : '批量选择' }}
       </button>
-      <button
-        class="btn text-secondary-text bg-secondary-bg gap-8 text-red"
-        [disabled]="!selectedCount() || busy()"
-        (click)="bulkStop()"
-        title="批量停止容器"
-      >
-        <dc-icon name="stop"></dc-icon>{{ bulkAction() === '停止' ? '停止中…' : '停止' }}
-      </button>
-      <button
-        class="btn text-secondary-text bg-secondary-bg gap-8 text-red"
-        [disabled]="!selectedCount() || busy()"
-        (click)="bulkRemove()"
-        title="批量删除容器"
-      >
-        <dc-icon name="delete"></dc-icon>{{ bulkAction() === '删除' ? '删除中…' : '删除' }}
-      </button>
+
       <button
         class="btn text-secondary-text bg-secondary-bg gap-8 text-purple"
-        [disabled]="!selectedCount() || busy() || hasActiveUpdates()"
-        (click)="bulkUpdate()"
-        title="批量更新容器"
+        [disabled]="!availableUpdateCount() || busy() || hasActiveUpdates()"
+        (click)="updateAll()"
+        title="更新所有有新版本且未忽略的容器"
       >
-        <dc-icon name="update"></dc-icon>{{ bulkAction() === '更新' ? '更新中…' : '批量更新' }}
+        <dc-icon name="update"></dc-icon>一键更新 ({{ availableUpdateCount() }})
       </button>
-    }
-    <button
-      class="btn text-secondary-text bg-secondary-bg gap-8"
-      (click)="toggleSelection()"
-      title="批量选择容器"
-    >
-      <dc-icon name="edit"></dc-icon>{{ selectionMode() ? '退出批量' : '批量选择' }}
-    </button>
+      <button
+        class="btn text-secondary-text bg-secondary-bg gap-8"
+        [disabled]="checking()"
+        (click)="checkUpdate()"
+        title="检查所有容器是否有镜像更新"
+      >
+        <dc-icon name="update"></dc-icon>{{ checking() ? '检查中…' : '检查更新' }}
+      </button>
+      <button class="btn text-white bg-blue gap-8" (click)="refresh()" title="刷新容器">
+        <dc-icon name="refresh"></dc-icon>刷新
+      </button>
+    </div>
 
-    <button
-      class="btn text-secondary-text bg-secondary-bg gap-8 text-purple"
-      [disabled]="!availableUpdateCount() || busy() || hasActiveUpdates()"
-      (click)="updateAll()"
-      title="更新所有有新版本且未忽略的容器"
-    >
-      <dc-icon name="update"></dc-icon>一键更新 ({{ availableUpdateCount() }})
-    </button>
-    <button
-      class="btn text-secondary-text bg-secondary-bg gap-8"
-      [disabled]="checking()"
-      (click)="checkUpdate()"
-      title="检查所有容器是否有镜像更新"
-    >
-      <dc-icon name="update"></dc-icon>{{ checking() ? '检查中…' : '检查更新' }}
-    </button>
-    <button class="btn text-white bg-blue gap-8" (click)="refresh()" title="刷新容器">
-      <dc-icon name="refresh"></dc-icon>刷新
-    </button>
+    @if (selectionMode()) {
+      <div class="container-heading-row container-heading-batch">
+        <label class="select-all heading-select-all"
+          ><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()" />全选</label
+        >
+        <span class="heading-selected text-muted fs-10">已选{{ selectedCount() }}</span>
+        <button
+          class="btn text-secondary-text bg-secondary-bg gap-8 text-green"
+          [disabled]="!selectedCount() || busy()"
+          (click)="bulkStart()"
+          title="批量启动容器"
+        >
+          <dc-icon name="start"></dc-icon>{{ bulkAction() === '启动' ? '启动中…' : '启动' }}
+        </button>
+        <button
+          class="btn text-secondary-text bg-secondary-bg gap-8 text-red"
+          [disabled]="!selectedCount() || busy()"
+          (click)="bulkStop()"
+          title="批量停止容器"
+        >
+          <dc-icon name="stop"></dc-icon>{{ bulkAction() === '停止' ? '停止中…' : '停止' }}
+        </button>
+        <button
+          class="btn text-secondary-text bg-secondary-bg gap-8 text-red"
+          [disabled]="!selectedCount() || busy()"
+          (click)="bulkRemove()"
+          title="批量删除容器"
+        >
+          <dc-icon name="delete"></dc-icon>{{ bulkAction() === '删除' ? '删除中…' : '删除' }}
+        </button>
+        <button
+          class="btn text-secondary-text bg-secondary-bg gap-8 text-purple"
+          [disabled]="!selectedCount() || busy() || hasActiveUpdates()"
+          (click)="bulkUpdate()"
+          title="批量更新容器"
+        >
+          <dc-icon name="update"></dc-icon>{{ bulkAction() === '更新' ? '更新中…' : '批量更新' }}
+        </button>
+      </div>
+    }
   </div>
 </dc-page-heading>
 
@@ -104,7 +109,11 @@
           }
         </div>
         <div resource-card-title>
-          <span class="text-ellipsis min-w-0">{{ item.name }}</span>
+          <span
+            class="text-ellipsis min-w-0"
+            [matTooltip]="item.name"
+            >{{ item.name }}</span
+          >
           @if (item.haveUpdate) {
             <small class="update-badge d-inline-block py-2 px-8 fs-10" title="有新版本可更新"
               >可更新</small
@@ -115,12 +124,23 @@
           }
         </div>
         <div resource-card-info class="fs-12 text-muted">
-          <span class="d-block text-ellipsis">{{ item.usingImage }}</span
+          <span
+            class="d-block text-ellipsis"
+            [matTooltip]="item.usingImage"
+            >{{ item.usingImage }}</span
+          >
           ><small class="d-block" [class.text-green]="isRunning(item)">{{
             statusText(item)
           }}</small>
         </div>
         <div resource-card-actions>
+          <button
+            class="btn text-blue border-1 py-8 px-7 fs-12"
+            (click)="openDetail(item)"
+            title="查看容器详情"
+          >
+            <dc-icon name="edit"></dc-icon>详情
+          </button>
           @if (isRunning(item)) {
             <button
               class="btn text-red border-1 py-8 px-7 fs-12"
@@ -192,4 +212,120 @@
       </dc-resource-card>
     }
   </section>
+}
+
+@if (detail(); as item) {
+  <div class="modal-backdrop d-grid place-items-center" (click)="closeDetailOnBackdrop($event)">
+    <section
+      class="modal min-w-0 d-grid modal-form modal-m container-detail-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="item.name + '容器详情'"
+      (click)="$event.stopPropagation()"
+    >
+      <dc-modal-heading
+        title="容器详情"
+        [subtitle]="item.id.slice(0, 12)"
+        (closed)="closeDetail()"
+      />
+      <div class="modal-body container-detail-body d-flex flex-col gap-16">
+        <div class="container-detail-identity d-flex items-center gap-12">
+          <img
+            class="resource-icon detail-icon"
+            [src]="icon(item)"
+            [alt]="item.name"
+            (error)="fallback($event)"
+          />
+          <div class="min-w-0 flex-1">
+            <strong class="d-block text-ellipsis">{{ detailName() || item.name }}</strong>
+            <span class="d-block mt-4 fs-12 text-muted text-ellipsis">{{ detailImage() }}</span>
+          </div>
+          <span class="status-dot" [class.is-stopped]="!isRunning(item)"></span>
+        </div>
+
+        <div class="form-field d-block">
+          容器名称
+          <div class="detail-field-row d-flex items-center gap-8 mt-8">
+            <input
+              class="field-control flex-1 py-10 px-12"
+              [ngModel]="detailName()"
+              (ngModelChange)="detailName.set($event)"
+              maxlength="255"
+              autocomplete="off"
+            />
+            <button
+              class="btn text-secondary-text bg-secondary-bg text-nowrap"
+              [disabled]="renameBusy() || !detailName().trim() || detailName().trim() === item.name"
+              (click)="renameDetail()"
+            >
+              {{ renameBusy() ? '重命名中…' : '重命名' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="form-field d-block">
+          镜像名称和标签
+          <div class="detail-field-row d-flex items-center gap-8 mt-8">
+            <input
+              class="field-control flex-1 py-10 px-12"
+              [ngModel]="detailImage()"
+              (ngModelChange)="detailImage.set($event)"
+              placeholder="例如：nginx:latest"
+              autocomplete="off"
+            />
+            <button
+              class="btn text-secondary-text bg-secondary-bg text-nowrap"
+              [disabled]="detailUpdateBusy() || activeUpdateIds().has(item.id) || !detailImage().trim()"
+              (click)="updateDetail()"
+            >
+              {{ detailUpdateBusy() ? '提交中…' : '更换镜像' }}
+            </button>
+          </div>
+          <span class="form-hint d-block mt-6 fs-12"
+            >修改镜像后点击“更换镜像”，系统会拉取镜像并重新创建容器。</span
+          >
+        </div>
+
+        <div class="container-detail-meta d-grid grid-cols-2-min gap-8 fs-12">
+          <span>状态：{{ statusText(item) }}</span>
+          <span>创建于：{{ item.createTime || '未知' }}</span>
+        </div>
+      </div>
+      <div class="modal-actions d-flex items-center justify-between gap-8">
+        <button class="btn text-secondary-text bg-secondary-bg" (click)="closeDetail()">关闭</button>
+        <div class="d-flex items-center gap-8">
+          <button
+            class="btn text-red bg-secondary-bg"
+            [disabled]="isActionBusy(item.id)"
+            (click)="detailRemove()"
+          >
+            <dc-icon name="delete"></dc-icon>删除
+          </button>
+          <button
+            class="btn text-blue bg-secondary-bg"
+            [disabled]="isActionBusy(item.id)"
+            (click)="detailRestart()"
+          >
+            <dc-icon name="restart"></dc-icon>重启
+          </button>
+          <button
+            class="btn text-green bg-secondary-bg"
+            [disabled]="isActionBusy(item.id)"
+            (click)="detailStartStop()"
+          >
+            <dc-icon [name]="isRunning(item) ? 'stop' : 'start'"></dc-icon>{{
+              isRunning(item) ? '停止' : '启动'
+            }}
+          </button>
+          <button
+            class="btn text-purple bg-purple text-white"
+            [disabled]="detailUpdateBusy() || activeUpdateIds().has(item.id) || !detailName().trim() || !detailImage().trim()"
+            (click)="updateDetail()"
+          >
+            <dc-icon name="update"></dc-icon>{{ detailUpdateBusy() ? '更新中…' : '更新' }}
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
 }

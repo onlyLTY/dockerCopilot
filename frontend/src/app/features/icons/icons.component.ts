@@ -9,6 +9,7 @@ import { ConfirmService } from '../../core/confirm.service';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 import { ModalHeadingComponent } from '../../shared/modal-heading/modal-heading.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'dc-icons',
@@ -19,6 +20,7 @@ import { ResourceCardComponent } from '../../shared/resource-card/resource-card.
     PageHeadingComponent,
     ResourceCardComponent,
     ModalHeadingComponent,
+    MatTooltipModule,
   ],
   templateUrl: './icons.component.html',
   styleUrl: './icons.component.scss',

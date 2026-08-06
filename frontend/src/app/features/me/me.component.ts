@@ -51,8 +51,7 @@ export class MeComponent {
   readonly logError = signal('');
   readonly logs = signal<LogEntry[]>([]);
   // 日志弹窗：按等级筛选；切换时重新请求后端（level=error 为最近 N 条 error，非混合 100 条里筛）
-  readonly logLevelFilter = signal<string>('all');
-  readonly logLevels = signal<string[]>(['debug', 'info', 'warn', 'error']);
+  readonly logLevelFilter = signal<string>('error');
   /** 当前结果条数（服务端已按 level 过滤） */
   readonly logResultCount = computed(() => this.logs().length);
   readonly filteredLogs = computed<LogEntry[]>(() => this.logs());
@@ -62,11 +61,10 @@ export class MeComponent {
     const f = this.logLevelFilter();
     const v = (key: string) => (f === key ? n : 0);
     return [
-      { key: 'all', value: v('all'), label: '全部' },
-      { key: 'debug', value: v('debug'), label: 'DEBUG' },
-      { key: 'info', value: v('info'), label: 'INFO', tone: 'blue' },
-      { key: 'warn', value: v('warn'), label: 'WARN', tone: 'amber' },
       { key: 'error', value: v('error'), label: 'ERROR', tone: 'red' },
+      { key: 'warn', value: v('warn'), label: 'WARN', tone: 'amber' },
+      { key: 'info', value: v('info'), label: 'INFO', tone: 'blue' },
+      { key: 'debug', value: v('debug'), label: 'DEBUG' },
     ];
   });
   readonly updateOptions = signal<string[]>([]);
@@ -256,27 +254,24 @@ export class MeComponent {
 
   openLogs() {
     this.showLogs.set(true);
-    this.logLevelFilter.set('all');
-    this.fetchLogs('all');
+    this.logLevelFilter.set('error');
+    this.fetchLogs('error');
   }
   closeLogs() {
     this.showLogs.set(false);
-    this.logLevelFilter.set('all');
+    this.logLevelFilter.set('error');
     this.logs.set([]);
   }
-  // dc-stats 在再次点击当前 active 项时 emit ''，此时归一回「全部」并重新拉取
   selectLogLevel(key: string) {
-    const next = key || 'all';
-    if (next === this.logLevelFilter() && this.logs().length) return;
-    this.logLevelFilter.set(next);
-    this.fetchLogs(next);
+    if (!key || key === this.logLevelFilter()) return;
+    this.logLevelFilter.set(key);
+    this.fetchLogs(key);
   }
 
   private fetchLogs(level: string) {
     this.loadingLogs.set(true);
     this.logError.set('');
-    const params = new URLSearchParams({ limit: '100' });
-    if (level && level !== 'all') params.set('level', level);
+    const params = new URLSearchParams({ limit: '100', level });
     this.http
       .get<ApiResponse<{ entries: LogEntry[] }>>('/api/logs?' + params.toString())
       .subscribe({

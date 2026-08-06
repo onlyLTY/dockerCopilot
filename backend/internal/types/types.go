@@ -57,7 +57,7 @@ type ComposeProjectValidateReq struct {
 
 type ContainerRenameReq struct {
 	IdReq
-	NewName string `form:"newName" validate:"required"`
+	NewName string `json:"newName" form:"newName" validate:"required"`
 }
 
 type ContainerRestoreReq struct {
@@ -66,8 +66,8 @@ type ContainerRestoreReq struct {
 
 type ContainerUpdateReq struct {
 	IdReq
-	ImageNameAndTag string `form:"imageNameAndTag" validate:"required"`
-	ContainerName   string `form:"containerName,optional"`
+	ImageNameAndTag string `json:"imageNameAndTag,optional" form:"imageNameAndTag,optional"`
+	ContainerName   string `json:"containerName,optional" form:"containerName,optional"`
 }
 
 type DelContainerBackupReq struct {
