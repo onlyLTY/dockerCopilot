@@ -9,13 +9,13 @@ import (
 
 // 常用业务码（与前端约定：HTTP 多为 200，body.code 表示业务结果）。
 const (
-	CodeBadRequest          = 400
-	CodeUnauthorized        = 401
-	CodeNotFound            = 404
-	CodeConflict            = 409
-	CodeDockerUnavailable   = 503
-	CodeInternal            = 500
-	CodeInternalUnhandled   = 50000
+	CodeBadRequest        = 400
+	CodeUnauthorized      = 401
+	CodeNotFound          = 404
+	CodeConflict          = 409
+	CodeDockerUnavailable = 503
+	CodeInternal          = 500
+	CodeInternalUnhandled = 50000
 )
 
 // CodeError 可安全返回给客户端的业务错误。

@@ -18,26 +18,26 @@ func clientMsg(err error, fallback string) string {
 		}
 		return "操作失败"
 	}
-if ce, ok := errorx.AsCodeError(err); ok {
-			if msg := strings.TrimSpace(ce.Msg); msg != "" {
-				return msg
+	if ce, ok := errorx.AsCodeError(err); ok {
+		if msg := strings.TrimSpace(ce.Msg); msg != "" {
+			return msg
+		}
+	}
+	msg := strings.TrimSpace(err.Error())
+	if msg == "" {
+		if fallback != "" {
+			return fallback
+		}
+		return "操作失败"
+	}
+	// 兼容旧 Error() 格式 "Code: 400, Msg: xxx"（若仍有）
+	if strings.HasPrefix(msg, "Code:") {
+		if i := strings.Index(msg, "Msg:"); i >= 0 {
+			inner := strings.TrimSpace(msg[i+4:])
+			if inner != "" && looksClientSafe(inner) {
+				return inner
 			}
 		}
-		msg := strings.TrimSpace(err.Error())
-		if msg == "" {
-			if fallback != "" {
-				return fallback
-			}
-			return "操作失败"
-		}
-		// 兼容旧 Error() 格式 "Code: 400, Msg: xxx"（若仍有）
-		if strings.HasPrefix(msg, "Code:") {
-			if i := strings.Index(msg, "Msg:"); i >= 0 {
-				inner := strings.TrimSpace(msg[i+4:])
-				if inner != "" && looksClientSafe(inner) {
-					return inner
-				}
-			}
 	}
 	if looksClientSafe(msg) {
 		return msg

@@ -19,6 +19,6 @@ func StartHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := container.NewStartLogic(r.Context(), svcCtx)
 		resp, err := l.Start(&req)
-			writeLogicResp(w, r, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }

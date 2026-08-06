@@ -19,6 +19,6 @@ func UpdateHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := container.NewUpdateLogic(r.Context(), svcCtx)
 		resp, err := l.Update(&req)
-			writeLogicResp(w, r, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }

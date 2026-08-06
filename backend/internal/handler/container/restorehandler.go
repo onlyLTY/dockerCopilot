@@ -19,6 +19,6 @@ func RestoreHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := container.NewRestoreLogic(r.Context(), svcCtx)
 		resp, err := l.Restore(&req)
-			writeLogicResp(w, r, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }

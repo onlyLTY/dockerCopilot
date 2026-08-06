@@ -18,6 +18,6 @@ func RestartHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 		l := container.NewRestartLogic(r.Context(), svcCtx)
 		resp, err := l.Restart(&req)
-			writeLogicResp(w, r, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }

@@ -8,7 +8,7 @@ import (
 )
 
 // writeLogicResp 与根包 handler.WriteLogicResp 相同约定，供 compose 子包使用
-//（避免 handler → handler/compose 循环依赖）。
+// （避免 handler → handler/compose 循环依赖）。
 func writeLogicResp(w http.ResponseWriter, r *http.Request, resp *types.Resp, err error) {
 	if err != nil {
 		if resp != nil {

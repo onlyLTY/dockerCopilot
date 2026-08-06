@@ -30,6 +30,6 @@ func DelRestoreHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := container.NewDelRestoreLogic(r.Context(), svcCtx)
 		resp, err := l.DelRestore(&req)
-			writeLogicResp(w, r, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }

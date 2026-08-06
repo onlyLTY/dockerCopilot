@@ -35,18 +35,18 @@ func (l *CheckUpdateLogic) CheckUpdate() (resp *types.Resp, err error) {
 	})
 	svcCtx := l.svcCtx
 	go func() {
-defer func() {
-				if r := recover(); r != nil {
-					logx.Errorf("检查更新 panic: %v", r)
-					svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "检查更新异常", DetailMsg: "检查更新过程发生内部错误，请查看服务日志", IsDone: true})
-				}
-			}()
-			list, err := utiles.GetImagesList(svcCtx)
-			if err != nil {
-				logx.Errorf("检查更新获取镜像列表失败: %v", err)
-				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "获取镜像列表失败", DetailMsg: "获取镜像列表失败", IsDone: true})
-				return
+		defer func() {
+			if r := recover(); r != nil {
+				logx.Errorf("检查更新 panic: %v", r)
+				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "检查更新异常", DetailMsg: "检查更新过程发生内部错误，请查看服务日志", IsDone: true})
 			}
+		}()
+		list, err := utiles.GetImagesList(svcCtx)
+		if err != nil {
+			logx.Errorf("检查更新获取镜像列表失败: %v", err)
+			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "获取镜像列表失败", DetailMsg: "获取镜像列表失败", IsDone: true})
+			return
+		}
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 5, Message: "开始检查", DetailMsg: "", IsDone: false})
 		svcCtx.HubImageInfo.CheckUpdateWithProgress(list, func(done, total int, current string) {
 			pct := 5

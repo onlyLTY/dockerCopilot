@@ -19,6 +19,6 @@ func StopHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := container.NewStopLogic(r.Context(), svcCtx)
 		resp, err := l.Stop(&req)
-			writeLogicResp(w, r, resp, err)
+		writeLogicResp(w, r, resp, err)
 	}
 }

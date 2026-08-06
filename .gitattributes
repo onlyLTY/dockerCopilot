@@ -1,3 +1,24 @@
+# 所有文本文件自动检测行尾，Git 在 checkout 时按平台转换，commit 时统一为 LF
+* text=auto
+
 # 强制 shell 脚本使用 LF 行尾，避免在 Windows 上被转为 CRLF 导致容器内 shebang 失效
 *.sh text eol=lf
-start.sh text eol=lf
+
+# 以下文件类型在 commit 时统一为 LF（Windows 检出时仍为 CRLF，但 Go 工具链需 LF）
+*.go text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.html text eol=lf
+*.scss text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.js text eol=lf
+
+# 二进制文件不做行尾转换
+*.png binary
+*.jpg binary
+*.ico binary
+*.svg binary
