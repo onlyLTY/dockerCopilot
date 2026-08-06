@@ -1,8 +1,3 @@
-:host {
-  display: block;
-  min-width: 0;
-}
-
 .form-select {
   position: relative;
   display: block;
@@ -23,7 +18,10 @@
   color: var(--black);
   padding: 12px 40px 12px 12px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
 }
 
 :host(.compact) .form-select select {
@@ -48,7 +46,9 @@
   color: var(--muted);
   pointer-events: none;
   transform: translateY(-50%);
-  transition: color 0.15s, transform 0.15s;
+  transition:
+    color 0.15s,
+    transform 0.15s;
 }
 
 .form-select:focus-within > dc-icon {

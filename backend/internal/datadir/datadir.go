@@ -1,17 +1,45 @@
 // Package datadir 统一应用数据根目录（备份、图标、设置、任务进度等）。
-// 默认 /data；可用环境变量 DATA_DIR 覆盖，便于本地 go run 与测试。
+// 优先级：环境变量 DATA_DIR > 配置文件 DataDir > 默认 /data。
 package datadir
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
-// Root 返回数据根目录。优先 DATA_DIR，否则 /data。
+var (
+	configRootMu sync.RWMutex
+	configRoot   string // 来自 yaml DataDir；仅当 DATA_DIR 未设时生效
+)
+
+// SetFromConfig 由启动流程在 conf.Load 之后调用，写入 yaml 中的 DataDir。
+// 空字符串表示清除（测试用）；相对路径会按当前工作目录解析为绝对路径。
+func SetFromConfig(dir string) {
+	dir = strings.TrimSpace(dir)
+	if dir != "" {
+		if abs, err := filepath.Abs(dir); err == nil {
+			dir = abs
+		}
+	}
+	configRootMu.Lock()
+	configRoot = dir
+	configRootMu.Unlock()
+}
+
+// Root 返回数据根目录。优先 DATA_DIR，其次 yaml DataDir，否则 /data。
 func Root() string {
 	if d := strings.TrimSpace(os.Getenv("DATA_DIR")); d != "" {
+		if abs, err := filepath.Abs(d); err == nil {
+			return abs
+		}
 		return d
+	}
+	configRootMu.RLock()
+	defer configRootMu.RUnlock()
+	if configRoot != "" {
+		return configRoot
 	}
 	return "/data"
 }

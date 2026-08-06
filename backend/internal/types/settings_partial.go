@@ -7,5 +7,7 @@ type UpdateAppSettingsPartial struct {
 	AutoBackupInterval  *string            `json:"autoBackupInterval,optional"`
 	LogLevel            *string            `json:"logLevel,optional"`
 	Retention           *int               `json:"retention,optional"`
-	Proxy               *ProxySettingsData `json:"proxy,optional"`
+	// HubURLs 非 nil 时更新 Docker Hub 加速源列表（可为空数组，表示清空加速源）。
+	HubURLs *[]string         `json:"hubUrls,optional"`
+	Proxy   *ProxySettingsData `json:"proxy,optional"`
 }

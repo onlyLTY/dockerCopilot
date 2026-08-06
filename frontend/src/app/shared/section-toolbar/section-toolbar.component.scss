@@ -1,0 +1,14 @@
+// 页内小节工具条：小屏换行
+
+@media (max-width: 600px) {
+  .section-toolbar {
+    align-items: flex-start !important;
+    flex-direction: column;
+  }
+  .section-toolbar-actions {
+    width: 100%;
+  }
+  .section-toolbar-actions button {
+    flex: 1;
+  }
+}

@@ -1,1 +1,71 @@
-/* Stats layout and color variants are shared through the global stats classes. */
+// 统计卡片：列数、分隔线、可点击态
+// 窄屏列数与 _responsive.scss 卡片网格同一套内容区断点（@container page）
+
+.stats {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.stats div,
+.stats button {
+  border-right: 1px solid var(--line);
+}
+.stats div:last-child,
+.stats button:last-child {
+  border-right: 0;
+}
+.stats button {
+  appearance: none;
+  background: transparent;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.stats button:hover,
+.stats button:focus-visible,
+.stats button.active {
+  background: var(--blue-soft);
+}
+.stats button.active {
+  color: var(--blue);
+  box-shadow: inset 0 -3px 0 var(--blue);
+}
+.stats button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+
+.stats-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.stats-five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.stats-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.stats-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* 与 _responsive.scss 卡片网格同一套内容区断点（须写在组件内以盖过 encapsulation） */
+@container page (max-width: 1279px) {
+  .stats.stats-four,
+  .stats.stats-five {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container page (max-width: 899px) {
+  .stats,
+  .stats.stats-three,
+  .stats.stats-four,
+  .stats.stats-five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats.stats-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

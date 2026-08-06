@@ -7,27 +7,55 @@ import (
 
 func TestRootDefault(t *testing.T) {
 	t.Setenv("DATA_DIR", "")
+	SetFromConfig("")
+	t.Cleanup(func() { SetFromConfig("") })
 	if Root() != "/data" {
 		t.Fatalf("Root() = %q, want /data", Root())
 	}
 }
 
-func TestRootOverride(t *testing.T) {
+func TestRootEnvOverride(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DATA_DIR", dir)
-	if Root() != dir {
-		t.Fatalf("Root() = %q, want %q", Root(), dir)
+	SetFromConfig(filepath.Join(t.TempDir(), "from-yaml")) // yaml 应被 env 盖住
+	t.Cleanup(func() { SetFromConfig("") })
+
+	got := Root()
+	want, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
 	}
-	wantIcons := filepath.Join(dir, "icon", "icons")
+	if got != want {
+		t.Fatalf("Root() = %q, want %q", got, want)
+	}
+	wantIcons := filepath.Join(want, "icon", "icons")
 	if IconDir() != wantIcons {
 		t.Fatalf("IconDir() = %q, want %q", IconDir(), wantIcons)
 	}
-	wantSettings := filepath.Join(dir, "config", "appSettings.json")
+	wantSettings := filepath.Join(want, "config", "appSettings.json")
 	if AppSettingsPath() != wantSettings {
 		t.Fatalf("AppSettingsPath() = %q, want %q", AppSettingsPath(), wantSettings)
 	}
-	wantLogin := filepath.Join(dir, "config", "loginAttempts.json")
+	wantLogin := filepath.Join(want, "config", "loginAttempts.json")
 	if LoginAttemptsPath() != wantLogin {
 		t.Fatalf("LoginAttemptsPath() = %q, want %q", LoginAttemptsPath(), wantLogin)
+	}
+}
+
+func TestRootFromConfig(t *testing.T) {
+	t.Setenv("DATA_DIR", "")
+	dir := t.TempDir()
+	SetFromConfig(dir)
+	t.Cleanup(func() { SetFromConfig("") })
+
+	want, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if Root() != want {
+		t.Fatalf("Root() = %q, want %q", Root(), want)
+	}
+	if BackupsDir() != filepath.Join(want, "backups") {
+		t.Fatalf("BackupsDir() = %q, want under %q", BackupsDir(), want)
 	}
 }

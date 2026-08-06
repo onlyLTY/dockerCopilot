@@ -1,8 +1,29 @@
 <div class="toast-stack d-flex flex-col items-center gap-10">
-    @for (t of toast.toasts(); track t.id) {
-      <button class="toast d-inline-flex items-start gap-10 py-12 px-16 fs-14" [class.success]="t.kind === 'success'" [class.error]="t.kind === 'error'" [class.info]="t.kind === 'info'" (click)="toast.dismiss(t.id)">
-      <span class="toast-mark d-grid place-items-center fs-12">{{ t.kind === 'success' ? '✓' : t.kind === 'error' ? '✕' : 'ⓘ' }}</span>
-      <span class="toast-text d-flex flex-col gap-3 min-w-0"><strong class="fs-14">{{ t.title }}</strong><span>{{ t.message }}</span></span>
+  @for (t of toast.toasts(); track t.id) {
+    <button
+      class="toast d-inline-flex items-start gap-10 py-12 px-16 fs-14 text-left cursor-pointer border-1 rounded-10 bg-toast-bg text-toast-fg shadow-toast"
+      [class.success]="t.kind === 'success'"
+      [class.error]="t.kind === 'error'"
+      [class.info]="t.kind === 'info'"
+      (click)="toast.dismiss(t.id)"
+    >
+      <span
+        class="d-grid place-items-center fs-12 flex-none w-20 h-20 rounded-50 text-white"
+        [class.bg-green]="t.kind === 'success'"
+        [class.bg-red]="t.kind === 'error'"
+        [class.bg-blue]="t.kind === 'info'"
+        >{{ t.kind === 'success' ? '✓' : t.kind === 'error' ? '✕' : 'ⓘ' }}</span
+      >
+      <span class="d-flex flex-col gap-3 min-w-0 flex-1 break-word">
+        <strong
+          class="fs-14 fw-750"
+          [class.text-green]="t.kind === 'success'"
+          [class.text-red]="t.kind === 'error'"
+          [class.text-blue]="t.kind === 'info'"
+          >{{ t.title }}</strong
+        >
+        <span class="text-muted lh-145">{{ t.message }}</span>
+      </span>
     </button>
   }
 </div>

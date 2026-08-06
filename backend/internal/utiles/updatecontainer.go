@@ -2,16 +2,13 @@ package utiles
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
-	dockerMsgType "github.com/docker/docker/pkg/jsonmessage"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"io"
-	"time"
 )
 
 func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string, imageNameAndTag string, delOldContainer bool, taskID string) error {
@@ -49,19 +46,10 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	oldTaskProgress.Percentage = 10
 	oldTaskProgress.DetailMsg = "正在拉取新镜像"
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
-	reader, err := serviceContext.DockerClient.ImagePull(ctx, imageNameAndTag, image.PullOptions{})
-	if err != nil {
+	if err := PullImageWithTask(ctx, serviceContext, imageNameAndTag, taskID); err != nil {
+		oldTaskProgress, _ = serviceContext.GetProgress(taskID)
 		oldTaskProgress.Message = "拉取镜像失败"
-		oldTaskProgress.DetailMsg = "拉取镜像失败"
-		oldTaskProgress.IsDone = true
-		serviceContext.UpdateProgress(taskID, oldTaskProgress)
-		logx.Errorf("Failed to pull image: %s", err)
-		return err
-	}
-	defer reader.Close()
-	if err := decodePullResp(reader, serviceContext, taskID); err != nil {
-		oldTaskProgress.Message = "拉取镜像失败"
-		oldTaskProgress.DetailMsg = "拉取镜像失败"
+		oldTaskProgress.DetailMsg = err.Error()
 		oldTaskProgress.IsDone = true
 		serviceContext.UpdateProgress(taskID, oldTaskProgress)
 		logx.Errorf("Failed to pull image: %s", err)
@@ -88,7 +76,7 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 		Signal:  signal,
 		Timeout: &timeout,
 	}
-	err = serviceContext.DockerClient.ContainerStop(context.Background(), id, stopOptions)
+	err := serviceContext.DockerClient.ContainerStop(context.Background(), id, stopOptions)
 	if err != nil {
 		oldTaskProgress.Message = "停止容器失败"
 		oldTaskProgress.DetailMsg = "停止容器失败"
@@ -180,54 +168,4 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	oldTaskProgress.IsDone = true
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
 	return nil
-}
-
-func decodePullResp(reader io.Reader, ctx *svc.ServiceContext, taskID string) (err error) {
-	decoder := json.NewDecoder(reader)
-	var oldTaskProgress, result = ctx.GetProgress(taskID)
-	if !result {
-		oldTaskProgress = svc.TaskProgress{
-			Percentage: 0,
-			Name:       "",
-			Message:    "",
-			DetailMsg:  "",
-			IsDone:     false,
-		}
-	}
-	for {
-		var msg dockerMsgType.JSONMessage
-		if err = decoder.Decode(&msg); err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			oldTaskProgress.Message = "拉取镜像失败"
-			oldTaskProgress.DetailMsg = "拉取镜像失败"
-			oldTaskProgress.Percentage = 25
-			oldTaskProgress.IsDone = true
-			ctx.UpdateProgress(taskID, oldTaskProgress)
-			logx.Errorf("Failed to decode pull image response: %s", err)
-			return fmt.Errorf("拉取镜像失败: %w", err)
-		}
-		// Print the progress or error information from the response
-		if msg.Error != nil {
-			oldTaskProgress.Message = "拉取镜像失败"
-			oldTaskProgress.DetailMsg = "拉取镜像失败"
-			oldTaskProgress.Percentage = 25
-			oldTaskProgress.IsDone = true
-			ctx.UpdateProgress(taskID, oldTaskProgress)
-			logx.Errorf("Error: %s", msg.Error)
-			return fmt.Errorf("拉取镜像失败: %w", msg.Error)
-		} else {
-			var formattedMsg string
-			if msg.Progress != nil {
-				formattedMsg = fmt.Sprintf("进度%s: %s", msg.Status, msg.Progress.String())
-			} else {
-				formattedMsg = fmt.Sprintf("进度%s", msg.Status)
-			}
-			oldTaskProgress.DetailMsg = formattedMsg
-			oldTaskProgress.Percentage = 25
-			ctx.UpdateProgress(taskID, oldTaskProgress)
-			logx.Infof("拉取镜像进度\t %s: %s\n", msg.Status, msg.Progress)
-		}
-	}
 }

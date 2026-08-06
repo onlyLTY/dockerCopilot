@@ -82,6 +82,74 @@ func TestRetentionValidation(t *testing.T) {
 	}
 }
 
+func TestHubURLsDefaultAndPersistence(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "appSettings.json")
+	t.Setenv("APP_SETTINGS_PATH", path)
+
+	got := GetHubURLs()
+	if len(got) != len(DefaultHubURLs) {
+		t.Fatalf("expected default hub urls, got %v", got)
+	}
+	for i := range DefaultHubURLs {
+		if got[i] != DefaultHubURLs[i] {
+			t.Fatalf("default hub urls mismatch at %d: got=%q want=%q", i, got[i], DefaultHubURLs[i])
+		}
+	}
+
+	// 归一化：URL→host、大小写、去重保序；带路径/非法协议在校验阶段拒绝
+	saved, err := SetHubURLs([]string{
+		"https://Docker.m.DaoCloud.io/",
+		"docker.1ms.run",
+		"docker.1ms.run",
+		"hub.rat.dev",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect := []string{"docker.m.daocloud.io", "docker.1ms.run", "hub.rat.dev"}
+	if len(saved) != len(expect) {
+		t.Fatalf("saved = %v, want %v", saved, expect)
+	}
+	for i := range expect {
+		if saved[i] != expect[i] {
+			t.Fatalf("saved[%d]=%q want %q", i, saved[i], expect[i])
+		}
+	}
+	if got := GetHubURLs(); len(got) != len(expect) || got[0] != expect[0] {
+		t.Fatalf("GetHubURLs after save = %v, want %v", got, expect)
+	}
+
+	// 允许空列表（用户主动清空加速源）
+	empty, err := SetHubURLs(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(empty) != 0 || len(GetHubURLs()) != 0 {
+		t.Fatalf("empty hub urls not persisted: set=%v get=%v", empty, GetHubURLs())
+	}
+
+	var stored Settings
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(content, &stored); err != nil || !stored.HubURLsConfigured {
+		t.Fatalf("hubUrlsConfigured marker missing: %+v err=%v", stored, err)
+	}
+
+	for _, bad := range [][]string{
+		{"ftp://bad.example"},
+		{"http://user:pass@mirror.example"},
+		{"https://hub.rat.dev/v2/"},
+		{"not a host"},
+	} {
+		if _, err := SetHubURLs(bad); err == nil {
+			t.Fatalf("invalid hub url accepted: %v", bad)
+		}
+	}
+}
+
 func TestProxySettingsPersistenceAndValidation(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "appSettings.json")

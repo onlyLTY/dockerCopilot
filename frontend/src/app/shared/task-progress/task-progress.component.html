@@ -1,24 +1,40 @@
 @if (task(); as t) {
   <div class="modal-backdrop d-grid place-items-center" (click)="close($event)">
-    <section class="modal min-w-0 d-grid modal-content modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <section
+      class="modal min-w-0 d-grid modal-content modal-m h-auto"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
       <dc-modal-heading [title]="t.title" [subtitle]="t.message" (closed)="tasks.closeView()" />
-      <div class="modal-body task-content d-flex flex-col">
-        <div class="task-progress mt-20">
-          <div class="progress-bar" [class.failed]="t.failed" [class.done]="t.isDone && !t.failed">
-            <span class="d-block" [style.width.%]="t.percentage"></span>
+      <div class="modal-body d-flex flex-col min-h-0 overflow-hidden">
+        <div class="mt-20 min-h-0">
+          <div class="h-10 bg-line overflow-hidden rounded-6">
+            <span
+              class="d-block h-full bg-blue transition-width"
+              [class.bg-green]="t.isDone && !t.failed"
+              [class.bg-red]="t.failed"
+              [style.width.%]="t.percentage"
+            ></span>
           </div>
-          <div class="progress-meta d-flex justify-between gap-12 mt-10 fs-12">
-            <span [class.failed]="t.failed">
+          <div class="d-flex justify-between gap-12 mt-10 fs-12 text-black">
+            <span [class.text-red]="t.failed">
               {{ t.failed ? '失败' : t.isDone ? '已完成' : '进行中' }} · {{ t.percentage }}%
             </span>
-            @if (!t.isDone) { <span class="text-muted">后台执行中，可关闭此窗口</span> }
+            @if (!t.isDone) {
+              <span class="text-muted">后台执行中，可关闭此窗口</span>
+            }
           </div>
           @if (t.detailMsg) {
-            <pre class="task-detail mt-16 pt-12 pb-12 px-14">{{ t.detailMsg }}</pre>
+            <pre
+              class="task-detail mt-16 py-12 px-14 min-h-0 max-h-220 overflow-auto text-muted text-pre-wrap break-word bg-page-bg border-1 rounded-8 fs-12 lh-16"
+              >{{ t.detailMsg }}</pre>
           }
         </div>
-        <div class="task-actions d-flex items-center justify-end gap-8 pt-16">
-          <button class="btn text-red bg-secondary-bg gap-4" (click)="remove(t.taskID)"><dc-icon class="icon-14" name="delete"></dc-icon>删除任务</button>
+        <div class="d-flex items-center justify-end gap-8 pt-16">
+          <button class="btn text-red bg-secondary-bg gap-4" (click)="remove(t.taskID)">
+            <dc-icon class="icon-14" name="delete"></dc-icon>删除任务
+          </button>
           <button class="btn text-white bg-blue" (click)="tasks.closeView()">关闭</button>
         </div>
       </div>

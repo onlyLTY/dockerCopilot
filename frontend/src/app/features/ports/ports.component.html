@@ -1,6 +1,8 @@
 <dc-page-heading title="端口" subtitle="查看所有容器使用的端口">
   <div page-heading-actions>
-    <button class="btn text-white bg-blue" (click)="refresh()" title="刷新端口"><dc-icon name="refresh"></dc-icon>刷新</button>
+    <button class="btn text-white bg-blue" (click)="refresh()" title="刷新端口">
+      <dc-icon name="refresh"></dc-icon>刷新
+    </button>
   </div>
 </dc-page-heading>
 
@@ -8,27 +10,56 @@
   <div class="alert warning-alert">⚠ {{ data().warnings.join('；') }}</div>
 }
 @if (data().conflicts.length) {
-  <div class="alert warning-alert">⚠ 发现 {{ data().conflicts.length }} 个端口冲突：{{ data().conflicts.join('、') }}</div>
+  <div class="alert warning-alert">
+    ⚠ 发现 {{ data().conflicts.length }} 个端口冲突：{{ data().conflicts.join('、') }}
+  </div>
 }
 
-<dc-stats [items]="stats()" [columns]="2" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
+<dc-stats
+  [items]="stats()"
+  [columns]="2"
+  [activeKey]="filter()"
+  (selectedChange)="selectFilter($event)"
+></dc-stats>
 
 @if (loading() || error() || !groups().length) {
-  <dc-page-state [loading]="loading()" [error]="error()" [retryable]="!!error()" emptyText="暂无端口使用" (retry)="refresh()"></dc-page-state>
+  <dc-page-state
+    [loading]="loading()"
+    [error]="error()"
+    [retryable]="!!error()"
+    emptyText="暂无端口使用"
+    (retry)="refresh()"
+  ></dc-page-state>
 } @else {
-  <section class="responsive-card-grid resource-grid page-scroll-area d-grid port-grid gap-16 mb-24">
+  <section class="responsive-card-grid resource-grid page-scroll-area d-grid gap-16 mb-24">
     @for (g of groups(); track g.containerName) {
       <dc-resource-card>
         <div resource-card-icon>
-          <img class="resource-icon" [src]="icon(g)" [alt]="g.containerName" (error)="fallback($event)">
+          <img
+            class="resource-icon"
+            [src]="icon(g)"
+            [alt]="g.containerName"
+            (error)="fallback($event)"
+          />
         </div>
         <div resource-card-title class="fs-16">{{ g.containerName }}</div>
         <div resource-card-info class="fs-12 text-muted">
-          <span class="d-block text-ellipsis">{{ g.project ? '项目：' + g.project : '独立容器' }}</span>
+          <span class="d-block text-ellipsis">{{
+            g.project ? '项目：' + g.project : '独立容器'
+          }}</span>
         </div>
-        <div resource-card-content class="port-tags {{ multiPorts(g) ? 'port-tags-grid' : '' }}">
+        <div
+          resource-card-content
+          class="text-left justify-start {{
+            multiPorts(g) ? 'd-grid grid-cols-2-min gap-6' : 'd-flex flex-wrap gap-8'
+          }}"
+        >
           @for (p of g.ports; track $index) {
-            <span class="rounded-7 py-5 px-4 fs-12">{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{ p.protocol.toUpperCase() }}</span>
+            <span class="d-inline-block flex-none text-nowrap rounded-7 py-5 px-4 fs-12"
+              >{{ p.hostPort || '未发布' }} → {{ p.containerPort }}/{{
+                p.protocol.toUpperCase()
+              }}</span
+            >
           }
         </div>
       </dc-resource-card>

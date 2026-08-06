@@ -1,13 +1,41 @@
-<section class="stats d-grid compact-stats" [class.stats-two]="columns() === 2" [class.stats-three]="columns() === 3" [class.stats-four]="columns() === 4" [class.stats-five]="columns() === 5">
+<section
+  class="stats d-grid shadow-md bg-white border-1 overflow-hidden mb-20 rounded-12"
+  [class.stats-two]="columns() === 2"
+  [class.stats-three]="columns() === 3"
+  [class.stats-four]="columns() === 4"
+  [class.stats-five]="columns() === 5"
+>
   @for (item of items(); track item.key || item.label) {
     @if (item.key) {
-      <button type="button" class="stat-item d-flex items-baseline justify-center gap-8" [class.green]="item.tone === 'green'" [class.amber]="item.tone === 'amber'" [class.violet]="item.tone === 'violet'" [class.red]="item.tone === 'red'" [class.blue]="item.tone === 'blue'" [class.active]="activeKey() === item.key" [attr.aria-pressed]="activeKey() === item.key" (click)="select(item)">
-        <strong class="d-block fs-20">{{ item.value }}</strong>
+      <button
+        type="button"
+        class="d-flex items-baseline justify-center gap-8 py-12 px-16 text-center"
+        [class.active]="activeKey() === item.key"
+        [attr.aria-pressed]="activeKey() === item.key"
+        (click)="select(item)"
+      >
+        <strong
+          class="d-block fs-20"
+          [class.text-green]="item.tone === 'green'"
+          [class.text-amber]="item.tone === 'amber'"
+          [class.text-purple]="item.tone === 'violet'"
+          [class.text-red]="item.tone === 'red'"
+          [class.text-blue]="!item.tone || item.tone === 'blue'"
+          >{{ item.value }}</strong
+        >
         <span class="d-block mt-0 fs-12 text-muted">{{ item.label }}</span>
       </button>
     } @else {
-      <div class="stat-item d-flex items-baseline justify-center gap-8" [class.green]="item.tone === 'green'" [class.amber]="item.tone === 'amber'" [class.violet]="item.tone === 'violet'" [class.red]="item.tone === 'red'" [class.blue]="item.tone === 'blue'">
-        <strong class="d-block fs-20">{{ item.value }}</strong>
+      <div class="d-flex items-baseline justify-center gap-8 py-12 px-16 text-center">
+        <strong
+          class="d-block fs-20"
+          [class.text-green]="item.tone === 'green'"
+          [class.text-amber]="item.tone === 'amber'"
+          [class.text-purple]="item.tone === 'violet'"
+          [class.text-red]="item.tone === 'red'"
+          [class.text-blue]="!item.tone || item.tone === 'blue'"
+          >{{ item.value }}</strong
+        >
         <span class="d-block mt-0 fs-12 text-muted">{{ item.label }}</span>
       </div>
     }

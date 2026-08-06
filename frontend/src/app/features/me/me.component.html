@@ -1,45 +1,82 @@
 <dc-page-heading title="关于" subtitle="项目档案、版本信息和应用设置">
   <div page-heading-actions>
-    <button class="btn text-white bg-blue" (click)="openSettings()"><dc-icon name="settings"></dc-icon>设置</button>
-    <button class="btn text-white bg-blue" (click)="openLogs()"><dc-icon name="tasks"></dc-icon>日志</button>
+    <button class="btn text-white bg-blue" (click)="openSettings()">
+      <dc-icon name="settings"></dc-icon>设置
+    </button>
+    <button class="btn text-white bg-blue" (click)="openLogs()">
+      <dc-icon name="tasks"></dc-icon>日志
+    </button>
   </div>
 </dc-page-heading>
 
 <dc-stats [items]="stats()" [columns]="4"></dc-stats>
 
-<section class="about-grid d-grid gap-20">
+<section class="about-grid d-grid grid-cols-2 gap-20">
   <article class="panel p-16">
     <h3>项目信息</h3>
-    <span class="text-muted fs-14 my-6">Docker Copilot是一个便捷的docker容器管理工具，现已支持所有平台</span>
-    <ol class="feature-list">
-      <li class="feature-item">指定镜像/tag更新容器</li>
-      <li class="feature-item">启动、停止、重启、重命名容器</li>
-      <li class="feature-item">删除无 TAG/未使用镜像</li>
-      <li class="feature-item">更新/部署进度查看</li>
-      <li class="feature-item">备份/恢复容器设置</li>
-      <li class="feature-item">Compose 部署容器</li>
-      <li class="feature-item">Compose 文件查看</li>
-      <li class="feature-item">端口查看</li>
+    <span class="text-muted fs-14 my-6"
+      >Docker Copilot是一个便捷的docker容器管理工具，现已支持所有平台</span
+    >
+    <ol class="feature-list d-grid grid-cols-2 gap-8 m-0 mt-16 mb-24 p-0">
+      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+        指定镜像/tag更新容器
+      </li>
+      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+        启动、停止、重启、重命名容器
+      </li>
+      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+        删除无 TAG/未使用镜像
+      </li>
+      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+        更新/部署进度查看
+      </li>
+      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+        备份/恢复容器设置
+      </li>
+      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+        Compose 部署容器
+      </li>
+      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+        Compose 文件查看
+      </li>
+      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+        端口查看
+      </li>
     </ol>
 
     <h3>反馈与建议</h3>
-      <span class="text-muted fs-14 my-6">在项目使用中遇到 bug 或想要提建议？欢迎在<a href="https://github.com/onlyLTY/dockerCopilot/issues" target="_blank" rel="noreferrer">GitHub Issues</a>提出，或发送邮件至<a href="onlylty@lty.wiki" target="_blank" rel="noreferrer">onlylty@lty.wiki</a>。期待您的反馈！</span>
+    <span class="text-muted fs-14 my-6"
+      >在项目使用中遇到 bug 或想要提建议？欢迎在<a
+        href="https://github.com/onlyLTY/dockerCopilot/issues"
+        target="_blank"
+        rel="noreferrer"
+        >GitHub Issues</a
+      >提出，或发送邮件至<a href="onlylty@lty.wiki" target="_blank" rel="noreferrer"
+        >onlylty@lty.wiki</a
+      >。期待您的反馈！</span
+    >
   </article>
 
   <article class="panel p-16">
     <h3>支持项目</h3>
-    <span class="text-muted fs-14 my-6">如果您用的愉快的话，可以请我喝一瓶快乐水吗？您的支持是我持续维护项目的动力！</span>
-    <div class="support-grid d-grid gap-16 mt-20">
-      <div class="support-payment d-grid place-items-center gap-8 p-16 rounded-8">
+    <span class="text-muted fs-14 my-6"
+      >如果您用的愉快的话，可以请我喝一瓶快乐水吗？您的支持是我持续维护项目的动力！</span
+    >
+    <div class="support-grid d-grid grid-cols-2 gap-16 mt-20">
+      <div class="d-grid place-items-center gap-8 p-16 rounded-8 min-w-0">
         <div class="text-muted fs-12">微信支付</div>
-        <div class="support-qr d-grid place-items-center border-1 rounded-8">
-          <img class="support-qr-image" src="assets/images/wechat.jpg" alt="微信二维码">
+        <div
+          class="support-qr d-grid place-items-center border-1 rounded-8 overflow-hidden max-w-full"
+        >
+          <img class="d-block w-full h-auto" src="assets/images/wechat.jpg" alt="微信二维码" />
         </div>
       </div>
-      <div class="support-payment d-grid place-items-center gap-8 p-16 rounded-8">
+      <div class="d-grid place-items-center gap-8 p-16 rounded-8 min-w-0">
         <div class="text-muted fs-12">支付宝支付</div>
-        <div class="support-qr d-grid place-items-center border-1 rounded-8">
-          <img class="support-qr-image" src="assets/images/alipay.jpg" alt="支付宝二维码">
+        <div
+          class="support-qr d-grid place-items-center border-1 rounded-8 overflow-hidden max-w-full"
+        >
+          <img class="d-block w-full h-auto" src="assets/images/alipay.jpg" alt="支付宝二维码" />
         </div>
       </div>
     </div>
@@ -47,45 +84,198 @@
 </section>
 
 @if (showSettings()) {
-  <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeSettings()">
-    <section class="modal min-w-0 d-grid modal-form modal-settings" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <dc-modal-heading title="应用设置" subtitle="调整后台任务、备份和日志输出。" (closed)="closeSettings()" />
+  <div
+    class="modal-backdrop d-grid place-items-center"
+    (click)="$event.target === $event.currentTarget && closeSettings()"
+  >
+    <section
+      class="modal min-w-0 d-grid modal-form modal-settings"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <dc-modal-heading
+        title="应用设置"
+        subtitle="调整后台任务、备份和日志输出。"
+        (closed)="closeSettings()"
+      />
       <div class="modal-body">
-        <div class="settings-grid">
-          <label class="form-field d-block mt-20 fs-12">更新检查频率<dc-form-select class="d-block mt-8" [options]="updateSelectOptions()" [(ngModel)]="updateDraft"></dc-form-select></label>
-          <label class="form-field d-block mt-20 fs-12">自动备份频率<dc-form-select class="d-block mt-8" [options]="backupSelectOptions()" [(ngModel)]="backupDraft"></dc-form-select></label>
-          <label class="form-field d-block mt-20 fs-12">备份保留数量<input class="d-block mt-8 py-12 px-12" type="number" min="1" max="100" [(ngModel)]="retentionDraft"><span class="text-muted d-block mt-8 p-0 fs-12">JSON 和 YAML 分别保留最近的备份</span></label>
-          <label class="form-field d-block mt-20 fs-12">日志级别<dc-form-select class="d-block mt-8" [options]="logSelectOptions()" [(ngModel)]="logDraft"></dc-form-select></label>
+        <div class="settings-grid d-grid grid-cols-4 gap-20">
+          <label class="form-field d-block mt-20 fs-12"
+            >更新检查频率<dc-form-select
+              class="d-block mt-8"
+              [options]="updateSelectOptions()"
+              [(ngModel)]="updateDraft"
+            ></dc-form-select
+          ></label>
+          <label class="form-field d-block mt-20 fs-12"
+            >自动备份频率<dc-form-select
+              class="d-block mt-8"
+              [options]="backupSelectOptions()"
+              [(ngModel)]="backupDraft"
+            ></dc-form-select
+          ></label>
+          <label class="form-field d-block mt-20 fs-12" title="JSON 和 YAML 分别保留最近的备份"
+            >备份保留数量<input
+              class="field-control d-block mt-8 py-12 px-12"
+              type="number"
+              min="1"
+              max="100"
+              [(ngModel)]="retentionDraft"
+              title="JSON 和 YAML 分别保留最近的备份"
+          /></label>
+          <label class="form-field d-block mt-20 fs-12"
+            >日志级别<dc-form-select
+              class="d-block mt-8"
+              [options]="logSelectOptions()"
+              [(ngModel)]="logDraft"
+            ></dc-form-select
+          ></label>
         </div>
-        <dc-form-expansion class="proxy-panel mt-20" title="代理设置" description="代理设置保存后需要重启DC服务才能生效">
-          <label class="form-field d-block mt-20 fs-12">GitHub 地址前缀代理<input class="d-block mt-8 py-12 px-12" type="url" [(ngModel)]="proxyDraft.githubProxy" placeholder="例如 https://github-proxy.example/" autocomplete="off"><span class="text-muted d-block mt-8 p-0 fs-10">用于版本检查和程序更新地址拼接，可留空。</span></label>
+        <dc-form-expansion
+          class="mt-20"
+          title="Docker加速源"
+          description="用于官方镜像的更新检查，以及本应用内的更新/恢复/Compose 拉取"
+        >
+          <div expansionActions class="d-flex flex-wrap gap-10">
+            <button type="button" class="btn text-white bg-blue" (click)="addHubUrl()">添加</button>
+            <button type="button" class="btn text-white bg-blue" (click)="resetHubUrls()">
+              恢复默认
+            </button>
+          </div>
+          <div class="d-grid gap-10 mt-12">
+            @for (item of hubUrlsDraft; track trackHubUrl($index); let i = $index) {
+              <div class="hub-url-row d-flex items-center gap-10">
+                <span class="hub-url-index text-muted fs-12 text-right flex-none">{{ i + 1 }}</span>
+                <input
+                  class="field-control flex-1 min-w-0 py-12 px-12"
+                  type="text"
+                  [ngModel]="item"
+                  (ngModelChange)="updateHubUrl(i, $event)"
+                  placeholder="例如 docker.m.daocloud.io"
+                  autocomplete="off"
+                />
+                <button
+                  type="button"
+                  class="btn text-secondary-text bg-secondary-bg"
+                  (click)="removeHubUrl(i)"
+                  title="删除"
+                >
+                  删除
+                </button>
+              </div>
+            }
+            @if (!hubUrlsDraft.length) {
+              <p class="text-muted fs-12 m-0">当前未配置加速源，检查更新与拉取时仅尝试官方源。</p>
+            }
+          </div>
+        </dc-form-expansion>
+        <dc-form-expansion
+          class="mt-20"
+          title="代理设置"
+          description="代理设置保存后需要重启DC服务才能生效"
+        >
+          <label
+            class="form-field d-block mt-20 fs-12"
+            title="用于版本检查和程序更新地址拼接，可留空。"
+            >GitHub 地址前缀代理<input
+              class="field-control d-block mt-8 py-12 px-12"
+              type="url"
+              [(ngModel)]="proxyDraft.githubProxy"
+              placeholder="例如 https://github-proxy.example/"
+              autocomplete="off"
+              title="用于版本检查和程序更新地址拼接，可留空。"
+          /></label>
           <label class="form-field d-block mt-20 fs-12">
             HTTP 代理
-            <input class="d-block mt-8 py-12 px-12" type="url" [(ngModel)]="proxyDraft.HTTP_PROXY" placeholder="例如 http://127.0.0.1:7890" autocomplete="off">
+            <input
+              class="field-control d-block mt-8 py-12 px-12"
+              type="url"
+              [(ngModel)]="proxyDraft.HTTP_PROXY"
+              placeholder="例如 http://127.0.0.1:7890"
+              autocomplete="off"
+            />
           </label>
-          <label class="form-field d-block mt-20 fs-12">HTTPS 代理<input class="d-block mt-8 py-12 px-12" type="url" [(ngModel)]="proxyDraft.HTTPS_PROXY" placeholder="例如 http://127.0.0.1:7890" autocomplete="off"></label>
-          <label class="form-field d-block mt-20 fs-12">不使用代理的地址<input class="d-block mt-8 py-12 px-12" type="text" [(ngModel)]="proxyDraft.NO_PROXY" placeholder="例如 localhost,127.0.0.1,::1" autocomplete="off"></label>
+          <label class="form-field d-block mt-20 fs-12"
+            >HTTPS 代理<input
+              class="field-control d-block mt-8 py-12 px-12"
+              type="url"
+              [(ngModel)]="proxyDraft.HTTPS_PROXY"
+              placeholder="例如 http://127.0.0.1:7890"
+              autocomplete="off"
+          /></label>
+          <label class="form-field d-block mt-20 fs-12"
+            >不使用代理的地址<input
+              class="field-control d-block mt-8 py-12 px-12"
+              type="text"
+              [(ngModel)]="proxyDraft.NO_PROXY"
+              placeholder="例如 localhost,127.0.0.1,::1"
+              autocomplete="off"
+          /></label>
         </dc-form-expansion>
       </div>
-      <div class="modal-actions d-flex justify-end gap-10 pt-18"><button class="btn text-secondary-text bg-secondary-bg" (click)="closeSettings()">取消</button><button class="btn text-white bg-blue" [disabled]="saving()" (click)="saveSettings()">{{ saving() ? '保存中…' : '保存设置' }}</button></div>
+      <div class="modal-actions d-flex justify-end gap-10 pt-18">
+        <button class="btn text-secondary-text bg-secondary-bg" (click)="closeSettings()">
+          取消</button
+        ><button class="btn text-white bg-blue" [disabled]="saving()" (click)="saveSettings()">
+          {{ saving() ? '保存中…' : '保存设置' }}
+        </button>
+      </div>
     </section>
   </div>
 }
 
 @if (showLogs()) {
-  <div class="modal-backdrop d-grid place-items-center" (click)="$event.target === $event.currentTarget && closeLogs()">
-    <section class="modal min-w-0 d-grid modal-content modal-xl" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <dc-modal-heading title="日志" subtitle="最近最多 100 条；切换级别会重新向服务端按级别查询" (closed)="closeLogs()" />
+  <div
+    class="modal-backdrop d-grid place-items-center"
+    (click)="$event.target === $event.currentTarget && closeLogs()"
+  >
+    <section
+      class="modal min-w-0 d-grid modal-content modal-xl h-auto"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <dc-modal-heading
+        title="日志"
+        subtitle="最近最多 100 条；切换级别会重新向服务端按级别查询"
+        (closed)="closeLogs()"
+      />
       <div class="modal-body">
-        @if (loadingLogs()) { <p class="text-muted">读取中…</p> }
-        @if (logError()) { <p class="message error">{{ logError() }}</p> }
+        @if (loadingLogs()) {
+          <p class="text-muted">读取中…</p>
+        }
+        @if (logError()) {
+          <p class="message error text-red">{{ logError() }}</p>
+        }
         @if (!loadingLogs() && !logError()) {
-          <dc-stats [items]="logLevelStats()" [columns]="5" [activeKey]="logLevelFilter()" (selectedChange)="selectLogLevel($event)"></dc-stats>
-          <div class="log-list">
-          @for (entry of filteredLogs(); track $index) {
-            <article class="log-entry py-14"><div class="log-meta d-flex items-center gap-9"><span class="log-level" [class]="'level-' + entry.level">{{ entry.level.toUpperCase() }}</span><time class="d-block fs-12">{{ entry.timestamp }}</time></div><p class="m-0 mt-7 fs-12">{{ entry.message }}</p></article>
-          }
-          @if (!filteredLogs().length) { <p class="text-muted">暂无日志</p> }
+          <dc-stats
+            [items]="logLevelStats()"
+            [columns]="5"
+            [activeKey]="logLevelFilter()"
+            (selectedChange)="selectLogLevel($event)"
+          ></dc-stats>
+          <div class="min-h-0 h-full overflow-y-auto">
+            @for (entry of filteredLogs(); track $index) {
+              <article class="py-14 border-b-1">
+                <div class="d-flex items-center gap-9">
+                  <span
+                    class="log-level fw-750 letter-wide"
+                    [class.text-muted]="entry.level === 'debug'"
+                    [class.text-blue]="entry.level === 'info'"
+                    [class.text-amber]="entry.level === 'warn'"
+                    [class.text-red]="entry.level === 'error'"
+                    >{{ entry.level.toUpperCase() }}</span
+                  ><time class="d-block fs-12 text-muted">{{ entry.timestamp }}</time>
+                </div>
+                <p class="m-0 mt-7 fs-12 text-black text-pre-wrap break-word">
+                  {{ entry.message }}
+                </p>
+              </article>
+            }
+            @if (!filteredLogs().length) {
+              <p class="text-muted">暂无日志</p>
+            }
           </div>
         }
       </div>

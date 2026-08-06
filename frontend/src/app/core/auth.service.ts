@@ -2,8 +2,14 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
-interface ApiResponse<T> { code: number; msg: string; data: T; }
-interface LoginData { jwt: string; }
+interface ApiResponse<T> {
+  code: number;
+  msg: string;
+  data: T;
+}
+interface LoginData {
+  jwt: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -26,5 +32,7 @@ export class AuthService {
     localStorage.removeItem('docker-copilot-token');
     this.authenticated.set(false);
   }
-  isAuthenticated(): boolean { return this.authenticated(); }
+  isAuthenticated(): boolean {
+    return this.authenticated();
+  }
 }

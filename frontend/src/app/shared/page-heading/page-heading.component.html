@@ -1,11 +1,11 @@
-<section class="page-heading d-flex items-end justify-between gap-20">
-  <div class="page-heading-copy min-w-0">
-    <h1 class="m-0">{{ title() }}</h1>
+<section class="page-heading d-flex items-end justify-between gap-20 py-16">
+  <div class="min-w-0">
+    <h1 class="m-0 text-black letter-tight">{{ title() }}</h1>
     @if (subtitle()) {
-      <span class="subtitle mt-7">{{ subtitle() }}</span>
+      <span class="d-block mt-7 text-muted">{{ subtitle() }}</span>
     }
   </div>
-  <div class="heading-actions d-flex items-center justify-end gap-8">
+  <div class="heading-actions d-flex items-center justify-end flex-wrap flex-none gap-8">
     <ng-content select="[page-heading-actions]"></ng-content>
   </div>
 </section>

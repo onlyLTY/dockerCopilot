@@ -1,0 +1,36 @@
+// 轻提示：定位、入场动画、语义边框
+
+.toast-stack {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--layer-toast);
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  width: min(520px, 90vw);
+  animation: toast-in 0.18s ease-out;
+}
+.toast.success {
+  border-color: color-mix(in srgb, var(--green) 28%, transparent);
+}
+.toast.error {
+  border-color: color-mix(in srgb, var(--red) 28%, transparent);
+}
+.toast.info {
+  border-color: color-mix(in srgb, var(--blue) 28%, transparent);
+}
+/* 语义色已在模板用 bg/text 工具类表达；这里只保留 soft border */
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -9,16 +9,16 @@ import { ToastService } from './toast.service';
 /** 单个任务的进度快照 */
 export interface TaskItem {
   taskID: string;
-  title: string;          // 展示用标题，如 “更新 nginx”“恢复 backup-2026-07-28”
-  percentage: number;     // 0-100
-  message: string;        // 当前阶段信息
-  detailMsg: string;      // 详细信息
-  isDone: boolean;        // 是否结束（成功或失败）
-  failed: boolean;        // 是否失败（isDone 且百分比未达成或消息含失败）
-  refresh: boolean;       // 完成后是否需要联动刷新资源缓存
-  createdAt: number;      // 创建时间戳，用于排序/清理
-  updatedAt: number;      // 最近一次进度更新时间
-  resourceID?: string;    // 关联资源 ID，例如容器更新对应的容器 ID
+  title: string; // 展示用标题，如 “更新 nginx”“恢复 backup-2026-07-28”
+  percentage: number; // 0-100
+  message: string; // 当前阶段信息
+  detailMsg: string; // 详细信息
+  isDone: boolean; // 是否结束（成功或失败）
+  failed: boolean; // 是否失败（isDone 且百分比未达成或消息含失败）
+  refresh: boolean; // 完成后是否需要联动刷新资源缓存
+  createdAt: number; // 创建时间戳，用于排序/清理
+  updatedAt: number; // 最近一次进度更新时间
+  resourceID?: string; // 关联资源 ID，例如容器更新对应的容器 ID
 }
 
 /** 后端 /api/progress/:taskid 的 data 结构 */
@@ -40,7 +40,7 @@ interface ProgressListResponse {
 }
 
 const STORAGE_KEY = 'dc-tasks';
-const POLL_INTERVAL = 1500;   // 批量轮询间隔（毫秒）
+const POLL_INTERVAL = 1500; // 批量轮询间隔（毫秒）
 const DONE_KEEP = 60 * 60 * 1000; // 已完成任务保留 1 小时后可被清理
 
 /**
@@ -78,8 +78,23 @@ export class TaskService {
     if (!taskID) return;
     const now = Date.now();
     const existing = this.tasks().find(t => t.taskID === taskID);
-    if (existing) { this.viewing.set(taskID); return; }
-    const item: TaskItem = { taskID, title, percentage: 0, message: '任务已提交', detailMsg: '', isDone: false, failed: false, refresh, createdAt: now, updatedAt: now, resourceID };
+    if (existing) {
+      this.viewing.set(taskID);
+      return;
+    }
+    const item: TaskItem = {
+      taskID,
+      title,
+      percentage: 0,
+      message: '任务已提交',
+      detailMsg: '',
+      isDone: false,
+      failed: false,
+      refresh,
+      createdAt: now,
+      updatedAt: now,
+      resourceID,
+    };
     this.tasks.update(list => [item, ...list]);
     this.persist();
     this.viewing.set(taskID);
@@ -96,7 +111,10 @@ export class TaskService {
         const local = new Map(this.tasks().map(item => [item.taskID, item]));
         const merged = response.data.map(progress => {
           const existing = local.get(progress.taskID);
-          const serverUpdated = typeof progress.updatedAt === 'number' && progress.updatedAt > 0 ? progress.updatedAt : now;
+          const serverUpdated =
+            typeof progress.updatedAt === 'number' && progress.updatedAt > 0
+              ? progress.updatedAt
+              : now;
           if (existing) {
             local.delete(progress.taskID);
             return {
@@ -105,7 +123,9 @@ export class TaskService {
               message: progress.message || existing.message,
               detailMsg: progress.detailMsg || existing.detailMsg,
               isDone: progress.isDone,
-              failed: progress.isDone && (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
+              failed:
+                progress.isDone &&
+                (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
               updatedAt: Math.max(existing.updatedAt || 0, serverUpdated),
             };
           }
@@ -116,7 +136,9 @@ export class TaskService {
             message: progress.message || '任务已恢复',
             detailMsg: progress.detailMsg || '',
             isDone: progress.isDone,
-            failed: progress.isDone && (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
+            failed:
+              progress.isDone &&
+              (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
             refresh: false,
             createdAt: serverUpdated,
             updatedAt: serverUpdated,
@@ -126,14 +148,20 @@ export class TaskService {
         this.persist();
         if (this.tasks().some(item => !item.isDone)) this.scheduleBatch(true);
       },
-      error: () => { this.persistedLoaded = false; },
+      error: () => {
+        this.persistedLoaded = false;
+      },
     });
   }
 
   /** 打开某个任务的进度弹窗 */
-  view(taskID: string): void { this.viewing.set(taskID); }
+  view(taskID: string): void {
+    this.viewing.set(taskID);
+  }
   /** 关闭进度弹窗（任务继续在后台轮询） */
-  closeView(): void { this.viewing.set(''); }
+  closeView(): void {
+    this.viewing.set('');
+  }
 
   /** 删除单个任务（停止其轮询） */
   remove(taskID: string): void {
@@ -156,7 +184,8 @@ export class TaskService {
   /** 清除已完成的任务，保留进行中的 */
   clearDone(): void {
     this.tasks.update(list => list.filter(t => !t.isDone));
-    if (this.viewing() && !this.tasks().some(t => t.taskID === this.viewing())) this.viewing.set('');
+    if (this.viewing() && !this.tasks().some(t => t.taskID === this.viewing()))
+      this.viewing.set('');
     this.persist();
     if (!this.tasks().some(t => !t.isDone)) this.stopBatch();
   }
@@ -212,59 +241,90 @@ export class TaskService {
           }
         } else {
           // list 失败时退化为逐个拉取（最多 3 个并发感，串行即可保持简单）
-          this.pollActiveIndividually(active.map(t => t.taskID), finish);
+          this.pollActiveIndividually(
+            active.map(t => t.taskID),
+            finish,
+          );
           return;
         }
         finish();
       },
       error: () => {
-        this.pollActiveIndividually(active.map(t => t.taskID), finish);
+        this.pollActiveIndividually(
+          active.map(t => t.taskID),
+          finish,
+        );
       },
     });
   }
 
   private pollActiveIndividually(ids: string[], done: () => void): void {
     let pending = ids.length;
-    if (!pending) { done(); return; }
+    if (!pending) {
+      done();
+      return;
+    }
     const step = () => {
       pending--;
       if (pending <= 0) done();
     };
     for (const taskID of ids) {
-      this.http.get<ApiResponse<ProgressData>>('/api/progress/' + encodeURIComponent(taskID)).subscribe({
-        next: r => {
-          if (r.code !== 200 || !r.data) this.markUnknown(taskID, r.msg);
-          else {
-            this.unknownCounts.delete(taskID);
-            this.apply(taskID, r.data);
-          }
-          step();
-        },
-        error: () => step(),
-      });
+      this.http
+        .get<ApiResponse<ProgressData>>('/api/progress/' + encodeURIComponent(taskID))
+        .subscribe({
+          next: r => {
+            if (r.code !== 200 || !r.data) this.markUnknown(taskID, r.msg);
+            else {
+              this.unknownCounts.delete(taskID);
+              this.apply(taskID, r.data);
+            }
+            step();
+          },
+          error: () => step(),
+        });
     }
   }
 
   private apply(taskID: string, d: ProgressData): void {
-    let doneNow = false; let refreshNeeded = false; let failedNow = false; let failureTitle = ''; let failureMessage = '';
-    this.tasks.update(list => list.map(t => {
-      if (t.taskID !== taskID || t.isDone) return t;
-      const failed = d.isDone && (d.percentage < 100 || /失败|错误|error|fail/i.test(d.message || ''));
-      if (d.isDone) {
-        doneNow = true;
-        refreshNeeded = t.refresh;
-        failedNow = failed;
-        failureTitle = d.name || t.title;
-        failureMessage = d.detailMsg || d.message || '任务执行失败';
-      }
-      const updatedAt = typeof d.updatedAt === 'number' && d.updatedAt > 0 ? d.updatedAt : Date.now();
-      return { ...t, percentage: d.percentage, message: d.message || t.message, detailMsg: d.detailMsg || '', isDone: d.isDone, failed, updatedAt };
-    }));
+    let doneNow = false;
+    let refreshNeeded = false;
+    let failedNow = false;
+    let failureTitle = '';
+    let failureMessage = '';
+    this.tasks.update(list =>
+      list.map(t => {
+        if (t.taskID !== taskID || t.isDone) return t;
+        const failed =
+          d.isDone && (d.percentage < 100 || /失败|错误|error|fail/i.test(d.message || ''));
+        if (d.isDone) {
+          doneNow = true;
+          refreshNeeded = t.refresh;
+          failedNow = failed;
+          failureTitle = d.name || t.title;
+          failureMessage = d.detailMsg || d.message || '任务执行失败';
+        }
+        const updatedAt =
+          typeof d.updatedAt === 'number' && d.updatedAt > 0 ? d.updatedAt : Date.now();
+        return {
+          ...t,
+          percentage: d.percentage,
+          message: d.message || t.message,
+          detailMsg: d.detailMsg || '',
+          isDone: d.isDone,
+          failed,
+          updatedAt,
+        };
+      }),
+    );
     if (doneNow) {
       this.unknownCounts.delete(taskID);
       if (failedNow) this.toast.error(failureTitle || '任务失败', failureMessage);
       if (refreshNeeded) this.bus.refresh(['containers', 'ports', 'images', 'compose']);
-      this.completed.next({ taskID, resourceID: this.tasks().find(t => t.taskID === taskID)?.resourceID, refresh: refreshNeeded });
+      this.completed.next({
+        taskID,
+        resourceID: this.tasks().find(t => t.taskID === taskID)?.resourceID,
+        refresh: refreshNeeded,
+      });
     }
     this.persist();
   }
@@ -274,15 +334,28 @@ export class TaskService {
     this.unknownCounts.set(taskID, attempts);
     if (attempts < 4) return;
     let changed = false;
-    this.tasks.update(list => list.map(t => {
-      if (t.taskID !== taskID || t.isDone) return t;
-      changed = true;
-      return { ...t, isDone: true, failed: true, message: msg || '任务不存在或已过期', detailMsg: msg || '', updatedAt: Date.now() };
-    }));
+    this.tasks.update(list =>
+      list.map(t => {
+        if (t.taskID !== taskID || t.isDone) return t;
+        changed = true;
+        return {
+          ...t,
+          isDone: true,
+          failed: true,
+          message: msg || '任务不存在或已过期',
+          detailMsg: msg || '',
+          updatedAt: Date.now(),
+        };
+      }),
+    );
     this.unknownCounts.delete(taskID);
     if (changed) {
       this.toast.error('任务失败', msg || '任务不存在或已过期');
-      this.completed.next({ taskID, resourceID: this.tasks().find(t => t.taskID === taskID)?.resourceID, refresh: false });
+      this.completed.next({
+        taskID,
+        resourceID: this.tasks().find(t => t.taskID === taskID)?.resourceID,
+        refresh: false,
+      });
     }
     this.persist();
   }
@@ -292,7 +365,9 @@ export class TaskService {
       const now = Date.now();
       const keep = this.tasks().filter(t => !t.isDone || now - t.updatedAt < DONE_KEEP);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(keep));
-    } catch { /* localStorage 不可用则忽略 */ }
+    } catch {
+      /* localStorage 不可用则忽略 */
+    }
   }
 
   private restore(): TaskItem[] {
@@ -301,6 +376,8 @@ export class TaskService {
       if (!raw) return [];
       const list = JSON.parse(raw) as TaskItem[];
       return Array.isArray(list) ? list : [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   }
 }

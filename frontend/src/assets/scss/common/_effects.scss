@@ -1,0 +1,58 @@
+// 阴影、表单控件、文本辅助等可复用效果工具类
+
+/* ===== 阴影 ===== */
+.shadow-none {
+  box-shadow: none !important;
+}
+.shadow-sm {
+  box-shadow: 0 8px 20px var(--shadow) !important;
+}
+.shadow-md {
+  box-shadow: 0 12px 24px var(--shadow) !important;
+}
+.shadow-lg {
+  box-shadow: 0 18px 45px var(--shadow) !important;
+}
+.shadow-panel {
+  box-shadow: 0 9px 22px var(--shadow) !important;
+}
+.shadow-modal {
+  box-shadow: 0 24px 70px var(--shadow-modal) !important;
+}
+.shadow-toast {
+  box-shadow: 0 12px 30px var(--shadow) !important;
+}
+
+/* ===== 表单控件（input / textarea / 类输入框） ===== */
+.field-control {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  outline: 0;
+  background: var(--field-bg);
+  color: var(--black);
+}
+.field-control:focus,
+.field-control:focus-visible {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+/* ===== 文本辅助 ===== */
+.break-word {
+  word-break: break-word !important;
+}
+.overflow-wrap {
+  overflow-wrap: anywhere !important;
+}
+.lh-125 {
+  line-height: 1.25 !important;
+}
+.lh-135 {
+  line-height: 1.35 !important;
+}
+
+/* 无数字 rounded：用于状态徽标等小圆角 pill */
+.rounded {
+  border-radius: 9999px !important;
+}

@@ -3,7 +3,8 @@
     [value]="value"
     [disabled]="disabled() || controlDisabled"
     (change)="change($event)"
-    (blur)="blur()">
+    (blur)="blur()"
+  >
     @for (option of options(); track option.value) {
       <option [value]="option.value">{{ option.label }}</option>
     }

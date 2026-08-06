@@ -22,29 +22,38 @@ export class BackupsComponent {
   private readonly confirm = inject(ConfirmService);
   readonly files = computed(() => this.service.cache.data() || []);
   readonly filter = signal('all');
-  readonly filteredFiles = computed(() => this.files().filter(f => this.filter() === 'all' || (this.filter() === 'json' ? this.extension(f) === '.json' : ['.yaml', '.yml'].includes(this.extension(f)))));
+  readonly filteredFiles = computed(() =>
+    this.files().filter(
+      f =>
+        this.filter() === 'all' ||
+        (this.filter() === 'json'
+          ? this.extension(f) === '.json'
+          : ['.yaml', '.yml'].includes(this.extension(f))),
+    ),
+  );
   readonly loading = this.service.cache.loading;
   readonly error = this.service.cache.error;
-  readonly jsonCount = computed(() => this.files().filter(x => this.extension(x) === '.json').length);
-  readonly yamlCount = computed(() => this.files().filter(x => ['.yaml', '.yml'].includes(this.extension(x))).length);
+  readonly jsonCount = computed(
+    () => this.files().filter(x => this.extension(x) === '.json').length,
+  );
+  readonly yamlCount = computed(
+    () => this.files().filter(x => ['.yaml', '.yml'].includes(this.extension(x))).length,
+  );
   readonly creating = signal(false);
   readonly stats = computed<readonly StatItem[]>(() => [
     { key: 'all', value: this.files().length, label: '总备份数' },
     { key: 'json', value: this.jsonCount(), label: 'JSON 备份', tone: 'blue' },
     { key: 'yaml', value: this.yamlCount(), label: 'YAML 备份', tone: 'violet' },
   ]);
-  readonly groups = computed(() => {
-    const map = new Map<string, string[]>();
-    this.filteredFiles().forEach(x => {
-      const d = this.date(x);
-      if (!map.has(d)) map.set(d, []);
-      map.get(d)!.push(x);
-    });
-    return Array.from(map, ([date, files]) => ({ date, files }));
-  });
-  constructor() { this.service.ensureLoaded(); }
-  refresh() { this.service.refresh(); }
-  selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); }
+  constructor() {
+    this.service.ensureLoaded();
+  }
+  refresh() {
+    this.service.refresh();
+  }
+  selectFilter(key: string): void {
+    this.filter.set(this.filter() === key || key === 'all' ? 'all' : key);
+  }
 
   create(t: 'json' | 'yaml') {
     if (this.creating()) return;
@@ -60,7 +69,14 @@ export class BackupsComponent {
   }
 
   async restore(f: string) {
-    if (!(await this.confirm.open({ title: '恢复备份', message: `恢复备份 ${f}？`, confirmText: '恢复' }))) return;
+    if (
+      !(await this.confirm.open({
+        title: '恢复备份',
+        message: `恢复备份 ${f}？`,
+        confirmText: '恢复',
+      }))
+    )
+      return;
     runAction({
       request: this.service.restore(f),
       onSuccess: r => {
@@ -74,7 +90,15 @@ export class BackupsComponent {
   }
 
   async remove(f: string) {
-    if (!(await this.confirm.open({ title: '删除备份', message: `删除备份 ${f}？`, confirmText: '删除', danger: true }))) return;
+    if (
+      !(await this.confirm.open({
+        title: '删除备份',
+        message: `删除备份 ${f}？`,
+        confirmText: '删除',
+        danger: true,
+      }))
+    )
+      return;
     runAction({
       request: this.service.remove(f),
       onSuccess: () => this.toast.success('备份已删除', f),
@@ -87,6 +111,11 @@ export class BackupsComponent {
     const m = f.match(/(\d{4}-\d{2}-\d{2})/) || f.match(/(\d{4})(\d{2})(\d{2})/);
     return m ? (m[1].includes('-') ? m[1] : `${m[1]}-${m[2]}-${m[3]}`) : '其他日期';
   }
-  type(f: string) { return this.extension(f) === '.json' ? 'JSON' : 'YAML'; }
-  extension(f: string) { const dot = f.lastIndexOf('.'); return dot >= 0 ? f.slice(dot).toLowerCase() : ''; }
+  type(f: string) {
+    return this.extension(f) === '.json' ? 'JSON' : 'YAML';
+  }
+  extension(f: string) {
+    const dot = f.lastIndexOf('.');
+    return dot >= 0 ? f.slice(dot).toLowerCase() : '';
+  }
 }

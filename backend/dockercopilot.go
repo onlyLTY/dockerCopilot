@@ -45,18 +45,7 @@ func main() {
 	// 本地/未 ldflags 注入时，从 version 文件解析版本；正式包已由 -X 写入则保持不变
 	config.ResolveVersion()
 
-	if err := settingstore.ApplyProxySettings(); err != nil {
-		logx.Errorf("应用代理设置失败: %v", err)
-	}
-	logDir := os.Getenv("LOG_DIR")
-	if logDir == "" {
-		logDir = "./logs"
-	}
-	if err := SetupLog(logDir, settingstore.GetLogLevel()); err != nil {
-		logx.Errorf("failed to setup log: %v", err)
-		os.Exit(1)
-	}
-
+	// 先加载配置，再定 DataDir：settingstore / 日志级别都依赖数据根目录。
 	flag.Parse()
 	var c config.Config
 	err := conf.Load(*configFile, &c, conf.UseEnv())
@@ -68,6 +57,20 @@ func main() {
 	if err := config.ValidateAccessSecret(c.Auth.AccessSecret); err != nil {
 		logx.Errorf("secretKey 不符合要求: %v", err)
 		logx.Errorf("请设置环境变量 secretKey 或配置 Auth.AccessSecret：至少 %d 位且不能为纯数字", config.MinAccessSecretLen)
+		os.Exit(1)
+	}
+	// DATA_DIR 环境变量仍优先；未设时用 yaml DataDir；都空则 /data
+	datadir.SetFromConfig(c.DataDir)
+
+	if err := settingstore.ApplyProxySettings(); err != nil {
+		logx.Errorf("应用代理设置失败: %v", err)
+	}
+	logDir := os.Getenv("LOG_DIR")
+	if logDir == "" {
+		logDir = "./logs"
+	}
+	if err := SetupLog(logDir, settingstore.GetLogLevel()); err != nil {
+		logx.Errorf("failed to setup log: %v", err)
 		os.Exit(1)
 	}
 	serverOptions := []rest.RunOption{rest.WithUnauthorizedCallback(

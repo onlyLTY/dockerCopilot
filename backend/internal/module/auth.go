@@ -4,14 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	ref "github.com/distribution/reference"
-	"github.com/onlyLTY/dockerCopilot/internal/types"
-	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	ref "github.com/distribution/reference"
+	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
+	"github.com/onlyLTY/dockerCopilot/internal/types"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 const ChallengeHeader = "WWW-Authenticate"
@@ -19,10 +21,6 @@ const (
 	DefaultRegistryDomain = "docker.io"
 	DefaultRegistryHost   = "index.docker.io"
 )
-
-var DefaultAcceleratorHostList = []string{"docker.1ms.run", "docker.m.daocloud.io",
-	"docker.1panel.top", "docker.1panel.live", "proxy.1panel.live", "dockerproxy.1panel.live", "docker.1panel.dev",
-	"docker.anye.in", "hub.rat.dev", "docker.amingg.com"}
 
 func GetToken(image types.Image, registryAuth string) (string, error) {
 	logx.Infof("image name %s", image.ImageName)
@@ -163,10 +161,11 @@ func GetRegistryAddress(imageRef string) (string, error) {
 	address := ref.Domain(normalizedRef)
 
 	if address == DefaultRegistryDomain {
+		// 官方 Hub：先试 index.docker.io，不通再按用户可配的 hubUrls（默认内置加速列表）依次探测。
 		if checkHost(DefaultRegistryHost) {
 			address = DefaultRegistryHost
 		} else {
-			for _, host := range DefaultAcceleratorHostList {
+			for _, host := range settingstore.GetHubURLs() {
 				if checkHost(host) {
 					address = host
 					break

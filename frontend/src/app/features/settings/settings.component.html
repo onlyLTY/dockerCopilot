@@ -2,28 +2,55 @@
 
 <dc-section-toolbar title="定时任务" subtitle="配置后台自动执行的任务"></dc-section-toolbar>
 
-<section class="settings-card py-22 px-24 mb-24">
-  <div class="settings-item d-flex items-center justify-between gap-20">
-    <div class="settings-item-text min-w-0">
-      <b class="d-block fs-16">更新检查频率</b>
-      <span class="d-block mt-6 fs-12 text-muted">定时检查所有容器的镜像是否有新版本。你也可以随时在容器页手动检查。</span>
+<section class="py-22 px-24 mb-24 bg-panel-bg border-1 rounded-14 shadow-sm">
+  <div class="d-flex items-center justify-between gap-20">
+    <div class="min-w-0">
+      <b class="d-block fs-16 text-black">更新检查频率</b>
+      <span class="d-block mt-6 fs-12 text-muted lh-16"
+        >定时检查所有容器的镜像是否有新版本。你也可以随时在容器页手动检查。</span
+      >
     </div>
-    <div class="settings-item-control d-flex items-center gap-10">
-      <dc-form-select class="settings-select compact" [options]="updateSelectOptions()" [(ngModel)]="updateDraft" [disabled]="loading() || updateSaving()"></dc-form-select>
-      <button class="btn text-white bg-blue" [disabled]="!updateDirty() || updateSaving()" (click)="saveUpdate()">{{ updateSaving() ? '保存中…' : '保存' }}</button>
+    <div class="settings-item-control d-flex items-center gap-10 flex-none">
+      <dc-form-select
+        class="compact"
+        [options]="updateSelectOptions()"
+        [(ngModel)]="updateDraft"
+        [disabled]="loading() || updateSaving()"
+      ></dc-form-select>
+      <button
+        class="btn text-white bg-blue"
+        [disabled]="!updateDirty() || updateSaving()"
+        (click)="saveUpdate()"
+      >
+        {{ updateSaving() ? '保存中…' : '保存' }}
+      </button>
     </div>
   </div>
-  <p class="settings-hint mt-16 pt-14 fs-12 text-muted">当前：{{ updateLabel(updateInterval()) }}</p>
+  <p class="mt-16 pt-14 fs-12 text-muted border-t-1">当前：{{ updateLabel(updateInterval()) }}</p>
 
-  <div class="settings-item d-flex items-center justify-between gap-20">
-    <div class="settings-item-text min-w-0">
-      <b class="d-block fs-16">自动备份频率</b>
-      <span class="d-block mt-6 fs-12 text-muted">定时创建容器备份（同时生成 JSON 和 YAML）。保留数量沿用备份页的保留设置。你也可以随时在备份页手动备份。</span>
+  <div class="d-flex items-center justify-between gap-20">
+    <div class="min-w-0">
+      <b class="d-block fs-16 text-black">自动备份频率</b>
+      <span class="d-block mt-6 fs-12 text-muted lh-16"
+        >定时创建容器备份（同时生成 JSON 和
+        YAML）。保留数量沿用备份页的保留设置。你也可以随时在备份页手动备份。</span
+      >
     </div>
-    <div class="settings-item-control d-flex items-center gap-10">
-      <dc-form-select class="settings-select compact" [options]="backupSelectOptions()" [(ngModel)]="backupDraft" [disabled]="loading() || backupSaving()"></dc-form-select>
-      <button class="btn text-white bg-blue" [disabled]="!backupDirty() || backupSaving()" (click)="saveBackup()">{{ backupSaving() ? '保存中…' : '保存' }}</button>
+    <div class="settings-item-control d-flex items-center gap-10 flex-none">
+      <dc-form-select
+        class="compact"
+        [options]="backupSelectOptions()"
+        [(ngModel)]="backupDraft"
+        [disabled]="loading() || backupSaving()"
+      ></dc-form-select>
+      <button
+        class="btn text-white bg-blue"
+        [disabled]="!backupDirty() || backupSaving()"
+        (click)="saveBackup()"
+      >
+        {{ backupSaving() ? '保存中…' : '保存' }}
+      </button>
     </div>
   </div>
-  <p class="settings-hint mt-16 pt-14 fs-12 text-muted">当前：{{ backupLabel(backupInterval()) }}</p>
+  <p class="mt-16 pt-14 fs-12 text-muted border-t-1">当前：{{ backupLabel(backupInterval()) }}</p>
 </section>

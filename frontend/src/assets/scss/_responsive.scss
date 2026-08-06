@@ -1,60 +1,39 @@
-// 响应式断点
+// 响应式断点（卡片网格）
+//
+// 壳层（侧栏显隐、顶栏）用视口 @media，见 shell.component.scss。
+// 页面特有布局（关于页 / 编辑器脚 / 工具条）写在各自组件 scss。
+// 统计条同口径断点写在 stats.component.scss（encapsulation）。
+//
+// 卡片网格按「内容区」宽度统一：.content-wrap 声明 container page，
+// 口径 ≈ viewport − 侧栏，避免固定侧栏把视口断点提前触发。
+//
+// | 内容区宽度   | 典型场景                          | 列数 |
+// | ≥ 1800px    | 超宽桌面                          | 5    |
+// | 1280–1799   | 15.6" FHD（~1920−230 侧栏）等     | 4    |
+// | 900–1279    | 小本 1366（~1136）、13–14"        | 3    |
+// | 640–899     | 平板 / 窄窗                       | 2    |
+// | < 640px     | 手机                              | 1    |
 
-@media (min-width: 2200px) {
-  .responsive-card-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-}
-
-/* 较小桌面：卡片降为三列，统计条仍保持页面声明的列数 */
-@media (max-width: 1100px) {
-  .responsive-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .about-grid { grid-template-columns: 1fr 1fr; }
-  .stats.stats-five,
-  .stats.stats-four { grid-template-columns: repeat(3, 1fr); }
-}
-
-@media (max-width: 1000px) {
-  .sidebar { transform: translateX(-100%); transition: transform .2s; }
-  .sidebar.open { transform: translateX(0); }
-  .sidebar-overlay {
-    display: block; position: fixed; inset: 0; z-index: var(--layer-sidebar-overlay); border: 0; background: var(--sidebar-overlay);
+@container page (min-width: 1800px) {
+  .responsive-card-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
-  .content-wrap { margin-left: 0; }
-  .compact-shell .content-wrap { margin-left: 0; }
-  .topbar { display: flex; }
-  .content-wrap main { padding: 0 20px 20px; }
-  .about-grid { grid-template-columns: 1fr; }
-
-  .stats,
-  .stats.stats-three,
-  .stats.stats-four,
-  .stats.stats-five { grid-template-columns: repeat(3, 1fr); }
-  .stats.stats-two { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* 平板：卡片为两列，避免卡片内容过窄 */
-@media (max-width: 800px) {
-  .responsive-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container page (max-width: 1279px) {
+  .responsive-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
-@media (max-width: 600px) {
-  .topbar { padding: 0 18px; }
-  .stats,
-  .stats.stats-two,
-  .stats.stats-three,
-  .stats.stats-four,
-  .stats.stats-five { grid-template-columns: repeat(2, 1fr); }
-  .responsive-card-grid { grid-template-columns: 1fr; }
-  .feature-list,
-  .support-grid { grid-template-columns: 1fr; }
-  .editor-foot { align-items: flex-start; }
-  .pull-images-option { order: 1; }
-  .editor-foot .message { flex-basis: 100%; order: 2; }
-  .editor-actions { width: 100%; order: 3; }
-  .editor-actions button { flex: 1; }
-  .heading-actions > [page-heading-actions] { justify-content: flex-start; width: 100%; }
-  .heading-actions > [page-heading-actions] > button,
-  .heading-actions > [page-heading-actions] > .btn { flex: 1; }
-  .section-toolbar { align-items: flex-start !important; flex-direction: column; }
-  .section-toolbar-actions { width: 100%; }
-  .section-toolbar-actions button { flex: 1; }
+@container page (max-width: 899px) {
+  .responsive-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container page (max-width: 639px) {
+  .responsive-card-grid {
+    grid-template-columns: 1fr;
+  }
 }

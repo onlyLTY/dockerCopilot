@@ -107,12 +107,15 @@ export class CacheStore<T> {
 
   /** 从 HttpErrorResponse / 网络异常中提炼可读原因 */
   private formatHttpError(e: unknown): string {
-    const err = e as {
-      status?: number;
-      statusText?: string;
-      message?: string;
-      error?: { msg?: string; message?: string } | string | null;
-    } | null | undefined;
+    const err = e as
+      | {
+          status?: number;
+          statusText?: string;
+          message?: string;
+          error?: { msg?: string; message?: string } | string | null;
+        }
+      | null
+      | undefined;
     if (!err) return this.errorText;
 
     const bodyMsg =

@@ -9,7 +9,8 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'containers' },
   {
     path: 'containers',
-    loadComponent: () => import('./features/containers/containers.component').then(m => m.ContainersComponent),
+    loadComponent: () =>
+      import('./features/containers/containers.component').then(m => m.ContainersComponent),
     canActivate: [authGuard],
   },
   {
@@ -19,12 +20,14 @@ export const routes: Routes = [
   },
   {
     path: 'compose',
-    loadComponent: () => import('./features/compose/compose.component').then(m => m.ComposeComponent),
+    loadComponent: () =>
+      import('./features/compose/compose.component').then(m => m.ComposeComponent),
     canActivate: [authGuard],
   },
   {
     path: 'backups',
-    loadComponent: () => import('./features/backups/backups.component').then(m => m.BackupsComponent),
+    loadComponent: () =>
+      import('./features/backups/backups.component').then(m => m.BackupsComponent),
     canActivate: [authGuard],
   },
   {

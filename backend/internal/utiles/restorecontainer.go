@@ -10,7 +10,6 @@ import (
 
 	dockerBackend "github.com/docker/docker/api/types/backend"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -81,15 +80,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 			backupList = append(backupList, linePrefix+" 恢复失败：备份缺少镜像信息")
 			continue
 		}
-		reader, err := ctx.DockerClient.ImagePull(context.TODO(), containerInfo.Config.Image, image.PullOptions{})
-		if err != nil {
-			logx.Errorf("Failed to pull image: %s", err)
-			backupList = append(backupList, linePrefix+" 拉取镜像失败")
-			continue
-		}
-		err = decodePullResp(reader, ctx, taskID)
-		_ = reader.Close()
-		if err != nil {
+		if err := PullImageWithTask(context.TODO(), ctx, containerInfo.Config.Image, taskID); err != nil {
 			logx.Errorf("Failed to pull image: %s", err)
 			backupList = append(backupList, linePrefix+" 拉取镜像失败")
 			continue

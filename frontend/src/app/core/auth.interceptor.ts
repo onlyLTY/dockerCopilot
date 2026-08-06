@@ -14,14 +14,18 @@ export function consumeSessionExpiredFlag(): boolean {
       sessionStorage.removeItem(SESSION_EXPIRED_FLAG);
       return true;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return false;
 }
 
 function markSessionExpired(): void {
   try {
     sessionStorage.setItem(SESSION_EXPIRED_FLAG, '1');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** 当前 URL 转为登录 returnUrl（仅站内相对路径） */

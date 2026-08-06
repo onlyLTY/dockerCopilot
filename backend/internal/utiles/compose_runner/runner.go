@@ -20,6 +20,7 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	dockerMsg "github.com/docker/docker/pkg/jsonmessage"
+	"github.com/onlyLTY/dockerCopilot/internal/module"
 	"gopkg.in/yaml.v3"
 )
 
@@ -282,13 +283,37 @@ func imageExists(ctx context.Context, cli client.APIClient, ref string) (bool, e
 	return false, nil
 }
 
-func pullImage(ctx context.Context, cli client.APIClient, ref string) error {
-	reader, err := cli.ImagePull(ctx, ref, image.PullOptions{})
+func pullImage(ctx context.Context, cli client.APIClient, imageRef string) error {
+	candidates, localName, err := module.ResolvePullCandidates(imageRef)
 	if err != nil {
 		return err
 	}
-	defer reader.Close()
-	// drain the jsonmessage stream so the pull completes and errors surface
+	var errs []string
+	for _, candidate := range candidates {
+		reader, pullErr := cli.ImagePull(ctx, candidate, image.PullOptions{})
+		if pullErr != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", candidate, pullErr))
+			continue
+		}
+		drainErr := drainComposePull(reader)
+		_ = reader.Close()
+		if drainErr != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", candidate, drainErr))
+			continue
+		}
+		// 加速源拉下的镜像 tag 回原名，容器 Config.Image 保持 compose 中的引用。
+		if candidate != localName {
+			_ = cli.ImageTag(ctx, candidate, localName)
+		}
+		return nil
+	}
+	if len(errs) == 0 {
+		return fmt.Errorf("拉取镜像失败：无可用源")
+	}
+	return fmt.Errorf("拉取镜像失败：%s", strings.Join(errs, "；"))
+}
+
+func drainComposePull(reader io.Reader) error {
 	decoder := json.NewDecoder(reader)
 	for {
 		var msg dockerMsg.JSONMessage

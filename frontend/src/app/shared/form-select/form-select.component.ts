@@ -13,7 +13,9 @@ export interface FormSelectOption {
   imports: [FormsModule, IconComponent],
   templateUrl: './form-select.component.html',
   styleUrl: './form-select.component.scss',
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FormSelectComponent), multi: true }],
+  providers: [
+    { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FormSelectComponent), multi: true },
+  ],
 })
 export class FormSelectComponent implements ControlValueAccessor {
   readonly options = input<readonly FormSelectOption[]>([]);

@@ -1,10 +1,17 @@
 <mat-expansion-panel class="form-expansion" [expanded]="expanded()" [disabled]="disabled()">
   <mat-expansion-panel-header>
-    <mat-panel-title>{{ title() }}</mat-panel-title>
-    @if (description()) {
-      <mat-panel-description>{{ description() }}</mat-panel-description>
-    }
-    <dc-icon class="expansion-icon" name="chevron-down" aria-hidden="true"></dc-icon>
+    <mat-panel-title>
+      <dc-icon class="expansion-icon" name="chevron-down" aria-hidden="true"></dc-icon>
+      <span class="expansion-title-text">{{ title() }}</span>
+    </mat-panel-title>
+    <mat-panel-description>
+      @if (description()) {
+        <span class="expansion-desc-text">{{ description() }}</span>
+      }
+      <div class="expansion-header-actions" (click)="$event.stopPropagation()">
+        <ng-content select="[expansionActions]"></ng-content>
+      </div>
+    </mat-panel-description>
   </mat-expansion-panel-header>
   <ng-content></ng-content>
 </mat-expansion-panel>

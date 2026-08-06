@@ -1,32 +1,38 @@
-:host {
-  display: block;
-}
+// 页头：sticky 与投影内容布局
 
 .page-heading {
   position: sticky;
   top: 0;
   z-index: 20;
-  padding: 16px 0;
   background: var(--page-bg);
-}
-
-.page-heading h1 {
-  color: var(--black);
-  letter-spacing: -.02em;
-}
-
-.subtitle {
-  display: block;
-  color: var(--muted);
-}
-
-.heading-actions {
-  flex-wrap: wrap;
-  flex: none;
 }
 
 .heading-actions:empty {
   display: none;
+}
+
+/* 投影内容：批量选择与操作区 */
+:host ::ng-deep .heading-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+:host ::ng-deep .heading-select-all input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue);
+}
+:host ::ng-deep .heading-selected {
+  white-space: nowrap;
+}
+:host ::ng-deep [page-heading-actions] {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 @media (max-width: 600px) {
@@ -44,6 +50,15 @@
   }
 
   .heading-actions button {
+    flex: 1;
+  }
+
+  :host ::ng-deep .heading-actions > [page-heading-actions] {
+    justify-content: flex-start;
+    width: 100%;
+  }
+  :host ::ng-deep .heading-actions > [page-heading-actions] > button,
+  :host ::ng-deep .heading-actions > [page-heading-actions] > .btn {
     flex: 1;
   }
 }

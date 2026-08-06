@@ -1,9 +1,15 @@
-<div class="modal-head d-flex justify-between gap-20">
-  <div>
-    <h2 class="m-0">{{ title() }}</h2>
+<div class="modal-head d-flex items-start justify-between gap-20 pb-8 border-b-1">
+  <div class="min-w-0">
+    <h2 class="m-0 text-black lh-125">{{ title() }}</h2>
     @if (subtitle()) {
-      <span class="modal-subtitle fs-12">{{ subtitle() }}</span>
+      <span class="d-block mt-8 fs-12 text-muted lh-15">{{ subtitle() }}</span>
     }
   </div>
-  <button class="modal-close d-grid place-items-center" (click)="closed.emit()" aria-label="关闭"><dc-icon name="close"></dc-icon></button>
+  <button
+    class="modal-close d-grid place-items-center flex-none p-0 border-0 text-muted"
+    (click)="closed.emit()"
+    aria-label="关闭"
+  >
+    <dc-icon name="close"></dc-icon>
+  </button>
 </div>

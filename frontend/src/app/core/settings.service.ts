@@ -3,16 +3,33 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap, map } from 'rxjs';
 import { ApiResponse } from './compose.service';
 
-export interface UpdateSettings { interval: string; options: string[]; }
-export interface BackupSettings { interval: string; options: string[]; }
-export interface LogSettings { level: string; options: string[]; }
-export interface ProxySettings { githubProxy: string; HTTP_PROXY: string; HTTPS_PROXY: string; NO_PROXY: string; }
+export interface UpdateSettings {
+  interval: string;
+  options: string[];
+}
+export interface BackupSettings {
+  interval: string;
+  options: string[];
+}
+export interface LogSettings {
+  level: string;
+  options: string[];
+}
+export interface ProxySettings {
+  githubProxy: string;
+  HTTP_PROXY: string;
+  HTTPS_PROXY: string;
+  NO_PROXY: string;
+}
 
 export interface AppSettings {
   updateCheck: UpdateSettings;
   autoBackup: BackupSettings;
   logLevel: LogSettings;
   retention: number;
+  hubUrls: string[];
+  /** 后端内置默认加速源，供「恢复默认」 */
+  defaultHubUrls?: string[];
   proxy: ProxySettings;
 }
 
@@ -21,6 +38,7 @@ export interface AppSettingsUpdate {
   autoBackupInterval?: string;
   logLevel?: string;
   retention?: number;
+  hubUrls?: string[];
   proxy?: ProxySettings;
 }
 
@@ -34,10 +52,17 @@ export interface RuntimeSettings {
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private readonly http = inject(HttpClient);
-  readonly runtime = signal<RuntimeSettings>({ updateInterval: '', backupInterval: '', logLevel: 'info', retention: 10 });
+  readonly runtime = signal<RuntimeSettings>({
+    updateInterval: '',
+    backupInterval: '',
+    logLevel: 'info',
+    retention: 10,
+  });
   private loaded = false;
 
-  constructor() { this.load(); }
+  constructor() {
+    this.load();
+  }
 
   /** 一次读取全部应用设置。 */
   getAll(): Observable<ApiResponse<AppSettings>> {
@@ -63,7 +88,9 @@ export class SettingsService {
         if (result.code === 200 && result.data) this.applySnapshot(result.data);
         else this.loaded = false;
       },
-      error: () => { this.loaded = false; },
+      error: () => {
+        this.loaded = false;
+      },
     });
   }
 
@@ -74,27 +101,53 @@ export class SettingsService {
   // ---- 兼容旧分项调用（设置页等仍可单独读写） ----
 
   getUpdateSettings(): Observable<ApiResponse<UpdateSettings>> {
-    return this.getAll().pipe(map(r => ({ code: r.code, msg: r.msg, data: r.data?.updateCheck ?? { interval: '', options: [] } })));
+    return this.getAll().pipe(
+      map(r => ({
+        code: r.code,
+        msg: r.msg,
+        data: r.data?.updateCheck ?? { interval: '', options: [] },
+      })),
+    );
   }
 
   setUpdateInterval(interval: string): Observable<ApiResponse<UpdateSettings>> {
     return this.saveAll({ updateCheckInterval: interval }).pipe(
-      map(r => ({ code: r.code, msg: r.msg, data: r.data?.updateCheck ?? { interval, options: [] } })),
+      map(r => ({
+        code: r.code,
+        msg: r.msg,
+        data: r.data?.updateCheck ?? { interval, options: [] },
+      })),
     );
   }
 
   getBackupSettings(): Observable<ApiResponse<BackupSettings>> {
-    return this.getAll().pipe(map(r => ({ code: r.code, msg: r.msg, data: r.data?.autoBackup ?? { interval: '', options: [] } })));
+    return this.getAll().pipe(
+      map(r => ({
+        code: r.code,
+        msg: r.msg,
+        data: r.data?.autoBackup ?? { interval: '', options: [] },
+      })),
+    );
   }
 
   setBackupInterval(interval: string): Observable<ApiResponse<BackupSettings>> {
     return this.saveAll({ autoBackupInterval: interval }).pipe(
-      map(r => ({ code: r.code, msg: r.msg, data: r.data?.autoBackup ?? { interval, options: [] } })),
+      map(r => ({
+        code: r.code,
+        msg: r.msg,
+        data: r.data?.autoBackup ?? { interval, options: [] },
+      })),
     );
   }
 
   getLogSettings(): Observable<ApiResponse<LogSettings>> {
-    return this.getAll().pipe(map(r => ({ code: r.code, msg: r.msg, data: r.data?.logLevel ?? { level: 'info', options: [] } })));
+    return this.getAll().pipe(
+      map(r => ({
+        code: r.code,
+        msg: r.msg,
+        data: r.data?.logLevel ?? { level: 'info', options: [] },
+      })),
+    );
   }
 
   setLogLevel(level: string): Observable<ApiResponse<LogSettings>> {
@@ -104,11 +157,13 @@ export class SettingsService {
   }
 
   getProxySettings(): Observable<ApiResponse<ProxySettings>> {
-    return this.getAll().pipe(map(r => ({
-      code: r.code,
-      msg: r.msg,
-      data: r.data?.proxy ?? { githubProxy: '', HTTP_PROXY: '', HTTPS_PROXY: '', NO_PROXY: '' },
-    })));
+    return this.getAll().pipe(
+      map(r => ({
+        code: r.code,
+        msg: r.msg,
+        data: r.data?.proxy ?? { githubProxy: '', HTTP_PROXY: '', HTTPS_PROXY: '', NO_PROXY: '' },
+      })),
+    );
   }
 
   setProxySettings(settings: ProxySettings): Observable<ApiResponse<ProxySettings>> {

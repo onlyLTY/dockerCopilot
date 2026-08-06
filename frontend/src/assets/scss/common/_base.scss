@@ -1,5 +1,7 @@
 // 基础样式：重置、排版、按钮/输入元素默认外观
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -8,11 +10,57 @@ body {
   color: var(--black);
 }
 
+/* Angular 自定义元素默认是 inline；统一成块级，避免每个组件写 host: { class: 'd-block' } */
+dc-root,
+dc-shell,
+dc-login,
+dc-containers,
+dc-images,
+dc-compose,
+dc-backups,
+dc-icons,
+dc-ports,
+dc-tasks,
+dc-settings,
+dc-me,
+dc-page-heading,
+dc-section-toolbar,
+dc-stats,
+dc-modal-heading,
+dc-resource-card,
+dc-form-select,
+dc-form-expansion {
+  display: block;
+}
+
+/* 弹层/占位组件不占布局盒子，避免破坏父级 grid/flex */
+dc-toast,
+dc-task-progress,
+dc-confirm-dialog,
+dc-page-state {
+  display: contents;
+}
+
+/* 需要在 flex/grid 子项里正确收缩 */
+dc-resource-card,
+dc-form-select,
+dc-form-expansion {
+  min-width: 0;
+}
+
+dc-shell {
+  height: 100vh;
+}
+
 button,
 input,
-textarea { font: inherit; }
+textarea {
+  font: inherit;
+}
 
-p { margin: 0; }
+p {
+  margin: 0;
+}
 
 input::placeholder,
 textarea::placeholder {
@@ -20,12 +68,16 @@ textarea::placeholder {
   opacity: 1;
 }
 
-button { cursor: pointer; }
+button {
+  cursor: pointer;
+}
 
 a {
   color: var(--blue);
   text-decoration: none;
-  transition: color 0.15s, opacity 0.15s;
+  transition:
+    color 0.15s,
+    opacity 0.15s;
 }
 
 a:hover {
@@ -39,41 +91,66 @@ a:focus-visible {
   border-radius: 3px;
 }
 
-
 /* dc-icon 尺寸工具类 */
 $icon-sizes: 8, 10, 12, 14, 16, 20, 22, 24, 32, 36, 40, 48;
 
 @each $size in $icon-sizes {
-  .icon-#{$size} { --icon-size: #{$size}px; }
-}
-
-
-/* 圆角 */
-$radiuses: 0, 4, 6, 7, 8, 10, 12, 14, 18, 50;
-@each $r in $radiuses {
-  .rounded-#{$r} { border-radius: #{$r}px !important; }
-  @if $r == 50 {
-    .rounded-#{$r} { border-radius: 50% !important; }
+  .icon-#{$size} {
+    --icon-size: #{$size}px;
   }
 }
-.rounded-full { border-radius: 9999px !important; }
 
+/* 圆角 */
+$radiuses: 0, 3, 4, 6, 7, 8, 9, 10, 12, 14, 16, 18, 50;
+@each $r in $radiuses {
+  .rounded-#{$r} {
+    border-radius: #{$r}px !important;
+  }
+  @if $r == 50 {
+    .rounded-#{$r} {
+      border-radius: 50% !important;
+    }
+  }
+}
+.rounded-full {
+  border-radius: 9999px !important;
+}
 
 /* 边框 */
-.border-0 { border: 0 !important; }
-.border-1 { border: 1px solid var(--line) !important; }
-.border-t-1 { border-top: 1px solid var(--line) !important; }
-.border-b-1 { border-bottom: 1px solid var(--line) !important; }
-
+.border-0 {
+  border: 0 !important;
+}
+.border-1 {
+  border: 1px solid var(--line) !important;
+}
+.border-t-1 {
+  border-top: 1px solid var(--line) !important;
+}
+.border-b-1 {
+  border-bottom: 1px solid var(--line) !important;
+}
 
 /* 光标 */
-.cursor-pointer { cursor: pointer !important; }
-.cursor-default { cursor: default !important; }
-.cursor-not-allowed { cursor: not-allowed !important; }
-.cursor-wait { cursor: wait !important; }
-
+.cursor-pointer {
+  cursor: pointer !important;
+}
+.cursor-default {
+  cursor: default !important;
+}
+.cursor-not-allowed {
+  cursor: not-allowed !important;
+}
+.cursor-wait {
+  cursor: wait !important;
+}
 
 /* 定位定位辅助 */
-.relative { position: relative !important; }
-.absolute { position: absolute !important; }
-.fixed { position: fixed !important; }
+.relative {
+  position: relative !important;
+}
+.absolute {
+  position: absolute !important;
+}
+.fixed {
+  position: fixed !important;
+}

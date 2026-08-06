@@ -1,0 +1,22 @@
+// 页面状态：整行占位、spinner 动画、文案/按钮约束
+
+.page-state {
+  grid-column: 1 / -1;
+}
+.page-state-spinner {
+  border: 3px solid var(--line);
+  border-top-color: var(--blue);
+  animation: dc-spin 0.7s linear infinite;
+}
+.page-state-text {
+  max-width: min(520px, 90vw);
+}
+.page-state-retry {
+  min-width: 112px;
+}
+
+@keyframes dc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

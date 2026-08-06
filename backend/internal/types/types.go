@@ -140,6 +140,7 @@ type UpdateAppSettingsReq struct {
 	AutoBackupInterval  string            `json:"autoBackupInterval,optional"`
 	LogLevel            string            `json:"logLevel,optional"`
 	Retention           int               `json:"retention,optional"`
+	HubURLs             []string          `json:"hubUrls,optional"`
 	Proxy               ProxySettingsData `json:"proxy,optional"`
 }
 

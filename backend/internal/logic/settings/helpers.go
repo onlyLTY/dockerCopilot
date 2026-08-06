@@ -7,11 +7,13 @@ import (
 
 // AppSettingsData 聚合设置快照。
 type AppSettingsData struct {
-	UpdateCheck IntervalSettings           `json:"updateCheck"`
-	AutoBackup  IntervalSettings           `json:"autoBackup"`
-	LogLevel    LevelSettings              `json:"logLevel"`
-	Retention   int                        `json:"retention"`
-	Proxy       settingstore.ProxySettings `json:"proxy"`
+	UpdateCheck     IntervalSettings           `json:"updateCheck"`
+	AutoBackup      IntervalSettings           `json:"autoBackup"`
+	LogLevel        LevelSettings              `json:"logLevel"`
+	Retention       int                        `json:"retention"`
+	HubURLs         []string                   `json:"hubUrls"`
+	DefaultHubURLs  []string                   `json:"defaultHubUrls"`
+	Proxy           settingstore.ProxySettings `json:"proxy"`
 }
 
 type IntervalSettings struct {
@@ -38,8 +40,10 @@ func SnapshotAppSettings() AppSettingsData {
 			Level:   settingstore.GetLogLevel(),
 			Options: settingstore.LogLevelOptions(),
 		},
-		Retention: settingstore.GetRetention(),
-		Proxy:     settingstore.GetProxySettings(),
+		Retention:      settingstore.GetRetention(),
+		HubURLs:        settingstore.GetHubURLs(),
+		DefaultHubURLs: settingstore.DefaultHubURLList(),
+		Proxy:          settingstore.GetProxySettings(),
 	}
 }
 

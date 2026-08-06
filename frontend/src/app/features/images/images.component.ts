@@ -14,7 +14,13 @@ import { PageHeadingComponent } from '../../shared/page-heading/page-heading.com
 @Component({
   selector: 'dc-images',
   standalone: true,
-  imports: [PageStateComponent, IconComponent, ResourceCardComponent, StatsComponent, PageHeadingComponent],
+  imports: [
+    PageStateComponent,
+    IconComponent,
+    ResourceCardComponent,
+    StatsComponent,
+    PageHeadingComponent,
+  ],
   templateUrl: './images.component.html',
 })
 export class ImagesComponent {
@@ -31,8 +37,20 @@ export class ImagesComponent {
   readonly iconMap = computed(() => this.icons.cache.data() || {});
   readonly cleaning = signal<boolean>(false);
   readonly filter = signal('all');
-  readonly filteredImages = computed(() => this.images().filter(x => this.filter() === 'all' || (this.filter() === 'used' ? x.inUsed : this.filter() === 'unused' ? !x.inUsed : this.isUntagged(x))));
-  readonly usedCount = computed(() => this.images().filter(x => x.inUsed).length); readonly untaggedCount = computed(() => this.images().filter(x => this.isUntagged(x)).length); readonly unusedCount = computed(() => this.images().filter(x => !x.inUsed).length);
+  readonly filteredImages = computed(() =>
+    this.images().filter(
+      x =>
+        this.filter() === 'all' ||
+        (this.filter() === 'used'
+          ? x.inUsed
+          : this.filter() === 'unused'
+            ? !x.inUsed
+            : this.isUntagged(x)),
+    ),
+  );
+  readonly usedCount = computed(() => this.images().filter(x => x.inUsed).length);
+  readonly untaggedCount = computed(() => this.images().filter(x => this.isUntagged(x)).length);
+  readonly unusedCount = computed(() => this.images().filter(x => !x.inUsed).length);
   readonly stats = computed<readonly StatItem[]>(() => [
     { key: 'all', value: this.images().length, label: '总镜像' },
     { key: 'used', value: this.usedCount(), label: '使用中', tone: 'green' },
@@ -49,26 +67,58 @@ export class ImagesComponent {
     });
     this.destroyRef.onDestroy(() => this.softRefresh?.stop());
   }
-  refresh() { this.service.refresh(); }
-  selectFilter(key: string): void { this.filter.set(this.filter() === key || key === 'all' ? 'all' : key); }
-  isUntagged(x: ImageRow) { return !x.tag || ['<none>', 'none'].includes(x.tag.toLowerCase()); }
+  refresh() {
+    this.service.refresh();
+  }
+  selectFilter(key: string): void {
+    this.filter.set(this.filter() === key || key === 'all' ? 'all' : key);
+  }
+  isUntagged(x: ImageRow) {
+    return !x.tag || ['<none>', 'none'].includes(x.tag.toLowerCase());
+  }
   async cleanup(kind: 'untagged' | 'unused') {
     const count = kind === 'untagged' ? this.untaggedCount() : this.unusedCount();
     const label = kind === 'untagged' ? '无 Tag' : '未使用';
-    if (!count || !(await this.confirm.open({ title: `清理${label}镜像`, message: `确定清理 ${count} 个${label}镜像吗？`, confirmText: '确认清理', danger: true }))) return;
+    if (
+      !count ||
+      !(await this.confirm.open({
+        title: `清理${label}镜像`,
+        message: `确定清理 ${count} 个${label}镜像吗？`,
+        confirmText: '确认清理',
+        danger: true,
+      }))
+    )
+      return;
     runAction({
       request: this.service.cleanup(kind),
       onStart: () => this.cleaning.set(true),
       onFinally: () => this.cleaning.set(false),
-      onSuccess: r => this.toast.success(`已清理 ${(r.data as { deleted?: number } | undefined)?.deleted ?? ''} 个${label}镜像`),
+      onSuccess: r =>
+        this.toast.success(
+          `已清理 ${(r.data as { deleted?: number } | undefined)?.deleted ?? ''} 个${label}镜像`,
+        ),
       onBizError: r => this.toast.error(`清理失败：${r.msg || '未知错误'}`),
       onHttpError: e => this.toast.error(`清理失败：${actionErrorMessage(e)}`),
     });
   }
-  icon(x: ImageRow) { return this.icons.resolve(x.name, this.iconMap()); } fallback(e: Event) { (e.target as HTMLImageElement).src = this.icons.actionIcon('images'); }
+  icon(x: ImageRow) {
+    return this.icons.resolve(x.name, this.iconMap());
+  }
+  fallback(e: Event) {
+    (e.target as HTMLImageElement).src = this.icons.defaultIcon();
+  }
   async remove(x: ImageRow, force: boolean) {
     const label = force ? '强制删除' : '删除';
-    if (!(await this.confirm.open({ title: `${label}镜像`, message: `${label}镜像 ${x.name}:${x.tag}？`, confirmText: label, danger: true, critical: force }))) return;
+    if (
+      !(await this.confirm.open({
+        title: `${label}镜像`,
+        message: `${label}镜像 ${x.name}:${x.tag}？`,
+        confirmText: label,
+        danger: true,
+        critical: force,
+      }))
+    )
+      return;
     runAction({
       request: this.service.remove(x.id, force),
       onSuccess: () => this.toast.success(actionLabel(x.name, label, true)),

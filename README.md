@@ -32,13 +32,13 @@ Docker Copilot 是一个面向 Docker Engine 的 Web 管理平台，用于在浏
 
 后端模块要求 Go 1.23+（`backend/go.mod` 声明 toolchain 为 Go 1.24.1）。
 
-- **主配置**：`backend/etc/dockerCopilot.yaml`（容器/通用；`AccessSecret: ${secretKey}` 需环境变量）
-- **本地固定配置（推荐）**：复制一份 `backend/etc/dockerCopilot.local.yaml`（已 gitignore），把密钥和路径写死，**不必每次 export**
+- **主配置**：`backend/etc/dockerCopilot.yaml`（容器/通用；`AccessSecret: ${secretKey}` 需环境变量；`DataDir` 可省略，容器挂 `/data` 即可）
+- **本地固定配置（推荐）**：复制一份 `backend/etc/dockerCopilot.local.yaml`（已 gitignore），把密钥、`DataDir`、Compose 路径写死，**不必每次 export**
 
 ```bash
 # 首次（若还没有 local 文件）
 cp backend/etc/dockerCopilot.yaml backend/etc/dockerCopilot.local.yaml
-# 编辑 local：AccessSecret 改成明文（如 test123456），Compose.ScanPaths 改成本机目录
+# 编辑 local：AccessSecret 明文；DataDir: ../docker/test/data；Compose.ScanPaths 改成本机目录
 
 cd backend && go run dockercopilot.go -f etc/dockerCopilot.local.yaml
 ```
@@ -48,12 +48,15 @@ cd backend && go run dockercopilot.go -f etc/dockerCopilot.local.yaml
 ```bash
 cd backend
 export secretKey='test123456'   # PowerShell: $env:secretKey="test123456"
+# 可选：export DATA_DIR=... 覆盖 yaml DataDir
 go run dockercopilot.go -f etc/dockerCopilot.yaml
 ```
 
 - 默认监听 `12712`
 - 本地未用 `-ldflags` 注入版本时，会尝试读取仓库根目录的 `version` 文件（可用 `VERSION_FILE` 指定）
-- 数据根目录默认 `/data`；本地可设 `DATA_DIR=./data`（或任意目录），备份/图标/设置/任务进度均落在其下。仍可用 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖
+- **数据根目录**优先级：`DATA_DIR` 环境变量 > yaml `DataDir` > 默认 `/data`。其下：`config/appSettings.json`（设置/加速源）、`backups/`（**容器备份页**）、`icon/`
+- **Compose 路径**在 yaml：`Compose.ScanPaths` 扫描项目；`Compose.BackupDir` 可省略（默认 `{DataDir}/backups/compose-projects`），**仅** Compose 文件版本/清理备份，**不是**备份页目录
+- 仍可用 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖
 - 健康检查：`GET /healthz`（不鉴权；会 Ping Docker，不可达时返回 503）
 
 验证：
@@ -69,9 +72,8 @@ go build ./...
 前端使用 Angular，CI 使用 Node.js 22。开发时后端需监听 `127.0.0.1:12712`，前端通过代理转发 `/api`。
 
 ```bash
-cd frontend
-npm ci
-npm start
+# 安装依赖
+cd frontend && npm start
 ```
 
 - 开发地址：<http://localhost:4200/manager>

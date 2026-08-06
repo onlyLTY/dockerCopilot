@@ -1,41 +1,68 @@
 <dc-page-heading title="备份管理" subtitle="创建、恢复和删除容器备份">
   <div page-heading-actions>
-    <button class="btn text-secondary-text bg-secondary-bg" (click)="create('yaml')" title="创建 YAML 备份"><dc-icon name="save"></dc-icon>YAML</button>
-    <button class="btn text-secondary-text bg-secondary-bg" (click)="create('json')" title="创建 JSON 备份"><dc-icon name="save"></dc-icon>JSON</button>
-    <button class="btn text-white bg-blue" (click)="refresh()" title="刷新备份"><dc-icon name="refresh"></dc-icon>刷新</button>
+    <button
+      class="btn text-secondary-text bg-secondary-bg"
+      (click)="create('yaml')"
+      title="创建 YAML 备份"
+    >
+      <dc-icon name="save"></dc-icon>YAML
+    </button>
+    <button
+      class="btn text-secondary-text bg-secondary-bg"
+      (click)="create('json')"
+      title="创建 JSON 备份"
+    >
+      <dc-icon name="save"></dc-icon>JSON
+    </button>
+    <button class="btn text-white bg-blue" (click)="refresh()" title="刷新备份">
+      <dc-icon name="refresh"></dc-icon>刷新
+    </button>
   </div>
 </dc-page-heading>
 
-<dc-stats [items]="stats()" [columns]="3" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
+<dc-stats
+  [items]="stats()"
+  [columns]="3"
+  [activeKey]="filter()"
+  (selectedChange)="selectFilter($event)"
+></dc-stats>
 
 @if (loading() || error() || !filteredFiles().length) {
-  <dc-page-state [loading]="loading()" [error]="error()" [retryable]="!!error()" emptyText="暂无备份" (retry)="refresh()"></dc-page-state>
+  <dc-page-state
+    [loading]="loading()"
+    [error]="error()"
+    [retryable]="!!error()"
+    emptyText="暂无备份"
+    (retry)="refresh()"
+  ></dc-page-state>
 } @else {
-  <section class="backup-list page-scroll-area">
-    @for (group of groups(); track group.date) {
-      <section class="backup-group m-0 mb-16">
-        <div class="responsive-card-grid backup-card-grid d-grid gap-16">
-          @for (file of group.files; track file) {
-            <article class="backup-card p-18">
-              <div class="backup-card-body">
-                <div>
-                  <span class="file-badge d-inline-block rounded mr-8 py-4 px-7 fs-12 text-white" [class.bg-blue]="extension(file) === '.json'" [class.bg-purple]="extension(file) !== '.json'">
-                    {{ type(file) }}
-                  </span>
-                  <b>{{ date(file) }}</b>
-                </div>
-                <small class="d-block mt-6 fs-12 text-muted">{{ file }}</small>
-              </div>
-              <div class="d-flex justify-center border-t-1 gap-18 mt-18 pt-14">
-                @if (extension(file) === '.json') {
-                  <button class="btn text-blue border-1 py-6 px-12 fs-12" (click)="restore(file)"><dc-icon name="restore"></dc-icon>恢复</button>
-                }
-                <button class="btn text-red border-1 py-6 px-12 fs-12" (click)="remove(file)"><dc-icon name="delete"></dc-icon>删除</button>
-              </div>
-            </article>
-          }
+  <section class="page-scroll-area responsive-card-grid backup-card-grid d-grid gap-16">
+    @for (file of filteredFiles(); track file) {
+      <article class="p-18 bg-white border-1 rounded-14 shadow-sm">
+        <div class="min-h-42">
+          <div>
+            <span
+              class="d-inline-block rounded mr-8 py-4 px-7 fs-12 text-white"
+              [class.bg-blue]="extension(file) === '.json'"
+              [class.bg-purple]="extension(file) !== '.json'"
+            >
+              {{ type(file) }}
+            </span>
+            <b class="text-black">{{ date(file) }}</b>
+          </div>
+          <small class="d-block mt-6 fs-12 text-muted break-word overflow-wrap">{{ file }}</small>
         </div>
-      </section>
+        <div class="d-flex justify-center border-t-1 gap-18 mt-18 pt-14">
+          @if (extension(file) === '.json') {
+            <button class="btn text-blue border-1 py-6 px-12 fs-12" (click)="restore(file)">
+              <dc-icon name="restore"></dc-icon>恢复
+            </button>
+          }
+          <button class="btn text-red border-1 py-6 px-12 fs-12" (click)="remove(file)">
+            <dc-icon name="delete"></dc-icon>删除
+          </button>
+        </div>
+      </article>
     }
   </section>
 }

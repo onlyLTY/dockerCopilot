@@ -8,6 +8,7 @@ import { ToastService } from '../../core/toast.service';
   selector: 'dc-toast',
   standalone: true,
   templateUrl: './toast.component.html',
+  styleUrl: './toast.component.scss',
 })
 export class ToastComponent {
   readonly toast = inject(ToastService);

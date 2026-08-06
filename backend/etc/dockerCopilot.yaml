@@ -4,6 +4,8 @@ Port: 12712                  # 服务端口
 # HTTP 请求超时(毫秒)。容器更新/Compose 部署/备份恢复等长任务已异步化，
 # 同步接口（列表、备份、程序下载等）一般远低于此；过长会拖住卡死连接。
 Timeout: 600000      # 10 分钟
+# DataDir 可省略。优先级：环境变量 DATA_DIR > 本字段 > 默认 /data。容器部署通常不写（挂载 /data）；本地 go run 可写相对路径，如 ../docker/test/data。
+# DataDir:
 Log:
   Encoding: plain            # 日志格式。plain=纯文本，可选 json
   # 实际文件日志由程序 SetupLog 配置：Mode=file、按天轮转(daily)、保留 7 天、压缩历史。
@@ -15,7 +17,8 @@ CorsOrigins: []              # 允许的跨域来源。空=不额外放行；填
 Compose:                     # Compose 项目管理相关
   ScanPaths:
     - /compose               # 扫描 compose 项目的目录（对应你挂载到容器的 /compose）
-  BackupDir: /data/backups/compose-projects  # compose 项目备份目录
+  # BackupDir 可省略：默认 {DataDir}/backups/compose-projects（或 BACKUP_DIR/compose-projects）
+  # 仅 Compose 文件版本/清理备份；容器备份页走 {DataDir}/backups
   PathMappings: []           # 宿主↔容器路径映射，用于修正 compose 里的挂载路径
   MaxDepth: 3                # 扫描子目录最大深度
   MaxFileSize: 10485760      # 单个 compose 文件大小上限(字节)=10MB

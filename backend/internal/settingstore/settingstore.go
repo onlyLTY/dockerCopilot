@@ -48,7 +48,23 @@ const (
 	defaultRetention           = 10
 	minRetention               = 1
 	maxRetention               = 100
+	maxHubURLs                 = 20
 )
+
+// DefaultHubURLs 官方 Docker Hub 检查更新时的默认加速源（仅 host，按优先级）。
+// 与历史 DefaultAcceleratorHostList 保持一致；用户可在设置中增删改。
+var DefaultHubURLs = []string{
+	"docker.1ms.run",
+	"docker.m.daocloud.io",
+	"docker.1panel.top",
+	"docker.1panel.live",
+	"proxy.1panel.live",
+	"dockerproxy.1panel.live",
+	"docker.1panel.dev",
+	"docker.anye.in",
+	"hub.rat.dev",
+	"docker.amingg.com",
+}
 
 var settingsMu sync.Mutex
 
@@ -59,6 +75,10 @@ type Settings struct {
 	LogLevel                string   `json:"logLevel"`
 	Retention               int      `json:"retention"`
 	IgnoredContainerUpdates []string `json:"ignoredContainerUpdates,omitempty"`
+	// HubURLs 官方 Docker Hub（docker.io）镜像检查更新时的加速源列表（仅 host，有序）。
+	// 未配置时 GetHubURLs 返回 DefaultHubURLs；用户保存后（含空列表）以持久化值为准。
+	HubURLs                 []string `json:"hubUrls,omitempty"`
+	HubURLsConfigured       bool     `json:"hubUrlsConfigured,omitempty"`
 	GithubProxy             string   `json:"githubProxy,omitempty"`
 	HTTPProxy               string   `json:"HTTP_PROXY,omitempty"`
 	HTTPSProxy              string   `json:"HTTPS_PROXY,omitempty"`
@@ -80,6 +100,7 @@ func load() Settings {
 		AutoBackupInterval:  defaultAutoBackupInterval,
 		LogLevel:            defaultLogLevel,
 		Retention:           defaultRetention,
+		HubURLs:             append([]string(nil), DefaultHubURLs...),
 	}
 	content, err := os.ReadFile(SettingsPath())
 	if err != nil {
@@ -97,6 +118,9 @@ func load() Settings {
 		_, hasNoProxy := fields["NO_PROXY"]
 		_, hasProxyMarker := fields["proxySettingsConfigured"]
 		stored.ProxySettingsConfigured = stored.ProxySettingsConfigured || hasGithubProxy || hasHTTPProxy || hasHTTPSProxy || hasNoProxy || hasProxyMarker
+		_, hasHubURLs := fields["hubUrls"]
+		_, hasHubURLsMarker := fields["hubUrlsConfigured"]
+		stored.HubURLsConfigured = stored.HubURLsConfigured || hasHubURLs || hasHubURLsMarker
 	}
 	if ValidUpdateCheckInterval(stored.UpdateCheckInterval) {
 		s.UpdateCheckInterval = stored.UpdateCheckInterval
@@ -111,6 +135,10 @@ func load() Settings {
 		s.Retention = stored.Retention
 	}
 	s.IgnoredContainerUpdates = normalizeIgnoredContainers(stored.IgnoredContainerUpdates)
+	if stored.HubURLsConfigured {
+		s.HubURLs = normalizeHubURLs(stored.HubURLs)
+		s.HubURLsConfigured = true
+	}
 	s.GithubProxy = stored.GithubProxy
 	s.HTTPProxy = stored.HTTPProxy
 	s.HTTPSProxy = stored.HTTPSProxy
@@ -358,6 +386,117 @@ func SetLogLevel(level string) (string, error) {
 		return "", err
 	}
 	return level, nil
+}
+
+// ===== Docker Hub 加速源（检查更新） =====
+
+// normalizeHubURLs 清洗加速源列表：去空白、统一为 host、去重并保持顺序。
+// 接受纯 host（docker.m.daocloud.io）或带协议的 URL（https://docker.m.daocloud.io/）。
+func normalizeHubURLs(items []string) []string {
+	seen := make(map[string]struct{}, len(items))
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		host, ok := normalizeHubURLEntry(item)
+		if !ok {
+			continue
+		}
+		if _, exists := seen[host]; exists {
+			continue
+		}
+		seen[host] = struct{}{}
+		result = append(result, host)
+	}
+	return result
+}
+
+func normalizeHubURLEntry(raw string) (string, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", false
+	}
+	for _, r := range raw {
+		if unicode.IsControl(r) || unicode.IsSpace(r) {
+			return "", false
+		}
+	}
+	// 允许用户粘贴完整 URL；统一存 host。带 path/query 的地址拒绝（避免 /v2 等被静默丢掉）。
+	if strings.Contains(raw, "://") {
+		parsed, err := url.Parse(raw)
+		if err != nil || parsed.Host == "" {
+			return "", false
+		}
+		if parsed.User != nil {
+			return "", false
+		}
+		if parsed.Scheme != "" && parsed.Scheme != "http" && parsed.Scheme != "https" {
+			return "", false
+		}
+		path := strings.Trim(parsed.EscapedPath(), "/")
+		if path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+			return "", false
+		}
+		raw = parsed.Host
+	}
+	raw = strings.Trim(raw, "/")
+	if raw == "" || strings.ContainsAny(raw, "/?#") {
+		return "", false
+	}
+	// host 基本校验：至少含一个点或为 localhost / 纯 IP 也可；这里只拒绝明显非法字符
+	for _, r := range raw {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '-' || r == ':' || r == '[' || r == ']' {
+			continue
+		}
+		return "", false
+	}
+	return strings.ToLower(raw), true
+}
+
+func validHubURLEntry(raw string) error {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	if _, ok := normalizeHubURLEntry(raw); !ok {
+		return fmt.Errorf("hubUrls 含有无效地址：%s（请填写 host 或 http(s) URL，不要带路径/账号）", raw)
+	}
+	return nil
+}
+
+// GetHubURLs 读取 Docker Hub 加速源列表。
+// 用户从未保存过时返回 DefaultHubURLs；保存过（含空列表）返回持久化值。
+func GetHubURLs() []string {
+	s := load()
+	out := make([]string, len(s.HubURLs))
+	copy(out, s.HubURLs)
+	return out
+}
+
+// DefaultHubURLList 返回内置默认加速源的副本（供前端「恢复默认」）。
+func DefaultHubURLList() []string {
+	out := make([]string, len(DefaultHubURLs))
+	copy(out, DefaultHubURLs)
+	return out
+}
+
+// SetHubURLs 校验并持久化加速源列表。允许空列表（表示不使用加速，仅尝试官方）。
+func SetHubURLs(items []string) ([]string, error) {
+	if len(items) > maxHubURLs {
+		return nil, fmt.Errorf("hubUrls 最多 %d 个", maxHubURLs)
+	}
+	for _, item := range items {
+		if err := validHubURLEntry(item); err != nil {
+			return nil, err
+		}
+	}
+	normalized := normalizeHubURLs(items)
+	if err := update(func(s *Settings) error {
+		s.HubURLs = normalized
+		s.HubURLsConfigured = true
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return normalized, nil
 }
 
 // ProxySettings 返回应用出站请求使用的代理配置。

@@ -1,7 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 
 export type ToastKind = 'success' | 'error' | 'info';
-export interface Toast { id: number; kind: ToastKind; title: string; message: string; }
+export interface Toast {
+  id: number;
+  kind: ToastKind;
+  title: string;
+  message: string;
+}
 
 /**
  * 全局轻提示服务：在页面居中上部弹出成功/失败/信息提示，默认数秒后自动关闭。
@@ -35,13 +40,26 @@ export class ToastService {
     this.show('info', '提示', titleOrMessage, messageOrTimeout, timeout);
   }
 
-  dismiss(id: number): void { this.toasts.update(list => list.filter(t => t.id !== id)); }
+  dismiss(id: number): void {
+    this.toasts.update(list => list.filter(t => t.id !== id));
+  }
 
-  private show(kind: ToastKind, fallbackTitle: string, titleOrMessage: string, messageOrTimeout: string | number | undefined, timeout: number): void {
+  private show(
+    kind: ToastKind,
+    fallbackTitle: string,
+    titleOrMessage: string,
+    messageOrTimeout: string | number | undefined,
+    timeout: number,
+  ): void {
     if (typeof messageOrTimeout === 'string') {
       this.push(kind, titleOrMessage, messageOrTimeout, timeout);
       return;
     }
-    this.push(kind, fallbackTitle, titleOrMessage, typeof messageOrTimeout === 'number' ? messageOrTimeout : timeout);
+    this.push(
+      kind,
+      fallbackTitle,
+      titleOrMessage,
+      typeof messageOrTimeout === 'number' ? messageOrTimeout : timeout,
+    );
   }
 }

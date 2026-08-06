@@ -72,10 +72,11 @@ backend/
 
 ## 启动与运行
 
-本地推荐固定配置（`etc/dockerCopilot.local.yaml` 已 gitignore）：
+本地推荐固定配置（`etc/dockerCopilot.local.yaml` 已 gitignore，内含 `DataDir`）：
 
 ```bash
-# cp etc/dockerCopilot.yaml etc/dockerCopilot.local.yaml
+# 首次：cp etc/dockerCopilot.yaml etc/dockerCopilot.local.yaml
+# 编辑：AccessSecret、DataDir: ../docker/test/data、Compose.ScanPaths
 go run dockercopilot.go -f etc/dockerCopilot.local.yaml
 ```
 
@@ -83,13 +84,15 @@ go run dockercopilot.go -f etc/dockerCopilot.local.yaml
 
 ```bash
 export secretKey=test123456
+# 可选：export DATA_DIR=... 覆盖 yaml DataDir
 go run dockercopilot.go -f etc/dockerCopilot.yaml
 go build ./...
 go test ./...
 ```
 
-- `etc/dockerCopilot.yaml`：`Auth.AccessSecret: ${secretKey}`（启动强制：至少 8 位且不能为纯数字）；`Timeout` 默认 10 分钟；`AccessExpire` 默认 7 天
-- `etc/dockerCopilot.local.yaml`：本机开发；`Compose.AllowHighRisk` 控制极高危部署门禁
+- `etc/dockerCopilot.yaml`：`Auth.AccessSecret: ${secretKey}`（启动强制：至少 8 位且不能为纯数字）；`Timeout` 默认 10 分钟；`AccessExpire` 默认 7 天；`DataDir` 可省略（容器挂 `/data`）
+- `etc/dockerCopilot.local.yaml`：本机开发；密钥、`DataDir`、`Compose.ScanPaths` 写死；`Compose.BackupDir` 可省略
+- **数据根**：`DATA_DIR` 环境变量 > yaml `DataDir` > 默认 `/data`（Windows 未配置时常为 `E:\data`）
 - 进程退出：`proc` WrapUp 刷任务进度，Shutdown 停 cron 并关闭 Docker 客户端
 
 ## 核心接口说明
@@ -131,4 +134,13 @@ go test ./...
 
 ### 数据目录
 
-默认根路径 `/data`，可用 `DATA_DIR` 覆盖。备份/图标/设置/任务进度均相对该根；亦支持 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH`。
+数据根优先级：环境变量 `DATA_DIR` > yaml `DataDir` > 默认 `/data`。本地推荐在 `dockerCopilot.local.yaml` 写 `DataDir: ../docker/test/data`。其下：
+
+| 路径 | 用途 |
+|------|------|
+| `{DataDir}/config/appSettings.json` | 应用设置（含 Docker 加速源 `hubUrls`） |
+| `{DataDir}/backups/` | **容器备份页** / 自动备份（JSON、YAML） |
+| `{DataDir}/icon/` | 自定义图标 |
+| `{DataDir}/config/taskProgress.json` | 任务进度 |
+
+`Compose.BackupDir`（yaml）可省略，默认 `{DataDir}/backups/compose-projects`（或 `BACKUP_DIR/compose-projects`），只用于 Compose 项目文件版本/清理备份，**不是**备份页目录。亦支持 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖。

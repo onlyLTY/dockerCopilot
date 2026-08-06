@@ -1,33 +1,20 @@
-:host {
-  display: block;
-  min-width: 0;
-}
+// 资源卡片：槽位布局与选中态
 
 .resource-card {
-  display: flex;
-  min-width: 0;
+  /* 有中间内容（容器/镜像等）时对齐网格高度；仅标题+操作时不撑高，避免分割线与按钮间大块空白 */
+  min-height: 0;
+  transition: background 0.15s;
+}
+
+.resource-card:has([resource-card-content]:not(:empty)) {
   min-height: 142px;
-  flex-direction: column;
-  padding: 18px;
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: 0 8px 20px var(--shadow);
-  transition: background .15s;
 }
 
 .resource-card.selected {
   border-color: var(--blue);
-  box-shadow: 0 0 0 1px var(--blue), 0 8px 20px var(--shadow);
-}
-
-.resource-card-main {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-  padding: 0 0 6px;
-  border-bottom: 1px solid var(--line) !important;
+  box-shadow:
+    0 0 0 1px var(--blue),
+    0 8px 20px var(--shadow);
 }
 
 .resource-card-main:has([resource-card-icon]) {

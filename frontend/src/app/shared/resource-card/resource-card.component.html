@@ -1,5 +1,8 @@
-<article class="resource-card" [class.selected]="selected()">
-  <div class="resource-card-main">
+<article
+  class="resource-card d-flex min-w-0 flex-col p-12 bg-white border-1 rounded-14 shadow-sm"
+  [class.selected]="selected()"
+>
+  <div class="resource-card-main d-flex min-w-0 items-center gap-8 pb-6 border-b-1">
     <ng-content select="[resource-card-icon]"></ng-content>
     <div class="resource-card-copy">
       <ng-content select="[resource-card-title]"></ng-content>

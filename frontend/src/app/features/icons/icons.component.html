@@ -1,12 +1,23 @@
-<dc-page-heading title="图标库" [subtitle]="'管理镜像和容器的自定义图标 · 共 ' + filtered().length + ' 个'">
+<dc-page-heading
+  title="图标库"
+  [subtitle]="'管理镜像和容器的自定义图标 · 共 ' + filtered().length + ' 个'"
+>
   <div page-heading-actions>
     @if (selectionMode()) {
-      <label class="select-all heading-select-all"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()">全选</label>
+      <label class="select-all heading-select-all"
+        ><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()" />全选</label
+      >
       <span class="heading-selected text-muted fs-12">已选 {{ selected().size }} 个</span>
-      <button class="btn text-red" [disabled]="!selected().size || busy()" (click)="bulkRemove()"><dc-icon name="delete"></dc-icon>批量删除</button>
+      <button class="btn text-red" [disabled]="!selected().size || busy()" (click)="bulkRemove()">
+        <dc-icon name="delete"></dc-icon>批量删除
+      </button>
     }
-    <button class="btn text-secondary-text bg-secondary-bg" (click)="toggleSelection()"><dc-icon name="edit"></dc-icon>{{ selectionMode() ? '退出批量' : '批量选择' }}</button>
-    <button class="btn text-white bg-blue" (click)="openUpload()"><dc-icon name="upload"></dc-icon>上传图标</button>
+    <button class="btn text-secondary-text bg-secondary-bg" (click)="toggleSelection()">
+      <dc-icon name="edit"></dc-icon>{{ selectionMode() ? '退出批量' : '批量选择' }}
+    </button>
+    <button class="btn text-white bg-blue" (click)="openUpload()">
+      <dc-icon name="upload"></dc-icon>上传图标
+    </button>
   </div>
 </dc-page-heading>
 
@@ -15,41 +26,75 @@
     @for (item of filtered(); track item[0]) {
       <dc-resource-card [selected]="selectionMode() && isSelected(item[0])">
         <div resource-card-icon class="resource-icon-wrap">
-          <img class="resource-icon" [src]="item[1]" [alt]="item[0]" (error)="fallback($event)">
+          <img class="resource-icon" [src]="item[1]" [alt]="item[0]" (error)="fallback($event)" />
           @if (selectionMode()) {
             <label class="card-select d-grid place-items-center">
-              <input type="checkbox" [checked]="isSelected(item[0])" (change)="toggleSelect(item[0])">
+              <input
+                type="checkbox"
+                [checked]="isSelected(item[0])"
+                (change)="toggleSelect(item[0])"
+              />
             </label>
           }
         </div>
         <div resource-card-title class="fs-16">{{ item[0] }}</div>
         <div resource-card-actions>
-          <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="edit(item[0])"><dc-icon name="edit"></dc-icon>替换</button>
-          <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="remove(item[0])"><dc-icon name="delete"></dc-icon>删除</button>
+          <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="edit(item[0])">
+            <dc-icon name="edit"></dc-icon>替换
+          </button>
+          <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="remove(item[0])">
+            <dc-icon name="delete"></dc-icon>删除
+          </button>
         </div>
       </dc-resource-card>
     }
     @if (!filtered().length) {
-      <div class="empty text-muted">暂无自定义图标</div>
+      <div class="empty text-muted text-center">暂无自定义图标</div>
     }
   </div>
 </section>
 
 @if (show()) {
   <div class="modal-backdrop d-grid place-items-center" (click)="close($event)">
-    <section class="modal min-w-0 d-grid modal-form modal-auto modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <section
+      class="modal min-w-0 d-grid modal-form modal-m h-auto"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
       <dc-modal-heading [title]="editing() ? '替换图标' : '上传图标'" (closed)="show.set(false)" />
       <div class="modal-body">
-        <label class="form-field d-block mt-20 fs-12">镜像仓库名称<input class="d-block mt-8 py-12 px-12" [(ngModel)]="name" placeholder="例如 nginx 或 ghcr.io/company/app"></label>
-        <p class="form-hint m-0 mt-8 fs-12">输入 tag 或 digest 也会自动归一化，同一镜像仓库的所有版本共用此图标。</p>
-        <label class="form-field d-block mt-20 fs-12">图标文件（仅 PNG）<input class="d-block mt-8 py-12 px-12" type="file" accept="image/png" (change)="choose($event)"></label>
+        <label class="form-field d-block mt-20 fs-12"
+          >镜像仓库名称<input
+            class="field-control d-block mt-8 py-12 px-12"
+            [(ngModel)]="name"
+            placeholder="例如 nginx 或 ghcr.io/company/app"
+        /></label>
+        <p class="form-hint m-0 mt-8 fs-12 text-muted lh-15">
+          输入 tag 或 digest 也会自动归一化，同一镜像仓库的所有版本共用此图标。
+        </p>
+        <label class="form-field d-block mt-20 fs-12"
+          >图标文件（仅 PNG）<input
+            class="field-control d-block mt-8 py-12 px-12"
+            type="file"
+            accept="image/png"
+            (change)="choose($event)"
+        /></label>
         @if (error()) {
-          <p class="message error">{{ error() }}</p>
+          <p class="message error text-red">{{ error() }}</p>
         }
       </div>
       <div class="modal-actions d-flex justify-end gap-10 pt-18">
-        <button class="btn text-secondary-text bg-secondary-bg" (click)="show.set(false)">取消</button>
-        <button class="btn text-white bg-blue" [disabled]="!file() || !name.trim() || uploading()" (click)="upload()">{{ uploading() ? '上传中…' : '保存图标' }}</button>
+        <button class="btn text-secondary-text bg-secondary-bg" (click)="show.set(false)">
+          取消
+        </button>
+        <button
+          class="btn text-white bg-blue"
+          [disabled]="!file() || !name.trim() || uploading()"
+          (click)="upload()"
+        >
+          {{ uploading() ? '上传中…' : '保存图标' }}
+        </button>
       </div>
     </section>
   </div>

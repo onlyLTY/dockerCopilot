@@ -29,11 +29,14 @@ export interface RunActionOptions<T extends ActionApiResult = ActionApiResult> {
 
 /** 从 HttpErrorResponse 等提取可读文案 */
 export function actionErrorMessage(err: unknown, fallback = '请求错误'): string {
-  const e = err as {
-    status?: number;
-    message?: string;
-    error?: { msg?: string; message?: string } | string | null;
-  } | null | undefined;
+  const e = err as
+    | {
+        status?: number;
+        message?: string;
+        error?: { msg?: string; message?: string } | string | null;
+      }
+    | null
+    | undefined;
   if (!e) return fallback;
   if (typeof e.error === 'string' && e.error.trim()) return e.error.trim();
   if (typeof e.error === 'object' && e.error) {

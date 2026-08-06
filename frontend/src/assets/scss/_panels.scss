@@ -1,25 +1,41 @@
-// 面板、提示条、资源卡片、图标卡、备份卡、端口卡
+// 面板、提示条、资源卡片、状态徽标、选择控件（多页面共用）
 
 /* ===== 提示条 ===== */
-.alert { border-radius: 8px; white-space: pre-wrap; word-break: break-word; }
-.error-alert { color: var(--red); background: var(--red-soft); border: 1px solid var(--red); }
-.warning-alert { color: var(--amber); background: var(--amber-soft); border: 1px solid var(--amber); }
+.alert {
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.error-alert {
+  color: var(--red);
+  background: var(--red-soft);
+  border: 1px solid var(--red);
+}
+.warning-alert {
+  color: var(--amber);
+  background: var(--amber-soft);
+  border: 1px solid var(--amber);
+}
 
 /* ===== 面板 ===== */
 .panel {
-  background: var(--panel-bg); border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: 0 9px 22px var(--shadow); overflow: hidden; margin-bottom: 24px;
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 9px 22px var(--shadow);
+  overflow: hidden;
+  margin-bottom: 24px;
 }
 
-/* ===== 资源网格 / 卡片（容器、镜像、项目、端口共用） ===== */
+/* ===== 资源网格 / 卡片（容器、镜像、项目、端口、图标、备份、任务共用） ===== */
 .responsive-card-grid,
 .resource-grid,
-.image-grid,
 .icon-grid,
 .backup-card-grid {
   min-width: 0;
   overflow-x: hidden;
 }
+/* 默认 4 列；断点统一在 _responsive.scss（按内容区宽度） */
 .responsive-card-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -31,14 +47,18 @@
   max-height: 48px;
   object-fit: contain;
 }
-.resource-icon-wrap { position: relative; }
+.resource-icon-wrap {
+  position: relative;
+}
 .resource-icon-wrap .card-select {
   position: absolute;
   inset: 0;
   border-radius: 12px;
   background: color-mix(in srgb, var(--panel-bg) 82%, transparent);
 }
-.resource-icon-wrap .card-select input { margin: 0; }
+.resource-icon-wrap .card-select input {
+  margin: 0;
+}
 [resource-card-title],
 [resource-card-title] span,
 [resource-card-title] small,
@@ -48,22 +68,44 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-[resource-card-title] { color: var(--black); }
+[resource-card-title] {
+  color: var(--black);
+}
 [resource-card-info] span,
-[resource-card-info] small { color: var(--muted); }
+[resource-card-info] small {
+  color: var(--muted);
+}
 .update-badge {
-  flex: none; border-radius: 20px; line-height: 1.6;
-  background: var(--purple-soft); color: var(--purple); overflow: visible;
+  flex: none;
+  border-radius: 20px;
+  line-height: 1.6;
+  background: var(--purple-soft);
+  color: var(--purple);
+  overflow: visible;
 }
 
+/* ===== 卡片选择（容器/图标批量操作） ===== */
+.card-select {
+  flex: none;
+  cursor: pointer;
+}
+.card-select input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--blue);
+}
+.select-all {
+  cursor: pointer;
+}
+.select-all input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--blue);
+}
 
-/* ===== 卡片选择（容器批量操作） ===== */
-.card-select { flex: none; cursor: pointer; }
-.card-select input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue); }
-.select-all { cursor: pointer; }
-.select-all input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue); }
-
-/* ===== 镜像卡：状态徽标 + 版本号一行带大小 + 发布时间 ===== */
+/* ===== 状态徽标（镜像 / 项目 / 容器） ===== */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -76,35 +118,49 @@
   color: var(--secondary-text);
 }
 .status-badge.used,
-.status-badge.using { background: var(--green-soft); color: var(--green); }
-.status-badge.stopped { background: var(--amber-soft); color: var(--amber); }
-.status-badge.unused { background: var(--purple-soft); color: var(--purple); }
+.status-badge.using {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.status-badge.stopped {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+.status-badge.unused {
+  background: var(--purple-soft);
+  color: var(--purple);
+}
 .status-badge.unknown,
-.status-badge.ignored { background: var(--secondary-bg); color: var(--muted); }
-
-.port-tags {
-  display: flex; flex-wrap: wrap; gap: 8px;
-  justify-content: flex-start; text-align: left;
-}
-.port-tags > span { display: inline-block; flex: none; white-space: nowrap; }
-/* 超过 2 个端口：每行 2 个，按内容宽度左对齐排列避免单卡过长 */
-.port-tags.port-tags-grid {
-  display: grid; grid-template-columns: repeat(2, min-content); gap: 6px;
-  justify-content: flex-start;
+.status-badge.ignored {
+  background: var(--secondary-bg);
+  color: var(--muted);
 }
 
-/* ===== 项目卡 ===== */
-
-/* ===== 图标库 ===== */
-.empty { text-align: center; grid-column: 1 / -1; }
-
-/* ===== 备份 ===== */
-.backup-card {
-  background: var(--white); border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: 0 8px 20px var(--shadow);
+/* ===== 页面滚动区（多列表页共用） ===== */
+.page-scroll-area {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) transparent;
 }
-.backup-card-body { min-height: 42px; }
-.backup-card-body b { color: var(--black); }
-.backup-card-body small {
-  color: var(--muted); white-space: normal; overflow-wrap: anywhere; word-break: break-word;
+.page-scroll-area::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.page-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.page-scroll-area::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+}
+.page-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--blue);
+  border-color: transparent;
+  background-clip: padding-box;
 }

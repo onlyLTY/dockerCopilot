@@ -12,6 +12,7 @@ import { ModalHeadingComponent } from '../modal-heading/modal-heading.component'
   standalone: true,
   imports: [IconComponent, ModalHeadingComponent],
   templateUrl: './task-progress.component.html',
+  styleUrl: './task-progress.component.scss',
 })
 export class TaskProgressComponent {
   readonly tasks = inject(TaskService);
@@ -21,6 +22,10 @@ export class TaskProgressComponent {
     if (this.task()) this.tasks.closeView();
   }
 
-  close(e: Event) { if (e.target === e.currentTarget) this.tasks.closeView(); }
-  remove(taskID: string) { this.tasks.remove(taskID); }
+  close(e: Event) {
+    if (e.target === e.currentTarget) this.tasks.closeView();
+  }
+  remove(taskID: string) {
+    this.tasks.remove(taskID);
+  }
 }

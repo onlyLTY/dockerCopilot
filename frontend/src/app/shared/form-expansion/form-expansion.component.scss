@@ -1,8 +1,3 @@
-:host {
-  display: block;
-  min-width: 0;
-}
-
 :host ::ng-deep .form-expansion.mat-expansion-panel {
   margin: 12px 0 !important;
   border: 1px solid var(--line) !important;
@@ -30,42 +25,79 @@
   background: var(--panel-header-bg) !important;
 }
 
+/* 标题不被 description 挤窄、不换行 */
 :host ::ng-deep .form-expansion .mat-expansion-panel-header-title {
-  flex: 0 1 auto;
-  min-width: 0;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto !important;
+  max-width: none !important;
+  min-width: max-content;
+  margin-right: 12px !important;
   color: var(--black) !important;
   font-weight: 650;
   line-height: 1.35;
+  white-space: nowrap;
 }
 
+.expansion-title-text {
+  white-space: nowrap;
+}
+
+/* description 占剩余空间：文案 + 右上角操作 */
 :host ::ng-deep .form-expansion .mat-expansion-panel-header-description {
-  flex: 1 1 auto;
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto !important;
+  justify-content: flex-end;
   min-width: 0;
-  margin: 0 16px;
+  margin: 0 !important;
   color: var(--muted) !important;
   line-height: 1.45;
   white-space: normal;
   font-size: 12px;
 }
 
+.expansion-desc-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
 :host ::ng-deep .form-expansion .mat-expansion-indicator {
   display: none !important;
 }
 
+/* 收起：> ；展开：v（chevron-down 旋转） */
 .expansion-icon {
   flex: 0 0 14px;
   --icon-size: 14px;
-  margin-left: auto;
   color: var(--muted);
-  transition: transform 0.2s ease, color 0.15s;
+  transform: rotate(-90deg);
+  transition:
+    transform 0.2s ease,
+    color 0.15s;
 }
 
 :host ::ng-deep .form-expansion .mat-expansion-panel-header.mat-expanded .expansion-icon {
-  transform: rotate(180deg);
+  transform: rotate(0deg);
   color: var(--blue);
 }
 
 :host ::ng-deep .form-expansion .mat-expansion-panel-header:hover .expansion-icon,
 :host ::ng-deep .form-expansion .mat-expansion-panel-header:focus .expansion-icon {
   color: var(--blue);
+}
+
+.expansion-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.expansion-header-actions:empty {
+  display: none;
 }

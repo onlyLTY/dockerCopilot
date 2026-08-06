@@ -1,0 +1,149 @@
+// Compose 编辑器：代码区、行号与部署栏结构
+
+.compose-body {
+  min-height: 0;
+  overflow: hidden !important;
+}
+.file-tabs {
+  flex: none;
+  padding: 10px 0 0;
+  overflow-x: auto;
+}
+.file-tabs button {
+  border: 0;
+  background: var(--page-bg);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.code-editor-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 260px;
+  height: min(480px, 58vh);
+}
+.code-gutter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 48px;
+  flex: none;
+  overflow: hidden;
+  text-align: right;
+  color: var(--editor-gutter);
+  padding: 22px 10px 22px 0;
+  font:
+    14px/1.65 'SFMono-Regular',
+    Consolas,
+    monospace;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  opacity: 0.75;
+  box-sizing: border-box;
+  border-right: 1px solid color-mix(in srgb, var(--editor-fg) 12%, transparent);
+}
+.code-gutter span {
+  display: block;
+  height: calc(14px * 1.65);
+  line-height: 1.65;
+}
+.code-editor-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 22px;
+  color: var(--editor-fg);
+  white-space: pre-wrap;
+  z-index: 2;
+  background: color-mix(in srgb, var(--editor-bg) 88%, transparent);
+}
+.code-editor-error {
+  color: var(--red);
+}
+.code-editor {
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  border: 0;
+  resize: none;
+  overflow-y: auto;
+  padding: 22px 22px 22px 60px;
+  font:
+    14px/1.65 'SFMono-Regular',
+    Consolas,
+    monospace;
+  outline: 0;
+  position: relative;
+  z-index: 0;
+  box-sizing: border-box;
+  line-height: 1.65;
+  tab-size: 2;
+  background: var(--editor-bg);
+  color: var(--editor-fg);
+}
+.code-editor::placeholder {
+  color: color-mix(in srgb, var(--editor-gutter) 75%, transparent);
+}
+.editor-foot {
+  margin-top: 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  align-items: center;
+}
+.editor-foot .message {
+  flex: 1;
+  color: var(--green);
+}
+.editor-foot .message.error {
+  color: var(--red);
+}
+.pull-images-option {
+  flex: none;
+  cursor: pointer;
+}
+.pull-images-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue);
+}
+.editor-actions {
+  flex: none;
+}
+.risk-box {
+  flex: none;
+  border-left: 3px solid var(--amber);
+  background: var(--amber-soft);
+  color: var(--amber);
+  overflow: auto;
+}
+
+@media (max-width: 600px) {
+  .editor-foot {
+    flex-wrap: wrap;
+    gap: 8px !important;
+    align-items: flex-start;
+  }
+  .editor-foot .message {
+    flex-basis: 100%;
+    order: 2;
+  }
+  .pull-images-option {
+    order: 1;
+  }
+  .editor-actions {
+    width: 100%;
+    order: 3;
+  }
+  .editor-actions button {
+    flex: 1;
+  }
+  .code-editor {
+    height: min(420px, 52vh);
+    min-height: 220px;
+    padding: 14px;
+  }
+}

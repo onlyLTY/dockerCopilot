@@ -1,13 +1,28 @@
 @if (confirm.dialog(); as dialog) {
-  <div class="modal-backdrop d-grid place-items-center confirm-backdrop" (click)="closeBackdrop($event)">
-    <section class="modal min-w-0 d-grid modal-confirm modal-m" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+  <div class="modal-backdrop d-grid place-items-center" (click)="closeBackdrop($event)">
+    <section
+      class="modal min-w-0 d-grid modal-confirm modal-m"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
       <dc-modal-heading [title]="dialog.options.title" (closed)="confirm.close(false)" />
       <div class="modal-body">
-        <p class="confirm-message my-22">{{ dialog.options.message }}</p>
+        <p class="my-22 text-black lh-17 text-pre-wrap">{{ dialog.options.message }}</p>
       </div>
       <div class="modal-actions d-flex justify-end pt-18">
-        <button class="btn text-secondary-text bg-secondary-bg" (click)="confirm.close(false)">{{ dialog.options.cancelText || '取消' }}</button>
-        <button class="btn text-white py-12 px-16" [class.bg-blue]="!dialog.options.danger && !dialog.options.critical" [class.bg-red]="dialog.options.danger && !dialog.options.critical" [class.bg-critical]="dialog.options.critical" (click)="confirm.close(true)">{{ dialog.options.confirmText || '确定' }}</button>
+        <button class="btn text-secondary-text bg-secondary-bg" (click)="confirm.close(false)">
+          {{ dialog.options.cancelText || '取消' }}
+        </button>
+        <button
+          class="btn text-white py-12 px-16"
+          [class.bg-blue]="!dialog.options.danger && !dialog.options.critical"
+          [class.bg-red]="dialog.options.danger && !dialog.options.critical"
+          [class.bg-critical]="dialog.options.critical"
+          (click)="confirm.close(true)"
+        >
+          {{ dialog.options.confirmText || '确定' }}
+        </button>
       </div>
     </section>
   </div>

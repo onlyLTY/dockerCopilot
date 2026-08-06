@@ -9,6 +9,7 @@ import { Component, input, output } from '@angular/core';
   selector: 'dc-page-state',
   standalone: true,
   templateUrl: './page-state.component.html',
+  styleUrl: './page-state.component.scss',
 })
 export class PageStateComponent {
   readonly loading = input(false);

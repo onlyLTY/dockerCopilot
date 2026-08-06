@@ -1,7 +1,11 @@
 <dc-page-heading title="项目" subtitle="管理 Compose 项目和配置文件">
   <div page-heading-actions>
-    <button class="btn text-secondary-text bg-secondary-bg" (click)="refresh()" title="刷新项目"><dc-icon name="refresh"></dc-icon>刷新</button>
-    <button class="btn text-white bg-blue" (click)="newProject()" title="新建项目"><dc-icon name="add"></dc-icon>新建</button>
+    <button class="btn text-secondary-text bg-secondary-bg" (click)="refresh()" title="刷新项目">
+      <dc-icon name="refresh"></dc-icon>刷新
+    </button>
+    <button class="btn text-white bg-blue" (click)="newProject()" title="新建项目">
+      <dc-icon name="add"></dc-icon>新建
+    </button>
   </div>
 </dc-page-heading>
 
@@ -9,27 +13,55 @@
   <div class="alert error-alert">ⓘ {{ message() }}</div>
 }
 
-<dc-stats [items]="stats()" [columns]="5" [activeKey]="filter()" (selectedChange)="selectFilter($event)"></dc-stats>
+<dc-stats
+  [items]="stats()"
+  [columns]="5"
+  [activeKey]="filter()"
+  (selectedChange)="selectFilter($event)"
+></dc-stats>
 
 @if (loading() || error() || !filteredProjects().length) {
-  <dc-page-state [loading]="loading()" [error]="error()" [retryable]="!!error()" emptyText="暂无项目" (retry)="refresh()"></dc-page-state>
+  <dc-page-state
+    [loading]="loading()"
+    [error]="error()"
+    [retryable]="!!error()"
+    emptyText="暂无项目"
+    (retry)="refresh()"
+  ></dc-page-state>
 } @else {
-  <section class="responsive-card-grid resource-grid page-scroll-area d-grid project-grid gap-16 mb-24">
+  <section class="responsive-card-grid resource-grid page-scroll-area d-grid gap-16 mb-24">
     @for (project of filteredProjects(); track project.id) {
       <dc-resource-card>
         <div resource-card-icon>
-          <img class="resource-icon" [src]="icon(project)" [alt]="project.name || '项目'" (error)="fallback($event)">
+          <img
+            class="resource-icon"
+            [src]="icon(project)"
+            [alt]="project.name || '项目'"
+            (error)="fallback($event)"
+          />
         </div>
         <div resource-card-title>
           <span class="text-ellipsis min-w-0">{{ project.name || '未解析项目' }}</span>
-          <small class="status-badge py-2 px-8 fs-10" [class.using]="project.status === 'using'" [class.stopped]="project.status === 'stopped'" [class.unused]="project.status === 'unused'" [class.unknown]="project.status === 'unknown'">{{ statusLabel(project.status) }}</small>
+          <small
+            class="status-badge py-2 px-8 fs-10"
+            [class.using]="project.status === 'using'"
+            [class.stopped]="project.status === 'stopped'"
+            [class.unused]="project.status === 'unused'"
+            [class.unknown]="project.status === 'unknown'"
+            >{{ statusLabel(project.status) }}</small
+          >
         </div>
         <div resource-card-info class="fs-12 text-muted">
           <span class="d-block text-ellipsis">{{ project.root }}</span>
-          <small class="d-block">{{ project.containers.length }} 个容器 · {{ project.files.length }} 个文件 · {{ project.ports.length }} 个端口</small>
+          <small class="d-block"
+            >{{ project.containers.length }} 个容器 · {{ project.files.length }} 个文件 ·
+            {{ project.ports.length }} 个端口</small
+          >
         </div>
         <div resource-card-actions>
-          <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="openEditor(project)"><dc-icon name="edit"></dc-icon>查看/编辑</button>
+          <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="openEditor(project)">
+            <dc-icon name="edit"></dc-icon>查看/编辑
+          </button>
         </div>
       </dc-resource-card>
     }
@@ -37,50 +69,130 @@
 }
 
 @if (composeDialog() !== 'closed') {
-  <div class="modal-backdrop d-grid place-items-center" (click)="composeDialog() === 'edit' ? closeEditor($event) : closeCreate($event)">
-    <section class="modal min-w-0 d-grid modal-form modal-xl" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+  <div
+    class="modal-backdrop d-grid place-items-center"
+    (click)="composeDialog() === 'edit' ? closeEditor($event) : closeCreate($event)"
+  >
+    <section
+      class="modal min-w-0 d-grid modal-form modal-xl"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
       @if (editorProject(); as ep) {
-        <dc-modal-heading [title]="ep.name || '项目'" [subtitle]="ep.root" (closed)="closeEditor()" />
-          <div class="modal-body compose-body d-flex flex-col">
+        <dc-modal-heading
+          [title]="ep.name || '项目'"
+          [subtitle]="ep.root"
+          (closed)="closeEditor()"
+        />
+        <div class="modal-body compose-body d-flex flex-col">
           <div class="file-tabs d-flex gap-2">
             @for (file of ep.files; track file.name) {
-              <button class="file-tab py-9 px-14 fs-12" [class.text-white]="filename() === file.name" [class.bg-blue]="filename() === file.name" [class.text-secondary-text]="filename() !== file.name" [class.bg-secondary-bg]="filename() !== file.name" (click)="openFile(file.name)">
+              <button
+                class="py-9 px-14 fs-12"
+                [class.text-white]="filename() === file.name"
+                [class.bg-blue]="filename() === file.name"
+                [class.text-secondary-text]="filename() !== file.name"
+                [class.bg-secondary-bg]="filename() !== file.name"
+                (click)="openFile(file.name)"
+              >
                 {{ file.name }}
               </button>
             }
           </div>
           <div class="code-editor-wrap" [class.is-loading]="fileLoading()">
             <div class="code-gutter" aria-hidden="true" [innerHTML]="lineNumbers()"></div>
-            <textarea class="code-editor fs-14" [ngModel]="content()" (ngModelChange)="content.set($event)" (scroll)="onEditorScroll($event)" spellcheck="false"></textarea>
+            <textarea
+              class="code-editor fs-14"
+              [ngModel]="content()"
+              (ngModelChange)="content.set($event)"
+              (scroll)="onEditorScroll($event)"
+              spellcheck="false"
+            ></textarea>
             @if (fileLoading()) {
               <div class="code-editor-overlay" role="status">正在读取 {{ filename() }}…</div>
             } @else if (fileError()) {
-              <div class="code-editor-overlay code-editor-error" role="alert">{{ fileError() }}</div>
+              <div class="code-editor-overlay code-editor-error" role="alert">
+                {{ fileError() }}
+              </div>
             }
           </div>
         </div>
         <div class="editor-foot d-flex items-center gap-16 pt-14 mt-14 fs-12">
-          <label class="pull-images-option d-flex items-center gap-6 text-muted text-nowrap"><input type="checkbox" [checked]="pullImages()" (change)="pullImages.set($any($event.target).checked)">重新拉取镜像</label>
+          <label class="pull-images-option d-flex items-center gap-6 text-muted text-nowrap"
+            ><input
+              type="checkbox"
+              [checked]="pullImages()"
+              (change)="pullImages.set($any($event.target).checked)"
+            />重新拉取镜像</label
+          >
           <span class="message flex-1 min-w-0">{{ message() }}</span>
           <div class="editor-actions d-flex items-center gap-8">
-            <button class="btn text-secondary-text bg-secondary-bg" [disabled]="deployBusy() || fileLoading() || !!fileError()" (click)="validate()">格式校验</button>
-            <button class="btn text-white bg-blue" [disabled]="deployBusy() || fileLoading() || !!fileError()" (click)="redeploy()">{{ deployBusy() ? '部署中…' : '重新部署' }}</button>
+            <button
+              class="btn text-secondary-text bg-secondary-bg"
+              [disabled]="deployBusy() || fileLoading() || !!fileError()"
+              (click)="validate()"
+            >
+              格式校验
+            </button>
+            <button
+              class="btn text-white bg-blue"
+              [disabled]="deployBusy() || fileLoading() || !!fileError()"
+              (click)="redeploy()"
+            >
+              {{ deployBusy() ? '部署中…' : '重新部署' }}
+            </button>
           </div>
         </div>
       } @else {
-        <dc-modal-heading title="新建项目" subtitle="填写完建议先检验一下格式" (closed)="closeCreate()" />
+        <dc-modal-heading
+          title="新建项目"
+          subtitle="填写完建议先检验一下格式"
+          (closed)="closeCreate()"
+        />
         <div class="modal-body compose-body d-flex flex-col">
-          <div class="form-field d-block mt-8 fs-12">项目名称<input class="d-block mt-8 py-12 px-12" [ngModel]="projectName()" (ngModelChange)="projectName.set($event)" placeholder="例如：my-app，只能包含小写字母、数字、短横线和下划线，长度不超过 63"></div>
-          <div class="compose-config-field mt-12 code-editor-wrap" [class.is-loading]="creating()">
+          <div class="form-field d-block mt-8 fs-12">
+            项目名称<input
+              class="field-control d-block mt-8 py-12 px-12"
+              [ngModel]="projectName()"
+              (ngModelChange)="projectName.set($event)"
+              placeholder="例如：my-app，只能包含小写字母、数字、短横线和下划线，长度不超过 63"
+            />
+          </div>
+          <div class="mt-12 code-editor-wrap" [class.is-loading]="creating()">
             <div class="code-gutter" aria-hidden="true" [innerHTML]="createLineNumbers()"></div>
-            <textarea class="code-editor fs-14" [ngModel]="projectContent()" (ngModelChange)="projectContent.set($event)" (scroll)="onCreateScroll($event)" spellcheck="false" placeholder="请写入compose文件内容"></textarea>
+            <textarea
+              class="code-editor fs-14"
+              [ngModel]="projectContent()"
+              (ngModelChange)="projectContent.set($event)"
+              (scroll)="onCreateScroll($event)"
+              spellcheck="false"
+              placeholder="请写入compose文件内容"
+            ></textarea>
           </div>
         </div>
         <div class="editor-foot d-flex items-center gap-16 pt-14 mt-14 fs-12">
-          <span class="message flex-1 min-w-0 text-ellipsis" [class.text-red]="createErrorType() === 'error'" [class.text-green]="createErrorType() === 'success'">{{ createValidated() && !createError() ? '格式已通过，可创建或部署' : createError() }}</span>
-          <button class="btn text-secondary-text bg-secondary-bg" (click)="validateCreate()">格式校验</button>
-          <button class="btn text-secondary-text bg-secondary-bg" [disabled]="creating()" (click)="deployNewProject()">创建并部署</button>
-          <button class="btn text-white bg-blue" [disabled]="creating()" (click)="createProject()">{{ creating() ? '创建中…' : '创建项目' }}</button>
+          <span
+            class="message flex-1 min-w-0 text-ellipsis"
+            [class.text-red]="createErrorType() === 'error'"
+            [class.text-green]="createErrorType() === 'success'"
+            >{{
+              createValidated() && !createError() ? '格式已通过，可创建或部署' : createError()
+            }}</span
+          >
+          <button class="btn text-secondary-text bg-secondary-bg" (click)="validateCreate()">
+            格式校验
+          </button>
+          <button
+            class="btn text-secondary-text bg-secondary-bg"
+            [disabled]="creating()"
+            (click)="deployNewProject()"
+          >
+            创建并部署
+          </button>
+          <button class="btn text-white bg-blue" [disabled]="creating()" (click)="createProject()">
+            {{ creating() ? '创建中…' : '创建项目' }}
+          </button>
         </div>
       }
     </section>

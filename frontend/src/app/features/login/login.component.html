@@ -1,22 +1,39 @@
-<div class="login-page d-grid place-items-center">
-  <div class="login-card p-38">
-    <div class="brand centered d-flex items-center justify-center gap-12 p-0">
-      <img class="brand-logo" src="assets/DockerCopilotlogo.png" alt="Docker Copilot">
-      <div class="brand-text"><strong>Docker Copilot</strong><span>容器管理平台</span></div>
+<div class="login-page d-grid place-items-center bg-page-bg">
+  <div class="login-card p-38 bg-white border-1 rounded-16 shadow-lg">
+    <div class="brand centered d-flex items-center justify-center gap-12 p-0 border-0">
+      <img
+        class="flex-none w-48 h-48 rounded-14 object-contain"
+        src="assets/DockerCopilotlogo.png"
+        alt="Docker Copilot"
+      />
+      <div class="d-flex flex-col gap-2 lh-13">
+        <strong class="fs-18 text-black">Docker Copilot</strong
+        ><span class="fs-13 text-muted">容器管理平台</span>
+      </div>
     </div>
-    <h1 class="mt-35 mb-7 mx-0 fs-24">登录管理台</h1>
-    <p class="m-0 fs-14">输入服务端配置的 secretKey 继续</p>
+    <h1 class="mt-35 mb-7 mx-0 fs-24 text-black">登录管理台</h1>
+    <p class="m-0 fs-14 text-muted">输入服务端配置的 secretKey 继续</p>
     @if (sessionHint()) {
-      <div class="message info mt-12 fs-12" role="status">{{ sessionHint() }}</div>
+      <div class="message info mt-12 fs-12 text-blue rounded-8 py-8 px-10" role="status">
+        {{ sessionHint() }}
+      </div>
     }
-    <label class="d-block mt-24 fs-12">Secret Key
-      <input class="d-block mt-8 p-12" type="password" [(ngModel)]="secretKey" (keyup.enter)="login()" autocomplete="current-password" [disabled]="submitting()">
+    <label class="d-block mt-24 fs-12 text-muted"
+      >Secret Key
+      <input
+        class="field-control d-block mt-8 p-12"
+        type="password"
+        [(ngModel)]="secretKey"
+        (keyup.enter)="login()"
+        autocomplete="current-password"
+        [disabled]="submitting()"
+      />
     </label>
     <button class="btn text-white bg-blue w-full mt-16" (click)="login()" [disabled]="submitting()">
       {{ submitting() ? '登录中…' : '进入管理台' }}
     </button>
     @if (error()) {
-      <div class="message error mt-12 fs-12" role="alert">{{ error() }}</div>
+      <div class="message error mt-12 fs-12 text-red" role="alert">{{ error() }}</div>
     }
   </div>
 </div>

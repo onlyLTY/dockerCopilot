@@ -1,54 +1,201 @@
 // Flex / 布局工具类：display、flex 方向与对齐、flex 比例、gap
 
 /* display */
-.d-none { display: none !important; }
-.d-block { display: block !important; }
-.d-inline { display: inline !important; }
-.d-inline-block { display: inline-block !important; }
-.d-flex { display: flex !important; }
-.d-inline-flex { display: inline-flex !important; }
-.d-grid { display: grid !important; }
-.d-inline-grid { display: inline-grid !important; }
-.d-contents { display: contents !important; }
+.d-none {
+  display: none !important;
+}
+.d-block {
+  display: block !important;
+}
+.d-inline {
+  display: inline !important;
+}
+.d-inline-block {
+  display: inline-block !important;
+}
+.d-flex {
+  display: flex !important;
+}
+.d-inline-flex {
+  display: inline-flex !important;
+}
+.d-grid {
+  display: grid !important;
+}
+.d-inline-grid {
+  display: inline-grid !important;
+}
+.d-contents {
+  display: contents !important;
+}
 
 /* flex 容器方向 */
-.flex-row { flex-direction: row !important; }
-.flex-col { flex-direction: column !important; }
-.flex-wrap { flex-wrap: wrap !important; }
-.flex-nowrap { flex-wrap: nowrap !important; }
+.flex-row {
+  flex-direction: row !important;
+}
+.flex-col {
+  flex-direction: column !important;
+}
+.flex-wrap {
+  flex-wrap: wrap !important;
+}
+.flex-nowrap {
+  flex-wrap: nowrap !important;
+}
 
 /* flex 比例 */
-.flex-1 { flex: 1 1 0 !important; }
-.flex-auto { flex: 1 1 auto !important; }
-.flex-none { flex: none !important; }
-.flex-grow { flex-grow: 1 !important; }
-.flex-shrink-0 { flex-shrink: 0 !important; }
+.flex-1 {
+  flex: 1 1 0 !important;
+}
+.flex-auto {
+  flex: 1 1 auto !important;
+}
+.flex-none {
+  flex: none !important;
+}
+.flex-grow {
+  flex-grow: 1 !important;
+}
+.flex-shrink-0 {
+  flex-shrink: 0 !important;
+}
 
 /* 交叉轴对齐 */
-.items-center { align-items: center !important; }
-.items-start { align-items: flex-start !important; }
-.items-end { align-items: flex-end !important; }
-.items-baseline { align-items: baseline !important; }
-.items-stretch { align-items: stretch !important; }
+.items-center {
+  align-items: center !important;
+}
+.items-start {
+  align-items: flex-start !important;
+}
+.items-end {
+  align-items: flex-end !important;
+}
+.items-baseline {
+  align-items: baseline !important;
+}
+.items-stretch {
+  align-items: stretch !important;
+}
 
 /* 主轴对齐 */
-.justify-center { justify-content: center !important; }
-.justify-start { justify-content: flex-start !important; }
-.justify-end { justify-content: flex-end !important; }
-.justify-between { justify-content: space-between !important; }
-.justify-around { justify-content: space-around !important; }
-.justify-evenly { justify-content: space-evenly !important; }
+.justify-center {
+  justify-content: center !important;
+}
+.justify-start {
+  justify-content: flex-start !important;
+}
+.justify-end {
+  justify-content: flex-end !important;
+}
+.justify-between {
+  justify-content: space-between !important;
+}
+.justify-around {
+  justify-content: space-around !important;
+}
+.justify-evenly {
+  justify-content: space-evenly !important;
+}
 
 /* grid 居中 */
-.place-items-center { place-items: center !important; }
+.place-items-center {
+  place-items: center !important;
+}
 
+/* grid 列数（minmax(0,1fr) 避免子项撑破网格） */
+.grid-cols-1 {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+.grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+.grid-cols-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+}
+
+/* 按内容宽度排（标签/chip 等，避免 1fr 把格子拉满） */
+.grid-cols-2-min {
+  grid-template-columns: repeat(2, min-content) !important;
+}
 
 /* 尺寸辅助 */
-.w-full { width: 100% !important; }
-.w-auto { width: auto !important; }
-.min-w-0 { min-width: 0 !important; }
-.h-full { height: 100% !important; }
-.min-h-0 { min-height: 0 !important; }
-.overflow-hidden { overflow: hidden !important; }
-.overflow-auto { overflow: auto !important; }
-.overflow-visible { overflow: visible !important; }
+.w-full {
+  width: 100% !important;
+}
+.w-auto {
+  width: auto !important;
+}
+.min-w-0 {
+  min-width: 0 !important;
+}
+.max-w-full {
+  max-width: 100% !important;
+}
+.h-full {
+  height: 100% !important;
+}
+.h-screen {
+  height: 100vh !important;
+}
+.h-auto {
+  height: auto !important;
+}
+.min-h-0 {
+  min-height: 0 !important;
+}
+
+/* 固定宽高 / min-height / max-height（与 spacing 常用档位对齐） */
+$box-sizes: 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 30, 32, 36, 40, 42, 44, 48, 56, 112, 200, 220;
+@each $size in $box-sizes {
+  .w-#{$size} {
+    width: #{$size}px !important;
+  }
+  .h-#{$size} {
+    height: #{$size}px !important;
+  }
+  .min-h-#{$size} {
+    min-height: #{$size}px !important;
+  }
+  .max-h-#{$size} {
+    max-height: #{$size}px !important;
+  }
+  .min-w-#{$size} {
+    min-width: #{$size}px !important;
+  }
+}
+
+.overflow-hidden {
+  overflow: hidden !important;
+}
+.overflow-auto {
+  overflow: auto !important;
+}
+.overflow-x-auto {
+  overflow-x: auto !important;
+}
+.overflow-y-auto {
+  overflow-y: auto !important;
+}
+.overflow-visible {
+  overflow: visible !important;
+}
+.object-contain {
+  object-fit: contain !important;
+}
+
+/* 过渡 */
+.transition-width {
+  transition: width 0.3s ease !important;
+}
+.transition-colors {
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s !important;
+}
