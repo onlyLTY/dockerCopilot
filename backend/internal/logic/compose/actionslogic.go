@@ -225,30 +225,31 @@ func (l *ActionsLogic) Cleanup(req *types.ComposeCleanupReq) (*types.Resp, error
 		logx.Errorf("compose operation=cleanup project=%s failed=scan error=%v", req.ProjectID, err)
 		return errorResp(resp, 500, "扫描 Compose 项目失败"), nil
 	}
+	targetFound := false
 	for _, project := range projects.Projects {
-		if project.ID == req.ProjectID && project.Status != "unused" {
+		if project.ID != req.ProjectID {
+			continue
+		}
+		targetFound = true
+		if project.Status != "unused" {
 			logx.Errorf("compose operation=cleanup project=%s failed=project_status_changed status=%s", req.ProjectID, project.Status)
 			return errorResp(resp, 409, "项目状态已变化，不能清理"), nil
 		}
+		break
+	}
+	if !targetFound {
+		logx.Errorf("compose operation=cleanup project=%s failed=project_not_found_after_scan", req.ProjectID)
+		return errorResp(resp, 409, "项目状态已变化或项目不存在，不能清理"), nil
 	}
 	if req.DeleteDir {
-		entries, err := os.ReadDir(root)
-		if err != nil {
-			logx.Errorf("compose operation=cleanup project=%s stage=read_dir failed=%v", req.ProjectID, err)
-			return errorResp(resp, 500, "读取项目目录失败"), nil
+		if err := composeProject.RemoveProjectRoot(root, l.svcCtx.Config.Compose.ScanPaths); err != nil {
+			logx.Errorf("compose operation=cleanup project=%s stage=remove_dir_validate failed=%v", req.ProjectID, err)
+			return errorResp(resp, 409, "项目目录不安全，不能删除整个目录"), nil
 		}
-		for _, entry := range entries {
-			if entry.IsDir() || (entry.Name() != ".env" && !isComposeFile(entry.Name())) {
-				logx.Errorf("compose operation=cleanup project=%s failed=unsafe_directory entry=%s", req.ProjectID, entry.Name())
-				return errorResp(resp, 409, "项目目录包含非 Compose 文件，不能删除整个目录"), nil
-			}
-			info, err := os.Lstat(filepath.Join(root, entry.Name()))
-			if err != nil || info.Mode()&os.ModeSymlink != 0 {
-				logx.Errorf("compose operation=cleanup project=%s failed=unsafe_symlink entry=%s error=%v", req.ProjectID, entry.Name(), err)
-				return errorResp(resp, 409, "项目目录包含符号链接，不能删除"), nil
-			}
-		}
-		if err := os.RemoveAll(root); err != nil {
+		if _, err := os.Lstat(root); err == nil {
+			logx.Errorf("compose operation=cleanup project=%s stage=remove_dir failed=directory_still_exists", req.ProjectID)
+			return errorResp(resp, 500, "删除项目目录失败"), nil
+		} else if !os.IsNotExist(err) {
 			logx.Errorf("compose operation=cleanup project=%s stage=remove_dir failed=%v", req.ProjectID, err)
 			return errorResp(resp, 500, "删除项目目录失败"), nil
 		}

@@ -61,6 +61,61 @@ func FindProjectRoot(svcCtx *svc.ServiceContext, id string) (string, error) {
 	return "", fmt.Errorf("Compose 项目不存在")
 }
 
+// RemoveProjectRoot 只删除配置的 Compose 扫描目录下的真实项目目录，
+// 不允许删除扫描根目录或符号链接目录。
+func RemoveProjectRoot(root string, scanPaths []string) error {
+	rootAbs, err := validateProjectRootForRemoval(root, scanPaths)
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(rootAbs)
+}
+
+func validateProjectRootForRemoval(root string, scanPaths []string) (string, error) {
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	rootAbs = filepath.Clean(rootAbs)
+	info, err := os.Lstat(rootAbs)
+	if err != nil {
+		return "", err
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return "", fmt.Errorf("项目目录不是安全的真实目录")
+	}
+	rootReal, err := filepath.EvalSymlinks(rootAbs)
+	if err != nil {
+		return "", err
+	}
+	rootReal = filepath.Clean(rootReal)
+
+	for _, scanPath := range scanPaths {
+		if strings.TrimSpace(scanPath) == "" {
+			continue
+		}
+		scanAbs, err := filepath.Abs(scanPath)
+		if err != nil {
+			return "", err
+		}
+		scanReal, err := filepath.EvalSymlinks(filepath.Clean(scanAbs))
+		if err != nil {
+			continue
+		}
+		rel, err := filepath.Rel(filepath.Clean(scanReal), rootReal)
+		if err != nil {
+			continue
+		}
+		if rel == "." || rel == "" {
+			return "", fmt.Errorf("不能删除 Compose 扫描根目录")
+		}
+		if rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel) {
+			return rootAbs, nil
+		}
+	}
+	return "", fmt.Errorf("项目目录不在 Compose 扫描范围内")
+}
+
 func findProjectRoot(root, id string) (string, error) {
 	var found string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, walkErr error) error {

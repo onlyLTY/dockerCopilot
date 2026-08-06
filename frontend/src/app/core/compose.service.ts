@@ -179,11 +179,20 @@ export class ComposeService {
     previewToken: string,
     deleteDir = false,
   ): Observable<ApiResponse<Record<string, unknown>>> {
-    return this.http.post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/cleanup', {
-      projectId,
-      previewToken,
-      deleteDir,
-      confirm: true,
-    });
+    return this.http
+      .post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/cleanup', {
+        projectId,
+        previewToken,
+        deleteDir,
+        confirm: true,
+      })
+      .pipe(
+        tap(r => {
+          if (r.code === 200 && deleteDir) {
+            this.store.refresh();
+            this.bus.invalidate(['containers', 'ports']);
+          }
+        }),
+      );
   }
 }

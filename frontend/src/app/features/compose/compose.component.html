@@ -41,7 +41,11 @@
           />
         </div>
         <div resource-card-title>
-          <span class="text-ellipsis min-w-0">{{ project.name || '未解析项目' }}</span>
+          <span
+            class="text-ellipsis min-w-0"
+            [matTooltip]="project.name || '未解析项目'"
+            >{{ project.name || '未解析项目' }}</span
+          >
           <small
             class="status-badge py-2 px-8 fs-10"
             [class.using]="project.status === 'using'"
@@ -52,7 +56,11 @@
           >
         </div>
         <div resource-card-info class="fs-12 text-muted">
-          <span class="d-block text-ellipsis">{{ project.root }}</span>
+          <span
+            class="d-block text-ellipsis"
+            [matTooltip]="project.root"
+            >{{ project.root }}</span
+          >
           <small class="d-block"
             >{{ project.containers.length }} 个容器 · {{ project.files.length }} 个文件 ·
             {{ project.ports.length }} 个端口</small
@@ -61,6 +69,18 @@
         <div resource-card-actions>
           <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="openEditor(project)">
             <dc-icon name="edit"></dc-icon>查看/编辑
+          </button>
+          <button
+            class="btn text-red border-1 py-8 px-7 fs-12"
+            [disabled]="project.status !== 'unused' || !!deletingProject() || cleanupBusy()"
+            [title]="
+              project.status === 'unused'
+                ? '删除整个项目文件夹'
+                : '只有未使用的项目可以删除'
+            "
+            (click)="deleteProject(project)"
+          >
+            <dc-icon name="delete"></dc-icon>{{ deletingProject() === project.id ? '删除中…' : '删除项目' }}
           </button>
         </div>
       </dc-resource-card>

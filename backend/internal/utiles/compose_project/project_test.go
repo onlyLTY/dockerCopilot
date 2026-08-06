@@ -1,6 +1,8 @@
 package compose_project
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	dockerTypes "github.com/docker/docker/api/types"
@@ -75,5 +77,62 @@ func TestSameComposeRootNormalizesWindowsSeparators(t *testing.T) {
 func TestSameComposeRootRequiresWorkingDirectory(t *testing.T) {
 	if sameComposeRoot(map[string]string{}, "/compose/dockercopilot", nil) {
 		t.Fatal("expected missing working directory not to match")
+	}
+}
+
+func TestRemoveProjectRootRemovesNestedContent(t *testing.T) {
+	scanRoot := t.TempDir()
+	projectRoot := filepath.Join(scanRoot, "project")
+	if err := os.MkdirAll(filepath.Join(projectRoot, "nested", "deep"), 0750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(projectRoot, "compose.yaml"), []byte("services: {}\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(projectRoot, "nested", "deep", "data.txt"), []byte("data"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := RemoveProjectRoot(projectRoot, []string{scanRoot}); err != nil {
+		t.Fatalf("remove project root: %v", err)
+	}
+	if _, err := os.Stat(projectRoot); !os.IsNotExist(err) {
+		t.Fatalf("expected project root to be removed, got %v", err)
+	}
+}
+
+func TestRemoveProjectRootRejectsScanRoot(t *testing.T) {
+	scanRoot := t.TempDir()
+	if err := RemoveProjectRoot(scanRoot, []string{scanRoot}); err == nil {
+		t.Fatal("expected scan root removal to be rejected")
+	}
+	if _, err := os.Stat(scanRoot); err != nil {
+		t.Fatalf("scan root should remain: %v", err)
+	}
+}
+
+func TestRemoveProjectRootRejectsOutsidePath(t *testing.T) {
+	scanRoot := t.TempDir()
+	outsideRoot := t.TempDir()
+	if err := RemoveProjectRoot(outsideRoot, []string{scanRoot}); err == nil {
+		t.Fatal("expected outside path removal to be rejected")
+	}
+	if _, err := os.Stat(outsideRoot); err != nil {
+		t.Fatalf("outside path should remain: %v", err)
+	}
+}
+
+func TestRemoveProjectRootRejectsSymlinkRoot(t *testing.T) {
+	scanRoot := t.TempDir()
+	target := t.TempDir()
+	link := filepath.Join(scanRoot, "project-link")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks are unavailable: %v", err)
+	}
+	if err := RemoveProjectRoot(link, []string{scanRoot}); err == nil {
+		t.Fatal("expected symlink project root removal to be rejected")
+	}
+	if _, err := os.Stat(target); err != nil {
+		t.Fatalf("symlink target should remain: %v", err)
 	}
 }

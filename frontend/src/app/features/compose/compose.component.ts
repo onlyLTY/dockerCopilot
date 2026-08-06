@@ -12,6 +12,7 @@ import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
 import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
 import { ModalHeadingComponent } from '../../shared/modal-heading/modal-heading.component';
 import { actionErrorMessage, runAction } from '../../core/run-action';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 const defaultCompose = '';
 
@@ -26,6 +27,7 @@ const defaultCompose = '';
     StatsComponent,
     PageHeadingComponent,
     ModalHeadingComponent,
+    MatTooltipModule,
   ],
   templateUrl: './compose.component.html',
   styleUrl: './compose.component.scss',
@@ -92,6 +94,7 @@ export class ComposeComponent {
   readonly selectionMode = signal(false);
   readonly selected = signal<Set<string>>(new Set());
   readonly cleanupBusy = signal(false);
+  readonly deletingProject = signal<string | undefined>(undefined);
   readonly editorProject = signal<ComposeProject | undefined>(undefined);
   readonly filename = signal('');
   readonly content = signal('');
@@ -390,6 +393,52 @@ export class ComposeComponent {
         });
       },
       error: () => this.setCreateError('项目已创建，但读取项目详情失败', 'error'),
+    });
+  }
+
+  async deleteProject(project: ComposeProject): Promise<void> {
+    if (project.status !== 'unused' || this.cleanupBusy() || this.deletingProject()) return;
+    const label = project.name || project.id;
+    if (
+      !(await this.confirm.open({
+        title: '删除项目文件夹',
+        message: `确定删除项目 ${label} 吗？将递归删除整个项目文件夹及其中的所有文件和子目录，此操作不可恢复。删除前会自动备份 Compose 配置文件。`,
+        confirmText: '确认删除',
+        danger: true,
+        critical: true,
+      }))
+    )
+      return;
+
+    this.deletingProject.set(project.id);
+    this.service.cleanupPreview(project.id).subscribe({
+      next: preview => {
+        const token = preview.data?.['previewToken'];
+        if (preview.code !== 200 || !token) {
+          this.deletingProject.set(undefined);
+          this.toast.error(`删除项目失败：${preview.msg || '无法生成删除预览'}`);
+          return;
+        }
+        this.service.cleanup(project.id, String(token), true).subscribe({
+          next: result => {
+            this.deletingProject.set(undefined);
+            if (result.code === 200) {
+              this.toast.success(`项目 ${label} 已删除`);
+              this.service.refresh();
+              return;
+            }
+            this.toast.error(`删除项目失败：${result.msg || '未知错误'}`);
+          },
+          error: error => {
+            this.deletingProject.set(undefined);
+            this.toast.error(`删除项目失败：${actionErrorMessage(error)}`);
+          },
+        });
+      },
+      error: error => {
+        this.deletingProject.set(undefined);
+        this.toast.error(`删除项目失败：${actionErrorMessage(error, '无法生成删除预览')}`);
+      },
     });
   }
 
