@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	logicons "github.com/onlyLTY/dockerCopilot/internal/logic/icons"
 )
 
 func makeUploadRequest(t *testing.T, filename, contentType string, content []byte) *http.Request {
@@ -38,14 +40,11 @@ func makeUploadRequest(t *testing.T, filename, contentType string, content []byt
 func withIconTestPaths(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	oldDir := iconDirectory
-	oldConfig := iconConfigPath
-	iconDirectory = func() string { return filepath.Join(dir, "icons") }
-	iconConfigPath = func() string { return filepath.Join(dir, "imageLogos.js") }
-	t.Cleanup(func() {
-		iconDirectory = oldDir
-		iconConfigPath = oldConfig
-	})
+	restore := logicons.SetIconPathsForTest(
+		func() string { return filepath.Join(dir, "icons") },
+		func() string { return filepath.Join(dir, "imageLogos.js") },
+	)
+	t.Cleanup(restore)
 	return dir
 }
 

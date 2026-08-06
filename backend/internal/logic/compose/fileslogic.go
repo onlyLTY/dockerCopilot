@@ -42,7 +42,7 @@ func (l *FilesLogic) Create(req *types.ComposeProjectCreateReq) (*types.Resp, er
 	return successResp(resp, map[string]interface{}{"projectId": id, "version": version}), nil
 }
 
-func (l *FilesLogic) List(req *types.ComposeProjectFileReq) (*types.Resp, error) {
+func (l *FilesLogic) List(req *types.ComposeProjectIdReq) (*types.Resp, error) {
 	resp := &types.Resp{}
 	logx.Infof("compose operation=file_list project=%s", req.ProjectID)
 	root, err := composeProject.FindProjectRoot(l.svcCtx, req.ProjectID)

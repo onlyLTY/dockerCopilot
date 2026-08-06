@@ -46,10 +46,19 @@ type ContainerUpdateReq {
 	ContainerName   string `form:"containerName,optional"`
 }
 
+type UpdateBackupSettingsReq {
+	Retention int `form:"retention" validate:"required"`
+}
+
 type ComposeProjectCreateReq {
 	ProjectName string `json:"projectName" validate:"required"`
 	Filename    string `json:"filename" validate:"required"`
 	Content     string `json:"content" validate:"required"`
+}
+
+// 仅项目 id（文件列表等）
+type ComposeProjectIdReq {
+	ProjectID string `path:"id" validate:"required"`
 }
 
 type ComposeProjectFileReq {
@@ -98,6 +107,50 @@ type VersionReq {
 	Type string `form:"type,optional"`
 }
 
+// —— settings / logs ——
+type IntervalSettingsData {
+	Interval string   `json:"interval"`
+	Options  []string `json:"options"`
+}
+
+type LevelSettingsData {
+	Level   string   `json:"level"`
+	Options []string `json:"options"`
+}
+
+type ProxySettingsData {
+	GithubProxy string `json:"githubProxy"`
+	HTTPProxy   string `json:"HTTP_PROXY"`
+	HTTPSProxy  string `json:"HTTPS_PROXY"`
+	NoProxy     string `json:"NO_PROXY"`
+}
+
+// 聚合写入契约占位；实际 partial 更新用 logic 内指针 DTO（handler 自定义 Decode）。
+type UpdateAppSettingsReq {
+	UpdateCheckInterval string            `json:"updateCheckInterval,optional"`
+	AutoBackupInterval  string            `json:"autoBackupInterval,optional"`
+	LogLevel            string            `json:"logLevel,optional"`
+	Retention           int               `json:"retention,optional"`
+	Proxy               ProxySettingsData `json:"proxy,optional"`
+}
+
+type IntervalSettingsReq {
+	Interval string `json:"interval" validate:"required"`
+}
+
+type LogLevelReq {
+	Level string `json:"level" validate:"required"`
+}
+
+type GetLogsReq {
+	Limit int    `form:"limit,optional"`
+	Level string `form:"level,optional"`
+}
+
+type IconDeleteReq {
+	ImageName string `form:"imageName" validate:"required"`
+}
+
 service dockerCopilot {
 	@handler webindex
 	get /
@@ -113,17 +166,17 @@ service dockerCopilot {
 }
 
 @server (
-		prefix: /api
-		group:  progress
-		jwt:    Auth
-	)
-	service dockerCopilot {
-		@handler ListProgress
-		get /progress/list returns (Resp)
+	prefix: /api
+	group:  progress
+	jwt:    Auth
+)
+service dockerCopilot {
+	@handler ListProgress
+	get /progress/list returns (Resp)
 
-		@handler GetProgress
-		get /progress/:taskid (GetProgressReq) returns (Resp)
-	}
+	@handler GetProgress
+	get /progress/:taskid (GetProgressReq) returns (Resp)
+}
 
 @server (
 	prefix: /api
@@ -146,20 +199,20 @@ service dockerCopilot {
 	@handler rename
 	post /container/:id/rename (ContainerRenameReq) returns (Resp)
 
-@handler update
-		post /container/:id/update (ContainerUpdateReq) returns (Resp)
+	@handler update
+	post /container/:id/update (ContainerUpdateReq) returns (Resp)
 
-		@handler checkUpdate
-		post /containers/check-update returns (Resp)
+	@handler checkUpdate
+	post /containers/check-update returns (Resp)
 
-		@handler updateIgnore
-		post /container/:id/update-ignore (IdReq) returns (Resp)
+	@handler updateIgnore
+	post /container/:id/update-ignore (IdReq) returns (Resp)
 
-		@handler restoreUpdateIgnore
-		delete /container/:id/update-ignore (IdReq) returns (Resp)
+	@handler restoreUpdateIgnore
+	delete /container/:id/update-ignore (IdReq) returns (Resp)
 
-		@handler backup
-		get /container/backup returns (Resp)
+	@handler backup
+	get /container/backup returns (Resp)
 
 	@handler backup2compose
 	get /container/backup2compose returns (Resp)
@@ -177,7 +230,7 @@ service dockerCopilot {
 	get /container/backup-settings returns (Resp)
 
 	@handler updateBackupSettings
-	put /container/backup-settings returns (Resp)
+	put /container/backup-settings (UpdateBackupSettingsReq) returns (Resp)
 }
 
 @server (
@@ -193,7 +246,7 @@ service dockerCopilot {
 	post /compose/projects (ComposeProjectCreateReq) returns (Resp)
 
 	@handler composeProjectFiles
-	get /compose/projects/:id/files (ComposeProjectFileReq) returns (Resp)
+	get /compose/projects/:id/files (ComposeProjectIdReq) returns (Resp)
 
 	@handler composeProjectFile
 	get /compose/projects/:id/files/:filename (ComposeProjectFileReq) returns (Resp)
@@ -221,19 +274,19 @@ service dockerCopilot {
 }
 
 @server (
-		prefix: /api
-		jwt:    Auth
-	)
-	service dockerCopilot {
-		@handler imagesList
-		get /images returns (Resp)
+	prefix: /api
+	jwt:    Auth
+)
+service dockerCopilot {
+	@handler imagesList
+	get /images returns (Resp)
 
-		@handler pruneImages
-		post /images/prune (ImagePruneReq) returns (Resp)
+	@handler pruneImages
+	post /images/prune (ImagePruneReq) returns (Resp)
 
-		@handler remove
-		delete /image/:id (RemoveImageReq) returns (Resp)
-	}
+	@handler remove
+	delete /image/:id (RemoveImageReq) returns (Resp)
+}
 
 @server (
 	prefix: /api
@@ -261,5 +314,53 @@ service dockerCopilot {
 	get / returns (Resp)
 
 	@handler delete
-	delete / returns (Resp)
+	delete / (IconDeleteReq) returns (Resp)
 }
+
+@server (
+	prefix: /api
+	group:  settings
+	jwt:    Auth
+)
+service dockerCopilot {
+	@handler getAppSettings
+	get /settings returns (Resp)
+
+	@handler updateAppSettings
+	put /settings (UpdateAppSettingsReq) returns (Resp)
+
+	@handler getUpdateCheckSettings
+	get /settings/update-check returns (Resp)
+
+	@handler updateUpdateCheckSettings
+	put /settings/update-check (IntervalSettingsReq) returns (Resp)
+
+	@handler getAutoBackupSettings
+	get /settings/auto-backup returns (Resp)
+
+	@handler updateAutoBackupSettings
+	put /settings/auto-backup (IntervalSettingsReq) returns (Resp)
+
+	@handler getLogLevelSettings
+	get /settings/log-level returns (Resp)
+
+	@handler updateLogLevelSettings
+	put /settings/log-level (LogLevelReq) returns (Resp)
+
+	@handler getProxySettings
+	get /settings/proxy returns (Resp)
+
+	@handler updateProxySettings
+	put /settings/proxy (ProxySettingsData) returns (Resp)
+}
+
+@server (
+	prefix: /api
+	group:  logs
+	jwt:    Auth
+)
+service dockerCopilot {
+	@handler getLogs
+	get /logs (GetLogsReq) returns (Resp)
+}
+

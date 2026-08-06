@@ -9,14 +9,14 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-func UpdateIgnoreHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func RestoreUpdateIgnoreHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.ContainerUpdateIgnoreReq
+		var req types.IdReq
 		if err := httpx.Parse(r, &req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
-		resp, err := container.NewUpdateIgnoreLogic(r.Context(), svcCtx).Set(&req, true)
+		resp, err := container.NewRestoreUpdateIgnoreLogic(r.Context(), svcCtx).RestoreUpdateIgnore(&req)
 		writeLogicResp(w, r, resp, err)
 	}
 }

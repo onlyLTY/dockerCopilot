@@ -28,6 +28,8 @@ Docker Copilot 是一个面向 Docker Engine 的 Web 管理平台，用于在浏
 
 #### 后端
 
+后端基于 go-zero，遵循 **Spec-First**（改 `backend/dockercopilot.api` → `goctl api go --style gozero` → 填 `internal/logic`）。详见 `backend/README.md`。
+
 后端模块要求 Go 1.23+（`backend/go.mod` 声明 toolchain 为 Go 1.24.1）。
 
 - **主配置**：`backend/etc/dockerCopilot.yaml`（容器/通用；`AccessSecret: ${secretKey}` 需环境变量）

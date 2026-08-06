@@ -23,12 +23,12 @@ func TestNormalizeRepository(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := normalizeRepository(test.input)
+			got, err := NormalizeRepository(test.input)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if got != test.want {
-				t.Fatalf("normalizeRepository(%q) = %q, want %q", test.input, got, test.want)
+				t.Fatalf("NormalizeRepository(%q) = %q, want %q", test.input, got, test.want)
 			}
 		})
 	}
@@ -36,8 +36,8 @@ func TestNormalizeRepository(t *testing.T) {
 
 func TestNormalizeRepositoryRejectsUnsafeValues(t *testing.T) {
 	for _, input := range []string{"", "../app", "registry/app name", "registry/app\nname", "registry/\"app"} {
-		if _, err := normalizeRepository(input); err == nil {
-			t.Fatalf("normalizeRepository(%q) accepted unsafe value", input)
+		if _, err := NormalizeRepository(input); err == nil {
+			t.Fatalf("NormalizeRepository(%q) accepted unsafe value", input)
 		}
 	}
 }
@@ -81,16 +81,16 @@ func TestWriteIconsEscapesValuesAndCanBeReadBack(t *testing.T) {
 }
 
 func TestMatchingKeysUsesNormalizedRepositoryNames(t *testing.T) {
-	icons := map[string]string{
+	iconsMap := map[string]string{
 		"nginx:latest":       "/src/config/image/docker.png",
 		"docker.io/nginx:1":  "/src/config/image/docker-old.png",
 		"ghcr.io/team/nginx": "/src/config/image/ghcr.png",
 	}
-	keys := matchingKeys(icons, "nginx")
+	keys := matchingKeys(iconsMap, "nginx")
 	if len(keys) != 2 {
 		t.Fatalf("matchingKeys returned %v, want two normalized nginx keys", keys)
 	}
-	if got := matchingKeys(icons, "team/nginx"); len(got) != 1 || got[0] != "ghcr.io/team/nginx" {
+	if got := matchingKeys(iconsMap, "team/nginx"); len(got) != 1 || got[0] != "ghcr.io/team/nginx" {
 		t.Fatalf("matchingKeys returned %v for normalized private registry path", got)
 	}
 }

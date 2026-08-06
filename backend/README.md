@@ -1,43 +1,80 @@
 # dockerCopilot Backend Service
 
-dockerCopilot 后端服务基于 [go-zero](https://github.com/zeromicro/go-zero) 框架开发，遵循 Spec-First 规范架构设计。
+dockerCopilot 后端服务基于 [go-zero](https://github.com/zeromicro/go-zero) 框架开发，遵循 **Spec-First（教科书 A）** 架构：
+
+```text
+改 dockercopilot.api
+  → goctl api go -api dockercopilot.api -dir . --style gozero
+  → 只实现 / 调整 internal/logic/**
+  → routes.go 以 goctl 生成为准（见下方「生成后补丁」）
+```
 
 ## 目录架构
 
 ```
 backend/
-├── dockercopilot.api        # API 规范描述文件 (Spec-First)
-├── dockercopilot.go         # 服务入口文件
+├── dockercopilot.api        # API 契约唯一真相 (Spec-First)
+├── dockercopilot.go         # 服务入口：/healthz、静态资源、优雅退出
 ├── etc/
 │   └── dockerCopilot.yaml   # 配置文件
 ├── internal/
 │   ├── config/              # 配置结构体与版本解析
 │   ├── errorx/              # 统一 CodeError
-│   ├── handler/             # HTTP 路由与 Handler（含 goctl 生成与手写补丁）
-│   ├── logic/               # 业务逻辑
-│   ├── middleware/          # 登录限流、安全响应头等
+│   ├── handler/             # HTTP Handler + routes.go（goctl）+ routes_manual.go
+│   ├── logic/               # 业务逻辑（人维护；goctl 仅生成不存在的 stub）
+│   ├── middleware/          # 登录限流、安全响应头
 │   ├── svc/                 # ServiceContext、任务进度、定时任务
-│   ├── types/               # 请求/响应结构体（goctl 生成）
+│   ├── types/               # 请求/响应（goctl 生成 + 少量手写 partial）
 │   └── utiles/              # Docker/Compose/备份等工具与子包
 └── README.md
 ```
 
+## 相关计划
+
+- 教科书 A 改造计划与验收：[`docs/plan-gozero-textbook-A.md`](../docs/plan-gozero-textbook-A.md)
+
 ## 核心开发规范
 
-1. **Spec-First**：API 变更优先改 `dockercopilot.api`；types 可用 goctl 生成。`routes.go` 以手写维护为主，**不要**让 goctl 空 stub 直接挂路由。
-2. **Handler 约定（goctl 风格）**：`Parse` → `NewXxxLogic` → `writeLogicResp` / `handler.WriteLogicResp`。Compose 复杂操作可聚合在 `ActionsLogic` / `FilesLogic`，但 **Handler 符号名** 与 api 中 `@handler` 对齐（如 `ComposeDeployHandler`）。
-3. **错误处理**：业务错误统一用 `internal/errorx.CodeError`；全局 `SetErrorHandler` 只认该类型。Logic 失败时填好 `resp.Code/Msg` 并返回 err，由 handler 写出 HTTP 200 + body。
-4. **Docker 客户端**：调用 Engine 前使用 `svcCtx.RequireDocker()` / `utiles` 内 `requireDocker`；不可用时业务码 **503**（`errorx.ErrDockerUnavailable`），禁止对 nil client 直接解引用。
-5. **手写路由**：中间件与 settings/logs 等在 `routes_manual.go`。重新 goctl 后务必保留 `RegisterManualHandlers` 调用，并核对 Compose/镜像 Handler 未退回空 stub。
-6. **日志**：`SetupLog` 使用 go-zero file 模式，**按天轮转**（`Rotation=daily`），`KeepDays=7` 并压缩历史。
-7. **编译与验证**：`go test ./...` 与 `go build ./...`。
+1. **Spec-First**：API 变更**只**先改 `dockercopilot.api`，再执行：
+
+   ```bash
+   goctl api validate -api dockercopilot.api
+   goctl api go -api dockercopilot.api -dir . --style gozero
+   go test ./...
+   ```
+
+   **必须使用 `--style gozero`**（与现有小写连写文件名一致）。不要用 `go_zero`（snake_case 会生成双份文件）。
+
+2. **生成后补丁（强制）**
+   - `RegisterHandlers` **开头**调用 `RegisterManualHandlers`（安全头 + 登录限流版 `POST /api/auth`）。
+   - **删除** goctl 生成的无中间件 `POST /api/auth`（避免与限流路由重复）。
+   - 已存在的 logic/handler **不会被 goctl 覆盖**；新 stub 必须填满或 thin 转调，**禁止**提交 `todo: add your logic`。
+   - `/healthz`、前端静态、图标 FileServer 仍在 `dockercopilot.go`。
+
+3. **Handler → Logic**
+   - 薄 Handler：`Parse` → `NewXxxLogic` → `writeLogicResp` / `WriteLogicResp`。
+   - Compose 复杂域：goctl 入口 thin logic **转调** `ActionsLogic` / `FilesLogic`（不拆碎算法）。
+   - Create 项目支持 JSON **或** form；icons 上传 multipart 在 handler 解析后交 logic。
+   - settings 聚合 PUT 使用 `types.UpdateAppSettingsPartial`（指针字段，区分未传）。
+
+4. **`routes_manual.go` 白名单**（仅此）
+   - 全局 `SecurityHeaders`
+   - `POST /api/auth` + 登录 IP 限流
+   - **禁止**把 settings/logs 等业务长期只挂在 manual 而不进 `.api`
+
+5. **错误处理**：业务错误用 `internal/errorx.CodeError`；Logic 填好 `resp.Code/Msg`；handler 以 HTTP 200 + body 为主（icons 上传等历史契约除外）。
+
+6. **Docker 客户端**：`svcCtx.RequireDocker()` / `requireDocker`；不可用业务码 **503**。
+
+7. **日志**：`SetupLog` 按天轮转，`KeepDays=7`。
+
+8. **编译与防回潮**：`go test ./...`（含 `routes_guard_test`：强制 `RegisterManualHandlers`、禁止 logic todo stub）与 `go build ./...`。
 
 ## 启动与运行
 
-本地推荐固定配置（`etc/dockerCopilot.local.yaml` 已 gitignore，密钥写在文件里，无需 export）：
+本地推荐固定配置（`etc/dockerCopilot.local.yaml` 已 gitignore）：
 
 ```bash
-# 首次可从主配置复制后改 AccessSecret / ScanPaths
 # cp etc/dockerCopilot.yaml etc/dockerCopilot.local.yaml
 go run dockercopilot.go -f etc/dockerCopilot.local.yaml
 ```
@@ -51,40 +88,39 @@ go build ./...
 go test ./...
 ```
 
-- `etc/dockerCopilot.yaml`：通用/容器用，`Auth.AccessSecret: ${secretKey}`；`Timeout` 默认 10 分钟；`AccessExpire` 默认 7 天
-- `etc/dockerCopilot.local.yaml`：本机开发，AccessSecret 可写明文；`Compose.AllowHighRisk` 控制极高危部署门禁
-- 进程退出：`proc` WrapUp 刷任务进度，Shutdown/`defer` 停 cron 并关闭 Docker 客户端
+- `etc/dockerCopilot.yaml`：`Auth.AccessSecret: ${secretKey}`；`Timeout` 默认 10 分钟；`AccessExpire` 默认 7 天
+- `etc/dockerCopilot.local.yaml`：本机开发；`Compose.AllowHighRisk` 控制极高危部署门禁
+- 进程退出：`proc` WrapUp 刷任务进度，Shutdown 停 cron 并关闭 Docker 客户端
 
 ## 核心接口说明
 
 ### 认证
 
-- `POST /api/auth` — 登录（含 IP 失败限流）
+- `POST /api/auth` — 登录（含 IP 失败限流，见 `routes_manual`）
 
 ### 容器
 
-- `GET /api/containers` — 容器列表
-- `POST /api/containers/check-update` — 检查镜像更新（异步任务）
+- `GET /api/containers`
+- `POST /api/containers/check-update`
 - `POST /api/container/:id/start|stop|restart|rename|update`
-- `POST|DELETE /api/container/:id/update-ignore` — 忽略/恢复更新检测
-- 备份：`/api/container/backup`、`listBackups`、`backups/restore` 等
+- `POST|DELETE /api/container/:id/update-ignore`
+- 备份：`/api/container/backup*`、`listBackups`、`backups/restore` 等
 
 ### Compose
 
 - `GET|POST /api/compose/projects`
-- `POST /api/compose/projects/:id/deploy` 与 `deploy/preview`
-- 文件读写、cleanup、`POST /api/compose/validate`
-- 实现在 `handler/compose` 的 actions/files/list 手写 handler；goctl 空 stub 已移除，重新生成后勿把 stub 再挂回 `routes.go`
+- `POST .../deploy`、`deploy/preview`、cleanup、`POST /api/compose/validate`
+- Handler → thin logic → `ActionsLogic` / `FilesLogic`
 
 ### 镜像 / 端口 / 图标 / 进度 / 版本
 
-- `GET /api/images`、`POST /api/images/prune`、`DELETE /api/image/:id`（JWT + `/api` 前缀）
+- `GET /api/images`、`POST /api/images/prune`、`DELETE /api/image/:id`
 - `GET /api/ports`
 - `/api/icons`
 - `GET /api/progress/list`、`GET /api/progress/:taskid`
 - `GET /api/version`、`PUT /api/program`
 
-### 设置与日志（手写路由）
+### 设置与日志（已在 `.api` + gen routes）
 
 - `/api/settings` 及 update-check / auto-backup / log-level / proxy
 - `GET /api/logs`
@@ -95,4 +131,4 @@ go test ./...
 
 ### 数据目录
 
-默认根路径 `/data`，可用环境变量 `DATA_DIR` 覆盖。备份/图标/设置/任务进度均相对该根目录；亦支持 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖。
+默认根路径 `/data`，可用 `DATA_DIR` 覆盖。备份/图标/设置/任务进度均相对该根；亦支持 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH`。

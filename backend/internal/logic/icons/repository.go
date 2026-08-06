@@ -25,7 +25,7 @@ func withIconConfigLock[T any](fn func() (T, error)) (T, error) {
 	return fn()
 }
 
-func normalizeRepository(value string) (string, error) {
+func NormalizeRepository(value string) (string, error) {
 	value = strings.ToLower(strings.TrimSpace(value))
 	if value == "" {
 		return "", fmt.Errorf("imageName is required")
@@ -131,9 +131,33 @@ func writeIcons(path string, icons map[string]string) error {
 func matchingKeys(icons map[string]string, repository string) []string {
 	keys := make([]string, 0)
 	for key := range icons {
-		if normalized, err := normalizeRepository(key); err == nil && normalized == repository {
+		if normalized, err := NormalizeRepository(key); err == nil && normalized == repository {
 			keys = append(keys, key)
 		}
 	}
 	return keys
+}
+
+func iconFileReferenced(icons map[string]string, filename string) bool {
+	for _, value := range icons {
+		if filepath.Base(value) == filename {
+			return true
+		}
+	}
+	return false
+}
+
+// SetIconPathsForTest 仅测试用。
+func SetIconPathsForTest(dirFn, configFn func() string) (restore func()) {
+	oldDir, oldConfig := iconDirectory, iconConfigPath
+	if dirFn != nil {
+		iconDirectory = dirFn
+	}
+	if configFn != nil {
+		iconConfigPath = configFn
+	}
+	return func() {
+		iconDirectory = oldDir
+		iconConfigPath = oldConfig
+	}
 }
