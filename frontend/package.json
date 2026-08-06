@@ -27,9 +27,6 @@
   },
   "overrides": {
     "@modelcontextprotocol/sdk": "1.30.0",
-    "@hono/node-server": "2.0.12",
-    "sockjs": {
-      "uuid": "11.1.1"
-    }
+    "@hono/node-server": "2.0.12"
   }
 }
