@@ -219,7 +219,7 @@
 @if (detail(); as item) {
   <div class="modal-backdrop d-grid place-items-center" (click)="closeDetailOnBackdrop($event)">
     <section
-      class="modal min-w-0 d-grid modal-form modal-m container-detail-modal"
+      class="modal min-w-0 d-grid modal-m container-detail-modal"
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="item.name + '容器详情'"
@@ -227,7 +227,7 @@
     >
       <dc-modal-heading
         title="容器详情"
-        [subtitle]="item.id.slice(0, 12)"
+        [subtitle]="item.id.slice(0, 12) + ' | 创建于：' + (item.createTime || '未知')"
         (closed)="closeDetail()"
       />
       <div class="modal-body d-flex flex-col gap-16 overflow-auto">
@@ -240,7 +240,7 @@
           />
           <div class="min-w-0 flex-1">
             <strong class="d-block text-ellipsis">{{ detailName() || item.name }}</strong>
-            <span class="d-block mt-4 fs-12 text-muted text-ellipsis">{{ detailImage() }}</span>
+            <span class="d-block mt-4 fs-12 text-muted text-ellipsis">{{ detailImage() }} </span>
           </div>
           <small
             class="status-badge py-2 px-8 fs-10"
@@ -251,7 +251,7 @@
         </div>
 
         <div class="form-field d-block">
-          容器名称
+          <span class="fs-14">容器名称</span>
           <div class="detail-field-row d-flex items-center gap-8 min-w-0 mt-8">
             <input
               class="field-control flex-1 min-w-0 py-10 px-12"
@@ -271,7 +271,7 @@
         </div>
 
         <div class="form-field d-block">
-          镜像名称和标签
+          <span class="fs-14">镜像名称和标签</span>
           <div class="detail-field-row d-flex items-center gap-8 min-w-0 mt-8">
             <input
               class="field-control flex-1 min-w-0 py-10 px-12"
@@ -292,30 +292,28 @@
             >修改镜像后点击“更换镜像”，系统会拉取镜像并重新创建容器。</span
           >
         </div>
-
-        <div class="container-detail-meta d-grid grid-cols-2-min gap-8 pt-12 border-t-1 fs-12 text-muted">
-          <span>创建于：{{ item.createTime || '未知' }}</span>
-        </div>
       </div>
-      <div class="modal-actions d-flex items-center justify-between gap-8">
+      <div class="modal-actions d-flex items-center justify-between gap-8 border-t-1">
         <button class="btn text-secondary-text bg-secondary-bg" (click)="closeDetail()">关闭</button>
         <div class="d-flex items-center gap-8">
           <button
-            class="btn text-red bg-secondary-bg"
+            class="btn bg-red text-white"
             [disabled]="isActionBusy(item.id)"
             (click)="detailRemove()"
           >
             <dc-icon name="delete"></dc-icon>删除
           </button>
           <button
-            class="btn text-blue bg-secondary-bg"
+            class="btn bg-blue text-white"
             [disabled]="isActionBusy(item.id)"
             (click)="detailRestart()"
           >
             <dc-icon name="restart"></dc-icon>重启
           </button>
           <button
-            class="btn text-green bg-secondary-bg"
+            class="btn text-white"
+            [class.bg-green]="!isRunning(item)"
+            [class.bg-red]="isRunning(item)"
             [disabled]="isActionBusy(item.id)"
             (click)="detailStartStop()"
           >
