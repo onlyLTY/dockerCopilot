@@ -21,18 +21,15 @@ export class ContainerService {
   private readonly http = inject(HttpClient);
   private readonly bus = inject(CacheBus);
   private readonly store = new CacheStore<ContainerRow[]>(() => this.list(), '读取容器失败');
-  /** 供页面消费的只读缓存视图 */
   readonly cache: CacheView<ContainerRow[]> = this.store;
 
   constructor() {
     this.bus.register('containers', this.store);
   }
 
-  /** 页面初始化调用：有缓存则不请求 */
   ensureLoaded(): void {
     this.store.ensureLoaded();
   }
-  /** 手动刷新，覆盖缓存 */
   refresh(): void {
     this.store.refresh();
   }
@@ -40,7 +37,7 @@ export class ContainerService {
   list(): Observable<ApiResponse<ContainerRow[]>> {
     return this.http.get<ApiResponse<ContainerRow[]>>('/api/containers');
   }
-  /** 手动触发检查更新：异步任务，返回 taskID */
+  /** 异步检查更新，返回 taskID 供进度跟踪 */
   checkUpdate(): Observable<ApiResponse<{ taskID: string }>> {
     return this.http.post<ApiResponse<{ taskID: string }>>('/api/containers/check-update', {});
   }

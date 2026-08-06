@@ -100,7 +100,7 @@ func main() {
 	})
 	defer ctx.Close()
 
-	// Ensure data directory and config exist (Auto-init)；根目录可由 DATA_DIR 覆盖
+	// 自动初始化数据目录（图标/备份/配置）；根目录可由 DATA_DIR 覆盖
 	if err := os.MkdirAll(datadir.IconDir(), 0755); err != nil {
 		logx.Errorf("Failed to create icon directory: %v", err)
 	}
@@ -277,7 +277,6 @@ func logxConfigLevel(level string) string {
 	}
 }
 
-// ensureLogDirectory 检查并创建日志目录
 func ensureLogDirectory(logDir string) error {
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
 		return os.MkdirAll(logDir, 0755)
@@ -285,7 +284,7 @@ func ensureLogDirectory(logDir string) error {
 	return nil
 }
 
-// SetupLog 使用 go-zero 原生 LogConf 标准初始化日志设置
+// SetupLog 使用 go-zero 原生 LogConf 初始化文件日志（按天滚动）。
 func SetupLog(logDir, level string) error {
 	if !settingstore.ValidLogLevel(level) {
 		level = "info"

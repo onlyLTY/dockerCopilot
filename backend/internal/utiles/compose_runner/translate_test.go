@@ -17,8 +17,8 @@ func TestEnvironmentSlice(t *testing.T) {
 		"NOVAL": nil,
 	}
 	got := environmentSlice(env)
-	// sorted by key; nil value passes through as bare key
-	want := []string{"A_KEY=1", "B_KEY=2", "NOVAL"}
+		// 按 key 排序；nil 值透传为裸 KEY
+		want := []string{"A_KEY=1", "B_KEY=2", "NOVAL"}
 	if len(got) != len(want) {
 		t.Fatalf("len = %d, want %d (%v)", len(got), len(want), got)
 	}
@@ -113,8 +113,8 @@ func TestTranslateVolumes(t *testing.T) {
 	if len(mounts) != 2 {
 		t.Fatalf("mounts count = %d, want 2", len(mounts))
 	}
-	// named volume source should be remapped to the real volume name
-	if string(mounts[0].Type) != "volume" || mounts[0].Source != "proj_mydata" {
+		// 命名卷 source 应映射为真实卷名
+		if string(mounts[0].Type) != "volume" || mounts[0].Source != "proj_mydata" {
 		t.Errorf("volume mount = %+v, want type volume source proj_mydata", mounts[0])
 	}
 	if string(mounts[1].Type) != "tmpfs" || mounts[1].Target != "/tmp" {
@@ -247,8 +247,8 @@ func TestTopoSort(t *testing.T) {
 	if len(order) != 2 {
 		t.Fatalf("order len = %d, want 2", len(order))
 	}
-	// db must come before web
-	dbIdx, webIdx := -1, -1
+		// db 须排在 web 之前
+		dbIdx, webIdx := -1, -1
 	for i, name := range order {
 		if name == "db" {
 			dbIdx = i
@@ -288,8 +288,8 @@ func TestTranslateServiceHostNetworkSkipsPorts(t *testing.T) {
 	if string(tr.hostConfig.NetworkMode) != "host" {
 		t.Errorf("expected host network mode, got %q", tr.hostConfig.NetworkMode)
 	}
-	// host mode should not attach to a default network
-	if tr.network != nil {
+		// host 模式不应挂默认网络
+		if tr.network != nil {
 		t.Errorf("host mode should have nil network config, got %+v", tr.network)
 	}
 }

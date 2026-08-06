@@ -64,12 +64,10 @@ export class SettingsService {
     this.load();
   }
 
-  /** 一次读取全部应用设置。 */
   getAll(): Observable<ApiResponse<AppSettings>> {
     return this.http.get<ApiResponse<AppSettings>>('/api/settings');
   }
 
-  /** 一次写入多项设置（字段可选）。 */
   saveAll(body: AppSettingsUpdate): Observable<ApiResponse<AppSettings>> {
     return this.http.put<ApiResponse<AppSettings>>('/api/settings', body).pipe(
       tap(r => {
@@ -98,7 +96,7 @@ export class SettingsService {
     this.runtime.update(current => ({ ...current, ...value }));
   }
 
-  // ---- 兼容旧分项调用（设置页等仍可单独读写） ----
+  // 兼容旧分项调用：设置页等仍可单独读写某一类配置。
 
   getUpdateSettings(): Observable<ApiResponse<UpdateSettings>> {
     return this.getAll().pipe(

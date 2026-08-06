@@ -30,7 +30,6 @@ export class ImagesComponent {
   private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
   private softRefresh: SoftRefreshHandle | null = null;
-  // 数据、加载态、错误态来自服务常驻缓存
   readonly images = computed(() => this.service.cache.data() || []);
   readonly loading = this.service.cache.loading;
   readonly error = this.service.cache.error;

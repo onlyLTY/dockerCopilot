@@ -29,7 +29,7 @@ func GetImagesList(ctx *svc.ServiceContext) ([]types.Image, error) {
 		}
 		imagesList = append(imagesList, i)
 	}
-	//看不明白就不要看了，这内存反复地申请，如果你看明白了 给这改成指针吧，啥？我为啥不直接写指针，我懒癌犯了就这样，欢迎pr
+	// 链式多遍遍历会反复分配切片；体量通常不大，保持值传递可读性优先。
 	imagesList, err = checkImageInUsed(ctx, splitImageNameAndTag(calculateImageSize(imagesList)))
 	if err != nil {
 		return imagesList, err
@@ -63,7 +63,6 @@ func checkImageInUsed(svc *svc.ServiceContext, imageList []types.Image) ([]types
 	if err != nil {
 		return imageList, err
 	}
-	// 这里可以用mapreduce 我懒等pr
 	for _, v := range list {
 		for i, imageInfo := range imageList {
 			if v.ImageID == imageInfo.ID {

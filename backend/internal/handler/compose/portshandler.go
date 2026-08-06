@@ -8,7 +8,6 @@ import (
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 )
 
-// PortsHandler goctl 风格端口列表。
 func PortsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()

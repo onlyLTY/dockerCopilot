@@ -243,7 +243,7 @@ func firstServiceImage(project *composeTypes.Project) string {
 	return ""
 }
 
-// LoadProject loads the same normalized Compose model used by deployment and validation.
+// LoadProject 加载与部署/校验相同的规范化 Compose 模型。
 func LoadProject(ctx context.Context, root string, files []string) (*composeTypes.Project, error) {
 	if root == "" || len(files) == 0 {
 		return nil, fmt.Errorf("Compose 项目文件不完整")
@@ -323,11 +323,8 @@ func containerPorts(inspect dockerTypes.ContainerJSON) []appTypes.ComposePort {
 			return
 		}
 		targetKey := containerPort + ":" + protocol
-		// Published bindings that differ only by host IP (IPv4 0.0.0.0, IPv6 ::,
-		// or an empty wildcard) map to the same host port and would otherwise
-		// appear as duplicate rows. Collapse them by keying on the host port
-		// alone for published entries; keep the host IP in the key for
-		// unpublished entries so exposed-only targets stay distinct.
+		// 仅 host IP 不同的已发布绑定（0.0.0.0 / :: / 空通配）应对同一宿主机端口去重；
+		// 未发布条目仍带 host IP，避免 exposed-only 目标被误合并。
 		key := hostIP + ":" + hostPort + ":" + targetKey
 		if published {
 			key = hostPort + ":" + targetKey
@@ -335,8 +332,7 @@ func containerPorts(inspect dockerTypes.ContainerJSON) []appTypes.ComposePort {
 		if seen[key] {
 			return
 		}
-		// Docker can report an exposed target as well as its published binding.
-		// Replace the unbound entry when the real binding is discovered.
+		// Docker 可能同时报告 exposed 与 published；发现真实绑定时替换未绑定条目。
 		if published {
 			if index, ok := unpublished[targetKey]; ok {
 				ports[index] = appTypes.ComposePort{HostIP: hostIP, HostPort: hostPort, ContainerPort: containerPort, Protocol: protocol, Published: true}

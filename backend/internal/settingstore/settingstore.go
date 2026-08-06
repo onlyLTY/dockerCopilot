@@ -168,8 +168,6 @@ func update(fn func(*Settings) error) error {
 	return save(s)
 }
 
-// ===== 容器更新忽略 =====
-
 func normalizeIgnoredContainers(items []string) []string {
 	seen := make(map[string]struct{}, len(items))
 	result := make([]string, 0, len(items))
@@ -201,7 +199,7 @@ func IsContainerUpdateIgnored(name string) bool {
 	return false
 }
 
-// SetContainerUpdateIgnored 设置或取消指定容器名称的更新忽略状态。
+// SetContainerUpdateIgnored 按容器名加入或移出「忽略更新」列表（名称会做 Base 清洗）。
 func SetContainerUpdateIgnored(name string, ignored bool) error {
 	name = filepath.Base(strings.TrimSpace(name))
 	if name == "." || name == "" {
@@ -260,28 +258,24 @@ func RenameContainerUpdateIgnore(oldName, newName string) error {
 	})
 }
 
-// UpdateCheckOptions 返回可选的更新检查频率（供前端下拉展示）。
 func UpdateCheckOptions() []string {
 	return []string{"off", "30m", "1h", "6h", "12h", "24h"}
 }
 
-// ValidUpdateCheckInterval 判断给定 key 是否为合法预设。
 func ValidUpdateCheckInterval(key string) bool {
 	_, ok := updateCheckCrons[key]
 	return ok
 }
 
-// UpdateCheckCron 返回给定预设 key 对应的 cron 表达式；off 或未知返回空串。
+// UpdateCheckCron 返回预设 key 对应的 cron；off 或未知返回空串（仅初始化调度器、不挂任务）。
 func UpdateCheckCron(key string) string {
 	return updateCheckCrons[key]
 }
 
-// GetUpdateCheckInterval 读取当前更新检查频率预设，缺省返回默认值。
 func GetUpdateCheckInterval() string {
 	return load().UpdateCheckInterval
 }
 
-// SetUpdateCheckInterval 校验并持久化更新检查频率预设。
 func SetUpdateCheckInterval(key string) (string, error) {
 	if !ValidUpdateCheckInterval(key) {
 		return "", fmt.Errorf("无效的更新检查频率：%s", key)
@@ -295,30 +289,24 @@ func SetUpdateCheckInterval(key string) (string, error) {
 	return key, nil
 }
 
-// ===== 自动备份频率 =====
-
-// AutoBackupOptions 返回可选的自动备份频率（供前端下拉展示）。
 func AutoBackupOptions() []string {
 	return []string{"off", "6h", "12h", "24h", "week", "month"}
 }
 
-// ValidAutoBackupInterval 判断给定 key 是否为合法预设。
 func ValidAutoBackupInterval(key string) bool {
 	_, ok := autoBackupCrons[key]
 	return ok
 }
 
-// AutoBackupCron 返回给定预设 key 对应的 cron 表达式；off 或未知返回空串。
+// AutoBackupCron 返回预设 key 对应的 cron；off 或未知返回空串。
 func AutoBackupCron(key string) string {
 	return autoBackupCrons[key]
 }
 
-// GetAutoBackupInterval 读取当前自动备份频率预设，缺省返回默认值。
 func GetAutoBackupInterval() string {
 	return load().AutoBackupInterval
 }
 
-// SetAutoBackupInterval 校验并持久化自动备份频率预设。
 func SetAutoBackupInterval(key string) (string, error) {
 	if !ValidAutoBackupInterval(key) {
 		return "", fmt.Errorf("无效的自动备份频率：%s", key)
@@ -332,19 +320,14 @@ func SetAutoBackupInterval(key string) (string, error) {
 	return key, nil
 }
 
-// ===== 备份保留数量 =====
-
-// ValidRetention 判断备份保留数量是否有效。
 func ValidRetention(value int) bool {
 	return value >= minRetention && value <= maxRetention
 }
 
-// GetRetention 读取当前备份保留数量。
 func GetRetention() int {
 	return load().Retention
 }
 
-// SetRetention 校验并持久化备份保留数量。
 func SetRetention(value int) (int, error) {
 	if !ValidRetention(value) {
 		return 0, fmt.Errorf("备份保留数量必须在 %d-%d 之间", minRetention, maxRetention)
@@ -358,23 +341,20 @@ func SetRetention(value int) (int, error) {
 	return value, nil
 }
 
-// LogLevelOptions 返回可选的日志级别。
-// 说明：应用层保留 warn；写入 go-zero logx 时 warn 会映射为 error（logx 无独立 warn 档）。
+// LogLevelOptions 可选日志级别。
+// 应用层保留 warn；写入 go-zero logx 时 warn 映射为 error（logx 无独立 warn 档）。
 func LogLevelOptions() []string {
 	return []string{"debug", "info", "warn", "error"}
 }
 
-// ValidLogLevel 判断日志级别是否有效。
 func ValidLogLevel(level string) bool {
 	return logLevels[level]
 }
 
-// GetLogLevel 读取当前日志级别。
 func GetLogLevel() string {
 	return load().LogLevel
 }
 
-// SetLogLevel 校验并持久化日志级别。
 func SetLogLevel(level string) (string, error) {
 	if !ValidLogLevel(level) {
 		return "", fmt.Errorf("无效的日志级别：%s", level)
@@ -387,8 +367,6 @@ func SetLogLevel(level string) (string, error) {
 	}
 	return level, nil
 }
-
-// ===== Docker Hub 加速源（检查更新） =====
 
 // normalizeHubURLs 清洗加速源列表：去空白、统一为 host、去重并保持顺序。
 // 接受纯 host（docker.m.daocloud.io）或带协议的 URL（https://docker.m.daocloud.io/）。
@@ -462,8 +440,7 @@ func validHubURLEntry(raw string) error {
 	return nil
 }
 
-// GetHubURLs 读取 Docker Hub 加速源列表。
-// 用户从未保存过时返回 DefaultHubURLs；保存过（含空列表）返回持久化值。
+// GetHubURLs 返回加速源列表：从未保存过用 DefaultHubURLs；保存过（含空列表）用持久化值。
 func GetHubURLs() []string {
 	s := load()
 	out := make([]string, len(s.HubURLs))
@@ -507,7 +484,6 @@ type ProxySettings struct {
 	NoProxy     string `json:"NO_PROXY"`
 }
 
-// GetProxySettings 读取代理配置，缺省值为空。
 func GetProxySettings() ProxySettings {
 	s := load()
 	return ProxySettings{

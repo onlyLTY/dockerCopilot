@@ -27,7 +27,6 @@ export class IconsComponent {
   private readonly service = inject(IconService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
-  // 图标 map 来自服务常驻缓存
   readonly icons = computed<IconMap>(() => this.service.cache.data() || {});
   query = '';
   readonly show = signal<boolean>(false);

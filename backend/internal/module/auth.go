@@ -179,13 +179,12 @@ func GetRegistryAddress(imageRef string) (string, error) {
 	return address, nil
 }
 
+// checkHost 用短超时 GET /v2/ 探测 registry 是否可达；200/401 均视为通（未鉴权也正常）。
 func checkHost(host string) bool {
 	URL := "https://" + host + "/v2/"
-	// 创建带有超时设置的 http.Client
 	client := http.Client{
 		Timeout: 5 * time.Second,
 	}
-	// 发送 HEAD 请求
 	resp, err := client.Get(URL)
 	if err != nil {
 		logx.Errorf("Failed to connect to %s: %s", URL, err)
@@ -198,7 +197,6 @@ func checkHost(host string) bool {
 		}
 	}(resp.Body)
 
-	// 检查 HTTP 响应状态码
 	if resp.StatusCode == http.StatusOK ||
 		resp.StatusCode == http.StatusUnauthorized {
 		return true

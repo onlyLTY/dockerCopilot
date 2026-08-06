@@ -35,7 +35,6 @@ export class ContainersComponent {
   private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
   private softRefresh: SoftRefreshHandle | null = null;
-  // 数据、加载态、错误态均来自服务里的常驻缓存，页面切换不再重复请求
   readonly containers = computed(() => this.service.cache.data() || []);
   readonly loading = this.service.cache.loading;
   readonly error = this.service.cache.error;
@@ -220,7 +219,6 @@ export class ContainersComponent {
     );
   }
 
-  // ===== 单个操作 =====
   isActionBusy(id: string): boolean {
     return this.actionBusy().has(id);
   }

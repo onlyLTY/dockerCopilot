@@ -28,8 +28,8 @@ type Result struct {
 	Output string `json:"output"`
 }
 
-// Available checks the Docker daemon through the injected API client. It does
-// not inspect PATH and does not require a Docker CLI or Compose plugin binary.
+// Available 通过注入的 API 客户端探测 Docker 守护进程是否可用。
+// 不检查 PATH，也不依赖 Docker CLI / Compose 插件二进制。
 func Available(ctx context.Context, dockerClient client.APIClient) bool {
 	if dockerClient == nil {
 		return false
@@ -56,13 +56,11 @@ func Config(ctx context.Context, dockerClient client.APIClient, projectDir strin
 	return Result{Output: sanitizeOutput(string(data))}, nil
 }
 
-// Up deploys a compose project natively through the Docker Engine API. It does
-// NOT use github.com/docker/compose/v2 (which drags in buildkit/buildx/containerd)
-// nor the docker CLI. Supported: image-based services with the common fields
-// (ports, volumes, env, restart, healthcheck, resources, user, privileged, etc.),
-// multi-service projects with depends_on ordering, and named networks/volumes.
-// NOT supported: build: (image must already exist or be pullable), secrets,
-// configs, profiles, and swarm multi-replica orchestration.
+// Up 通过 Docker Engine API 原生部署 compose 项目。
+// 不使用 github.com/docker/compose/v2（会拖入 buildkit/buildx/containerd），也不调用 docker CLI。
+// 支持：基于 image 的常见字段（ports/volumes/env/restart/healthcheck/resources/user/privileged 等）、
+// depends_on 多服务排序、命名网络与数据卷。
+// 不支持：build:（镜像须已存在或可拉取）、secrets、configs、profiles、swarm 多副本编排。
 func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool) (Result, error) {
 	if projectDir == "" || len(files) == 0 {
 		return Result{}, fmt.Errorf("Compose 执行参数不完整")
@@ -90,28 +88,24 @@ func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 		fmt.Fprintf(out, format+" (耗时 %s)\n", append(args, formatDuration(elapsed))...)
 	}
 
-	// Reject build-only services early: without an image we cannot proceed and
-	// building is explicitly out of scope (that is what pulls in buildkit).
+	// 提前拒绝仅 build 的服务：无 image 无法继续，且构建明确不在本实现范围内（会引入 buildkit）。
 	for name, svc := range project.Services {
 		if svc.Image == "" {
 			return Result{Output: sanitizeOutput(out.String())}, fmt.Errorf("服务 %s 未指定 image，当前不支持从源码构建（build:）", name)
 		}
 	}
 
-	// 1. networks: create declared networks that do not exist yet, plus a
-	// project default network when no custom network is declared.
+	// 顺序：网络 → 数据卷 → 按 depends_on 拓扑部署服务。
 	networkNames, defaultNetwork, err := ensureNetworks(runCtx, dockerClient, project, logf)
 	if err != nil {
 		return Result{Output: sanitizeOutput(out.String())}, err
 	}
 
-	// 2. volumes: create declared named volumes that do not exist yet.
 	volumeNames, err := ensureVolumes(runCtx, dockerClient, project, logf)
 	if err != nil {
 		return Result{Output: sanitizeOutput(out.String())}, err
 	}
 
-	// 3. deploy services in depends_on order.
 	order, err := topoSort(project.Services)
 	if err != nil {
 		return Result{Output: sanitizeOutput(out.String())}, err
@@ -129,9 +123,8 @@ func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 	return Result{Output: sanitizeOutput(out.String())}, nil
 }
 
-// ensureNetworks creates any declared networks missing from the daemon and
-// returns a map from compose network key to real network name, plus the name of
-// the project default network (created when the project declares no networks).
+// ensureNetworks 为缺失的声明网络建网；返回 compose 网络键→真实名，
+// 以及项目默认网络名（项目未声明任何网络时会创建）。
 func ensureNetworks(ctx context.Context, cli client.APIClient, project *composeTypes.Project, logf func(string, ...interface{})) (map[string]string, string, error) {
 	names := map[string]string{}
 	defaultNetwork := ""
@@ -186,8 +179,7 @@ func createNetworkIfMissing(ctx context.Context, cli client.APIClient, name, pro
 	return nil
 }
 
-// ensureVolumes creates any declared named volumes missing from the daemon and
-// returns a map from compose volume key to real volume name.
+// ensureVolumes 为缺失的声明命名卷建卷；返回 compose 卷键→真实名。
 func ensureVolumes(ctx context.Context, cli client.APIClient, project *composeTypes.Project, logf func(string, ...interface{})) (map[string]string, error) {
 	names := map[string]string{}
 	for key, cfg := range project.Volumes {
@@ -221,15 +213,13 @@ func ensureVolumes(ctx context.Context, cli client.APIClient, project *composeTy
 	return names, nil
 }
 
-// deployService pulls the image if needed, translates the service, and creates
-// (or recreates when the config hash changed) and starts the container.
+// deployService 按需拉镜像、转换配置，并在配置哈希变化时重建后启动容器。
 func deployService(ctx context.Context, cli client.APIClient, projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string, pullImages bool, logf func(string, ...interface{})) error {
 	t, err := translateService(projectName, root, serviceName, svc, defaultNetwork, networkNames, volumeNames)
 	if err != nil {
 		return fmt.Errorf("服务 %s 配置转换失败: %w", serviceName, err)
 	}
 
-	// pull image when it is not present locally
 	present, err := imageExists(ctx, cli, svc.Image)
 	if err != nil {
 		return err
@@ -241,7 +231,6 @@ func deployService(ctx context.Context, cli client.APIClient, projectName, root,
 		}
 	}
 
-	// look for an existing container with the same name
 	existing, err := findContainerByName(ctx, cli, t.name)
 	if err != nil {
 		return err
@@ -278,8 +267,7 @@ func imageExists(ctx context.Context, cli client.APIClient, ref string) (bool, e
 	if client.IsErrNotFound(err) {
 		return false, nil
 	}
-	// treat other errors as "not present" so we attempt a pull, but surface
-	// genuinely broken clients through the pull path instead.
+	// 其它错误也当「本地没有」，走 pull；真正坏掉的客户端会在 pull 路径暴露。
 	return false, nil
 }
 
@@ -358,11 +346,10 @@ func removeContainer(ctx context.Context, cli client.APIClient, id string) error
 	return cli.ContainerRemove(ctx, id, container.RemoveOptions{Force: true})
 }
 
-// topoSort orders services so that dependencies (depends_on) start first.
-// Returns an error on cyclic dependencies. Services with equal ordering are
-// sorted by name for deterministic output.
+// topoSort 按 depends_on 拓扑排序，保证依赖先启动；有环则报错。
+// 同层按服务名排序，保证输出稳定。
 func topoSort(services composeTypes.Services) ([]string, error) {
-	visited := map[string]int{} // 0=unvisited,1=visiting,2=done
+	visited := map[string]int{} // 0=未访问 1=访问中 2=已完成
 	var order []string
 	names := make([]string, 0, len(services))
 	for name := range services {
@@ -408,8 +395,7 @@ func topoSort(services composeTypes.Services) ([]string, error) {
 	return order, nil
 }
 
-// serviceConfigHash produces a stable hash of the service definition so repeat
-// deployments can detect configuration drift and recreate only when needed.
+// serviceConfigHash 对服务定义做稳定哈希，重复部署时仅在配置漂移时重建。
 func serviceConfigHash(svc composeTypes.ServiceConfig) string {
 	data, err := json.Marshal(svc)
 	if err != nil {

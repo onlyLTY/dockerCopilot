@@ -15,9 +15,8 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
-// Compose labels required so ScanProjects (compose_project package) can match the
-// containers back to their project. Missing these means deployed containers become
-// invisible in the project list.
+// Compose 标准 label：ScanProjects（compose_project）据此把容器归属回项目；
+// 缺失则部署出的容器不会出现在项目列表中。
 const (
 	labelProject         = "com.docker.compose.project"
 	labelService         = "com.docker.compose.service"
@@ -28,8 +27,7 @@ const (
 	labelContainerNumber = "com.docker.compose.container-number"
 )
 
-// translated bundles the three inputs ContainerCreate needs plus the resolved
-// container name for a single compose service.
+// translated 聚合 ContainerCreate 所需的三份配置，以及解析后的容器名。
 type translated struct {
 	name       string
 	config     *container.Config
@@ -37,9 +35,8 @@ type translated struct {
 	network    *network.NetworkingConfig
 }
 
-// translateService converts a compose ServiceConfig into the docker Engine API
-// structures. root is the project working directory (used for compose labels),
-// networkName is the default network to attach when the service declares none.
+// translateService 将 compose ServiceConfig 转为 Docker Engine API 结构。
+// root 为项目工作目录（写入 compose label）；服务未声明网络时挂到 defaultNetwork。
 func translateService(projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string) (translated, error) {
 	name := svc.ContainerName
 	if name == "" {
@@ -104,7 +101,7 @@ func translateService(projectName, root, serviceName string, svc composeTypes.Se
 	hostCfg.RestartPolicy = translateRestart(svc.Restart)
 	applyResources(&hostCfg.Resources, svc)
 
-	// ports (ignored when using host network mode)
+	// host 网络模式下端口映射无效，跳过。
 	if !isHostNetwork(svc.NetworkMode) {
 		exposed, bindings, err := translatePorts(svc.Ports)
 		if err != nil {
@@ -118,7 +115,6 @@ func translateService(projectName, root, serviceName string, svc composeTypes.Se
 		}
 	}
 
-	// volumes
 	binds, mounts, err := translateVolumes(svc.Volumes, volumeNames)
 	if err != nil {
 		return translated{}, err
@@ -149,9 +145,8 @@ func buildLabels(projectName, root, serviceName string, svc composeTypes.Service
 	return labels
 }
 
-// environmentSlice converts compose MappingWithEquals into the KEY=VALUE slice
-// docker expects. A nil value means "pass through host env"; we skip those since
-// the loader has already resolved values via WithDotEnv / explicit env.
+// environmentSlice 将 compose MappingWithEquals 转为 Docker 期望的 KEY=VALUE 切片。
+// nil 值表示透传宿主环境，写成裸 KEY（无 =value）；显式值已由 WithDotEnv 等解析。
 func environmentSlice(env composeTypes.MappingWithEquals) []string {
 	if len(env) == 0 {
 		return nil
@@ -174,7 +169,7 @@ func environmentSlice(env composeTypes.MappingWithEquals) []string {
 }
 
 func translateRestart(restart string) container.RestartPolicy {
-	// compose accepts: "no", "always", "on-failure[:max]", "unless-stopped"
+	// compose 取值：no / always / on-failure[:max] / unless-stopped
 	if restart == "" {
 		return container.RestartPolicy{}
 	}
@@ -193,9 +188,8 @@ func translateRestart(restart string) container.RestartPolicy {
 	}
 }
 
-// applyResources maps compose resource limits into the docker Resources struct.
-// It honours both the modern deploy.resources.limits form and the legacy
-// mem_limit / cpus top-level fields.
+// applyResources 将 compose 资源限制写入 docker Resources。
+// 同时支持 deploy.resources.limits 与旧式顶层 mem_limit / cpus。
 func applyResources(res *container.Resources, svc composeTypes.ServiceConfig) {
 	if svc.Deploy != nil && svc.Deploy.Resources.Limits != nil {
 		lim := svc.Deploy.Resources.Limits
@@ -210,7 +204,7 @@ func applyResources(res *container.Resources, svc composeTypes.ServiceConfig) {
 			res.PidsLimit = &pids
 		}
 	}
-	// legacy fields override nothing already set unless present
+	// 旧式字段仅在有值时覆盖（未设置则保留 deploy 结果）。
 	if svc.MemLimit != 0 {
 		res.Memory = int64(svc.MemLimit)
 	}
@@ -279,9 +273,8 @@ func translatePorts(ports []composeTypes.ServicePortConfig) (nat.PortSet, nat.Po
 	return exposed, bindings, nil
 }
 
-// translateVolumes splits compose volumes into legacy bind strings and typed
-// mounts. Bind mounts use the Binds slice (matching the existing backup/restore
-// code paths); named volumes and tmpfs use the Mounts slice.
+// translateVolumes 将 compose volumes 拆成旧式 bind 字符串与类型化 Mounts。
+// bind 走 Binds（与现有备份/恢复路径一致）；命名卷与 tmpfs 走 Mounts。
 func translateVolumes(volumes []composeTypes.ServiceVolumeConfig, volumeNames map[string]string) ([]string, []mount.Mount, error) {
 	var binds []string
 	var mounts []mount.Mount
@@ -319,12 +312,10 @@ func translateVolumes(volumes []composeTypes.ServiceVolumeConfig, volumeNames ma
 	return binds, mounts, nil
 }
 
-// translateNetworks builds the NetworkingConfig. When the service declares no
-// networks and is not using a special network mode, it is attached to the
-// project default network.
+// translateNetworks 构建 NetworkingConfig。
+// 服务未声明网络且非特殊 network_mode 时，挂到项目默认网络。
 func translateNetworks(svc composeTypes.ServiceConfig, defaultNetwork string, networkNames map[string]string) *network.NetworkingConfig {
-	// Special network modes (host/none/container:/bridge) manage their own
-	// endpoint and must not receive an explicit NetworkingConfig.
+	// host/none/container:/bridge 自行管理 endpoint，不能再附显式 NetworkingConfig。
 	if isSpecialNetworkMode(svc.NetworkMode) {
 		return nil
 	}
@@ -358,17 +349,15 @@ func translateNetworks(svc composeTypes.ServiceConfig, defaultNetwork string, ne
 	return &network.NetworkingConfig{EndpointsConfig: endpoints}
 }
 
-// isHostNetwork reports whether the service uses host networking. We compare the
-// raw string instead of container.NetworkMode.IsHost() because that method is
-// platform-specific (it always returns false on Windows), which breaks both
-// cross-platform tests and any non-linux build.
+// isHostNetwork 判断是否 host 网络。
+// 用原始字符串比较，不用 NetworkMode.IsHost()：后者在 Windows 恒为 false，
+// 会破坏跨平台测试与非 linux 构建。
 func isHostNetwork(mode string) bool {
 	return mode == "host"
 }
 
-// isSpecialNetworkMode reports whether the service declares a network mode that
-// manages its own endpoint and therefore must not receive an explicit
-// NetworkingConfig: host, none, bridge, or container:<name>.
+// isSpecialNetworkMode：host/none/bridge/container:<name> 自行管理 endpoint，
+// 不得再附显式 NetworkingConfig。
 func isSpecialNetworkMode(mode string) bool {
 	if mode == "" {
 		return false

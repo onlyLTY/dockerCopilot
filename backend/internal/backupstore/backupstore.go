@@ -82,7 +82,7 @@ func TimestampedName(ext string) string {
 	return "backup-" + time.Now().UTC().Format("20060102T150405") + "-" + hex.EncodeToString(suffix[:]) + ext
 }
 
-// CreateBackupFile creates a uniquely named backup and writes it without replacing an existing file.
+// CreateBackupFile 生成唯一文件名并写入备份；已存在则不覆盖（O_EXCL 重试）。
 func CreateBackupFile(dir, ext string, content []byte, perm os.FileMode) (string, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", err

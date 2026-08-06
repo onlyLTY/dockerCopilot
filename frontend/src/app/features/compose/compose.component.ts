@@ -65,7 +65,6 @@ export class ComposeComponent {
     const gutter = ta.parentElement?.querySelector('.code-gutter') as HTMLElement | null;
     if (gutter) gutter.scrollTop = ta.scrollTop;
   }
-  // 项目数据、加载态来自服务常驻缓存
   readonly data = computed<ProjectsData | undefined>(() => {
     const value = this.service.cache.data();
     if (!value) return undefined;

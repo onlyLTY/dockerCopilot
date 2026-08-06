@@ -22,6 +22,6 @@ func NewWebindexLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Webindex
 }
 
 func (l *WebindexLogic) Webindex() error {
-	// 这个logic没啥用 别看了 要看就去看handler
+	// 实际跳转在 handler；logic 仅满足 goctl 分层占位。
 	return nil
 }

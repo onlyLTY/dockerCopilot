@@ -36,7 +36,6 @@ interface PortGroup {
 export class PortsComponent {
   private readonly service = inject(PortService);
   private readonly icons = inject(IconService);
-  // 数据、加载态、错误态来自服务常驻缓存
   readonly data = computed(
     () =>
       this.service.cache.data() || {
