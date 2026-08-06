@@ -4,7 +4,6 @@ services:
     image: ${DOCKER_COPILOT_IMAGE:-dockercopilot:latest}
     restart: unless-stopped
     init: true
-    stop_grace_period: 30s
     security_opt:
       - no-new-privileges:true
     ports:
