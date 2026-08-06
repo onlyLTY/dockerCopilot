@@ -8,6 +8,8 @@ import (
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
+	"github.com/onlyLTY/dockerCopilot/internal/config"
+	"github.com/onlyLTY/dockerCopilot/internal/svc"
 )
 
 func TestContainerPortsMergesDockerPortSources(t *testing.T) {
@@ -77,6 +79,39 @@ func TestSameComposeRootNormalizesWindowsSeparators(t *testing.T) {
 func TestSameComposeRootRequiresWorkingDirectory(t *testing.T) {
 	if sameComposeRoot(map[string]string{}, "/compose/dockercopilot", nil) {
 		t.Fatal("expected missing working directory not to match")
+	}
+}
+
+func TestComposePathMappingsResolveRelativeHostPath(t *testing.T) {
+	svcCtx := &svc.ServiceContext{}
+	svcCtx.Config.Compose.PathMappings = []config.ComposePathMapping{{
+		HostPath:      ".",
+		ContainerPath: "/compose",
+	}}
+	mappings := composePathMappings(svcCtx, nil)
+	if len(mappings) != 1 {
+		t.Fatalf("expected one mapping, got %#v", mappings)
+	}
+	root, err := filepath.Abs(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mappings[0].source != normalizeComposePath(root) || mappings[0].destination != "/compose" {
+		t.Fatalf("unexpected mapping: %#v", mappings[0])
+	}
+	labels := map[string]string{"com.docker.compose.project.working_dir": root + string(filepath.Separator) + "project"}
+	if !sameComposeRoot(labels, "/compose/project", mappings) {
+		t.Fatal("expected relative host mapping to match")
+	}
+}
+
+func TestComposeMountIsRelevantWithRelativeScanPath(t *testing.T) {
+	root, err := filepath.Abs(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !composeMountIsRelevant(root, "/compose", []string{"."}) {
+		t.Fatal("expected relative scan path to match host mount source")
 	}
 }
 

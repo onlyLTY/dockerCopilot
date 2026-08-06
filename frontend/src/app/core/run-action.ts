@@ -53,7 +53,9 @@ export function actionErrorMessage(err: unknown, fallback = '请求错误'): str
  * 统一「点按钮 → 请求 → toast/busy」的订阅样板，减少各页复制 next/error。
  * 不替代 forkJoin/批量流，只覆盖单次操作。
  */
-export function runAction<T extends ActionApiResult>(options: RunActionOptions<T>): void {
+export function runAction<T extends ActionApiResult>(
+  options: RunActionOptions<T>,
+): Promise<boolean> {
   const {
     request,
     isSuccess = r => r?.code === 200 || r?.code === 0,
@@ -64,22 +66,37 @@ export function runAction<T extends ActionApiResult>(options: RunActionOptions<T
     onSuccess,
   } = options;
   onStart?.();
-  request.subscribe({
-    next: r => {
+  return new Promise<boolean>(resolve => {
+    let settled = false;
+    const finish = (success: boolean) => {
+      if (settled) return;
+      settled = true;
       try {
-        if (isSuccess(r)) onSuccess?.(r);
-        else onBizError?.(r);
-      } finally {
         onFinally?.();
-      }
-    },
-    error: err => {
-      try {
-        onHttpError?.(err);
       } finally {
-        onFinally?.();
+        resolve(success);
       }
-    },
+    };
+    request.subscribe({
+      next: r => {
+        let success = false;
+        try {
+          success = isSuccess(r);
+          if (success) onSuccess?.(r);
+          else onBizError?.(r);
+        } finally {
+          finish(success);
+        }
+      },
+      error: err => {
+        try {
+          onHttpError?.(err);
+        } finally {
+          finish(false);
+        }
+      },
+      complete: () => finish(false),
+    });
   });
 }
 

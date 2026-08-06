@@ -260,7 +260,7 @@ func (l *ActionsLogic) Cleanup(req *types.ComposeCleanupReq) (*types.Resp, error
 			return errorResp(resp, 500, "读取项目目录失败"), nil
 		}
 		for _, entry := range entries {
-			if entry.IsDir() || (!isComposeFile(entry.Name()) && entry.Name() != ".env") {
+			if entry.IsDir() || (!isComposeFile(entry.Name()) && !composeProject.IsComposeEnvFile(entry.Name())) {
 				continue
 			}
 			if err := os.Remove(filepath.Join(root, entry.Name())); err != nil {
@@ -341,6 +341,5 @@ func composeErrMsg(prefix string, err error, output string) string {
 }
 
 func isComposeFile(name string) bool {
-	lower := strings.ToLower(name)
-	return lower == "compose.yaml" || lower == "compose.yml" || lower == "docker-compose.yaml" || lower == "docker-compose.yml" || strings.Contains(lower, "override")
+	return composeProject.IsComposeFile(name)
 }

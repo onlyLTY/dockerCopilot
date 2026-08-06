@@ -42,7 +42,7 @@ func ValidateComposeFilename(filename string) error {
 	if lower == ".env" {
 		return nil
 	}
-	if !composeFilenames[lower] && !strings.Contains(lower, "override") {
+	if !IsComposeFile(filename) {
 		return fmt.Errorf("不支持的 Compose 文件名")
 	}
 	return nil
@@ -222,7 +222,7 @@ func ListProjectFiles(root string) ([]map[string]interface{}, error) {
 	}
 	files := make([]map[string]interface{}, 0)
 	for _, entry := range entries {
-		if entry.IsDir() || (!composeFilenames[strings.ToLower(entry.Name())] && !strings.Contains(strings.ToLower(entry.Name()), "override") && entry.Name() != ".env") {
+		if entry.IsDir() || (!IsComposeFile(entry.Name()) && !IsComposeEnvFile(entry.Name())) {
 			continue
 		}
 		info, err := entry.Info()

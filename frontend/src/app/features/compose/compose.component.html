@@ -105,8 +105,8 @@
           [subtitle]="ep.root"
           (closed)="closeEditor()"
         />
-        <div class="modal-body compose-body d-flex flex-col">
-          <div class="file-tabs d-flex gap-2">
+        <div class="modal-body d-flex flex-col min-h-0 overflow-hidden">
+          <div class="file-tabs d-flex flex-none gap-2 pt-10 overflow-x-auto">
             @for (file of ep.files; track file.name) {
               <button
                 class="py-9 px-14 fs-12"
@@ -120,7 +120,7 @@
               </button>
             }
           </div>
-          <div class="code-editor-wrap" [class.is-loading]="fileLoading()">
+          <div class="code-editor-wrap flex-auto" [class.is-loading]="fileLoading()">
             <div class="code-gutter" aria-hidden="true">
               @for (n of lineNumbers(); track n) {
                 <span>{{ n }}</span>
@@ -143,7 +143,7 @@
           </div>
         </div>
         <div class="editor-foot d-flex items-center gap-16 pt-14 mt-14 fs-12">
-          <label class="pull-images-option d-flex items-center gap-6 text-muted text-nowrap"
+          <label class="pull-images-option d-flex items-center gap-6 flex-none text-muted text-nowrap"
             ><input
               type="checkbox"
               [checked]="pullImages()"
@@ -151,7 +151,7 @@
             />重新拉取镜像</label
           >
           <span class="message flex-1 min-w-0">{{ message() }}</span>
-          <div class="editor-actions d-flex items-center gap-8">
+          <div class="editor-actions d-flex items-center gap-8 flex-none">
             <button
               class="btn text-secondary-text bg-secondary-bg"
               [disabled]="deployBusy() || fileLoading() || !!fileError()"
@@ -174,7 +174,7 @@
           subtitle="填写完建议先检验一下格式"
           (closed)="closeCreate()"
         />
-        <div class="modal-body compose-body d-flex flex-col">
+        <div class="modal-body d-flex flex-col min-h-0 overflow-hidden">
           <div class="form-field d-block mt-8 fs-12">
             项目名称<input
               class="field-control d-block mt-8 py-12 px-12"
@@ -183,7 +183,7 @@
               placeholder="例如：my-app，只能包含小写字母、数字、短横线和下划线，长度不超过 63"
             />
           </div>
-          <div class="mt-12 code-editor-wrap" [class.is-loading]="creating()">
+          <div class="mt-12 code-editor-wrap flex-auto" [class.is-loading]="creating()">
             <div class="code-gutter" aria-hidden="true">
               @for (n of createLineNumbers(); track n) {
                 <span>{{ n }}</span>

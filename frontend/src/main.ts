@@ -14,7 +14,12 @@ bootstrapApplication(AppComponent, {
     provideHttpClient(withInterceptors([authInterceptor])),
     {
       provide: MAT_TOOLTIP_DEFAULT_OPTIONS,
-      useValue: { showDelay: 300, hideDelay: 100, touchendHideDelay: 100 },
+      useValue: {
+        showDelay: 300,
+        hideDelay: 100,
+        touchendHideDelay: 100,
+        position: 'above',
+      },
     },
   ],
 }).catch(err => console.error(err));

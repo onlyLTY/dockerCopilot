@@ -1,7 +1,7 @@
 import { Component, computed, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { from, forkJoin, of } from 'rxjs';
+import { from, forkJoin, Observable, of } from 'rxjs';
 import { catchError, map, mergeMap, toArray } from 'rxjs/operators';
 import { ContainerService, ContainerRow } from '../../core/container.service';
 import { IconService } from '../../core/icon.service';
@@ -9,7 +9,12 @@ import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
 import { ConfirmService } from '../../core/confirm.service';
 import { SoftRefreshHandle, startSoftRefresh } from '../../core/soft-refresh';
-import { actionErrorMessage, actionLabel, runAction } from '../../core/run-action';
+import {
+  ActionApiResult,
+  actionErrorMessage,
+  actionLabel,
+  runAction,
+} from '../../core/run-action';
 import { PageStateComponent } from '../../shared/page-state/page-state.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
@@ -338,9 +343,14 @@ export class ContainersComponent {
   actionBusyLabel(id: string): string | undefined {
     return this.actionBusy().get(id);
   }
-  private run(x: ContainerRow, fn: (id: string) => any, label: string, async = false) {
-    if (this.actionBusy().has(x.id)) return;
-    runAction({
+  private run(
+    x: ContainerRow,
+    fn: (id: string) => Observable<ActionApiResult>,
+    label: string,
+    async = false,
+  ): Promise<boolean> {
+    if (this.actionBusy().has(x.id)) return Promise.resolve(false);
+    return runAction({
       request: fn(x.id),
       onStart: () => this.actionBusy.update(m => new Map(m).set(x.id, label)),
       onFinally: () => this.clearActionBusy(x.id),
@@ -383,8 +393,7 @@ export class ContainersComponent {
       }))
     )
       return false;
-    this.run(x, id => this.service.remove(id, running), label);
-    return true;
+    return this.run(x, id => this.service.remove(id, running), label);
   }
   private clearActionBusy(id: string): void {
     this.actionBusy.update(m => {

@@ -8,3 +8,15 @@
 @use 'panels';
 @use 'modals';
 @use 'responsive';
+
+/* ===== 悬浮提示 ===== */
+:root {
+  --mat-tooltip-container-color: var(--black);
+  --mat-tooltip-supporting-text-color: var(--page-bg);
+  --mat-tooltip-container-shape: 6px;
+}
+
+.mat-mdc-tooltip-surface {
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px var(--shadow);
+}

@@ -20,12 +20,25 @@ func TestProjectNameValidation(t *testing.T) {
 }
 
 func TestComposeFilenameValidation(t *testing.T) {
-	for _, name := range []string{"compose.yaml", "docker-compose.override.yml", ".env"} {
+	for _, name := range []string{
+		"compose.yaml",
+		"docker-compose.override.yml",
+		"compose.override.yaml",
+		"COMPOSE.OVERRIDE.YML",
+		".env",
+	} {
 		if err := ValidateComposeFilename(name); err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected %q to be valid: %v", name, err)
 		}
 	}
-	for _, name := range []string{"../compose.yaml", `..\compose.yaml`, "secret.txt"} {
+	for _, name := range []string{
+		"../compose.yaml",
+		`..\\compose.yaml`,
+		"secret.txt",
+		"myoverride.txt",
+		"override-secret",
+		"compose.override.json",
+	} {
 		if err := ValidateComposeFilename(name); err == nil {
 			t.Fatalf("expected %q to fail", name)
 		}

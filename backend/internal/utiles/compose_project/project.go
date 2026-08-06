@@ -34,6 +34,17 @@ var composeFilenames = map[string]bool{
 	"docker-compose.yml":  true,
 }
 
+var composeOverrideFilenamePattern = regexp.MustCompile(`^(compose|docker-compose)\.override\.(yaml|yml)$`)
+
+func IsComposeFile(filename string) bool {
+	lower := strings.ToLower(filename)
+	return composeFilenames[lower] || composeOverrideFilenamePattern.MatchString(lower)
+}
+
+func IsComposeEnvFile(filename string) bool {
+	return strings.EqualFold(filename, ".env")
+}
+
 type projectFiles struct {
 	root  string
 	files []string
@@ -323,7 +334,7 @@ func reverseComposePathMapping(mapping composePathMapping) composePathMapping {
 func composePathMappings(svcCtx *svc.ServiceContext, containers []container.Summary) []composePathMapping {
 	mappings := make([]composePathMapping, 0, len(svcCtx.Config.Compose.PathMappings)+2)
 	for _, configured := range svcCtx.Config.Compose.PathMappings {
-		source := normalizeComposePath(configured.HostPath)
+		source := normalizeHostComposePath(configured.HostPath)
 		destination := normalizeComposePath(configured.ContainerPath)
 		if source != "" && destination != "" {
 			mappings = append(mappings, composePathMapping{source: source, destination: destination})
@@ -340,7 +351,7 @@ func composePathMappings(svcCtx *svc.ServiceContext, containers []container.Summ
 		}
 		source := normalizeComposePath(mounted.Source)
 		destination := normalizeComposePath(mounted.Destination)
-		if source == "" || destination == "" || !composeMountIsRelevant(destination, svcCtx.Config.Compose.ScanPaths) {
+		if source == "" || destination == "" || !composeMountIsRelevant(source, destination, svcCtx.Config.Compose.ScanPaths) {
 			continue
 		}
 		mappings = append(mappings, composePathMapping{source: source, destination: destination})
@@ -397,13 +408,33 @@ func currentContainerID() string {
 	return strings.ToLower(id)
 }
 
-func composeMountIsRelevant(destination string, scanPaths []string) bool {
+func composeMountIsRelevant(source, destination string, scanPaths []string) bool {
 	for _, scanPath := range scanPaths {
-		if composePathWithin(destination, scanPath) || composePathWithin(scanPath, destination) {
+		localScanPath := normalizeHostComposePath(scanPath)
+		if localScanPath != "" && (composePathWithin(source, localScanPath) || composePathWithin(localScanPath, source)) {
+			return true
+		}
+		containerScanPath := normalizeComposePath(scanPath)
+		if containerScanPath != "" && (composePathWithin(destination, containerScanPath) || composePathWithin(containerScanPath, destination)) {
 			return true
 		}
 	}
 	return false
+}
+
+func normalizeHostComposePath(raw string) string {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return ""
+	}
+	if len(value) >= 3 && value[1] == ':' && (value[2] == '/' || value[2] == '\\') {
+		return normalizeComposePath(value)
+	}
+	absolute, err := filepath.Abs(value)
+	if err != nil {
+		return ""
+	}
+	return normalizeComposePath(absolute)
 }
 
 func normalizeComposePath(raw string) string {

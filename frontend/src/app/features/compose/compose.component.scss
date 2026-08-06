@@ -1,14 +1,5 @@
 // Compose 编辑器：代码区、行号与部署栏结构
 
-.compose-body {
-  min-height: 0;
-  overflow: hidden !important;
-}
-.file-tabs {
-  flex: none;
-  padding: 10px 0 0;
-  overflow-x: auto;
-}
 .file-tabs button {
   border: 0;
   background: var(--page-bg);
@@ -17,7 +8,6 @@
 }
 .code-editor-wrap {
   position: relative;
-  flex: 1 1 auto;
   display: flex;
   min-height: 260px;
   height: min(480px, 58vh);
@@ -106,16 +96,12 @@
   color: var(--red);
 }
 .pull-images-option {
-  flex: none;
   cursor: pointer;
 }
 .pull-images-option input {
   width: 16px;
   height: 16px;
   accent-color: var(--blue);
-}
-.editor-actions {
-  flex: none;
 }
 .risk-box {
   flex: none;

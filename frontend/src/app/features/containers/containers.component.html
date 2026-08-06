@@ -1,6 +1,6 @@
 <dc-page-heading title="容器管理" subtitle="管理您的 Docker 容器，包括启动、停止、重启、删除等操作">
-  <div page-heading-actions class="container-heading-actions">
-    <div class="container-heading-row">
+  <div page-heading-actions class="container-heading-actions d-flex flex-col items-stretch gap-8">
+    <div class="container-heading-row d-flex items-center justify-end flex-wrap gap-8">
       <button
         class="btn text-secondary-text bg-secondary-bg gap-8"
         (click)="toggleSelection()"
@@ -31,11 +31,13 @@
     </div>
 
     @if (selectionMode()) {
-      <div class="container-heading-row container-heading-batch">
-        <label class="select-all heading-select-all"
+      <div
+        class="container-heading-row d-flex items-center justify-end flex-wrap gap-8 pt-2 border-t-1"
+      >
+        <label class="select-all heading-select-all flex-none"
           ><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()" />全选</label
         >
-        <span class="heading-selected text-muted fs-10">已选{{ selectedCount() }}</span>
+        <span class="heading-selected text-muted fs-10 flex-none">已选{{ selectedCount() }}</span>
         <button
           class="btn text-secondary-text bg-secondary-bg gap-8 text-green"
           [disabled]="!selectedCount() || busy()"
@@ -129,7 +131,7 @@
             [matTooltip]="item.usingImage"
             >{{ item.usingImage }}</span
           >
-          ><small class="d-block" [class.text-green]="isRunning(item)">{{
+          <small class="d-block" [class.text-green]="isRunning(item)">{{
             statusText(item)
           }}</small>
         </div>
@@ -228,10 +230,10 @@
         [subtitle]="item.id.slice(0, 12)"
         (closed)="closeDetail()"
       />
-      <div class="modal-body container-detail-body d-flex flex-col gap-16">
-        <div class="container-detail-identity d-flex items-center gap-12">
+      <div class="modal-body d-flex flex-col gap-16 overflow-auto">
+        <div class="d-flex items-center gap-12 min-w-0 p-12 border-1 rounded-8 bg-page-bg">
           <img
-            class="resource-icon detail-icon"
+            class="resource-icon flex-none"
             [src]="icon(item)"
             [alt]="item.name"
             (error)="fallback($event)"
@@ -240,14 +242,19 @@
             <strong class="d-block text-ellipsis">{{ detailName() || item.name }}</strong>
             <span class="d-block mt-4 fs-12 text-muted text-ellipsis">{{ detailImage() }}</span>
           </div>
-          <span class="status-dot" [class.is-stopped]="!isRunning(item)"></span>
+          <small
+            class="status-badge py-2 px-8 fs-10"
+            [class.using]="isRunning(item)"
+            [class.stopped]="!isRunning(item)"
+            >{{ statusText(item) }}</small
+          >
         </div>
 
         <div class="form-field d-block">
           容器名称
-          <div class="detail-field-row d-flex items-center gap-8 mt-8">
+          <div class="detail-field-row d-flex items-center gap-8 min-w-0 mt-8">
             <input
-              class="field-control flex-1 py-10 px-12"
+              class="field-control flex-1 min-w-0 py-10 px-12"
               [ngModel]="detailName()"
               (ngModelChange)="detailName.set($event)"
               maxlength="255"
@@ -265,9 +272,9 @@
 
         <div class="form-field d-block">
           镜像名称和标签
-          <div class="detail-field-row d-flex items-center gap-8 mt-8">
+          <div class="detail-field-row d-flex items-center gap-8 min-w-0 mt-8">
             <input
-              class="field-control flex-1 py-10 px-12"
+              class="field-control flex-1 min-w-0 py-10 px-12"
               [ngModel]="detailImage()"
               (ngModelChange)="detailImage.set($event)"
               placeholder="例如：nginx:latest"
@@ -286,8 +293,7 @@
           >
         </div>
 
-        <div class="container-detail-meta d-grid grid-cols-2-min gap-8 fs-12">
-          <span>状态：{{ statusText(item) }}</span>
+        <div class="container-detail-meta d-grid grid-cols-2-min gap-8 pt-12 border-t-1 fs-12 text-muted">
           <span>创建于：{{ item.createTime || '未知' }}</span>
         </div>
       </div>
