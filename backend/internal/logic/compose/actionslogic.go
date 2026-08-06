@@ -151,7 +151,7 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 			return
 		}
 		logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=up success", projectID, filename, taskID)
-		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "部署完成", DetailMsg: result.Output, IsDone: true})
+		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "部署完成", DetailMsg: "", IsDone: true})
 	}()
 
 	return successResp(resp, map[string]interface{}{"projectId": req.ProjectID, "filename": req.Filename, "taskID": taskID}), nil

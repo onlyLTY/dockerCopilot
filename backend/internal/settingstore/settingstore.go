@@ -49,6 +49,7 @@ const (
 	minRetention               = 1
 	maxRetention               = 100
 	maxHubURLs                 = 20
+	defaultPullTimeoutSec      = 300
 )
 
 // DefaultHubURLs 官方 Docker Hub 检查更新时的默认加速源（仅 host，按优先级）。
@@ -84,6 +85,8 @@ type Settings struct {
 	HTTPSProxy              string   `json:"HTTPS_PROXY,omitempty"`
 	NoProxy                 string   `json:"NO_PROXY,omitempty"`
 	ProxySettingsConfigured bool     `json:"proxySettingsConfigured,omitempty"`
+	// PullTimeoutSec 拉取镜像超时（秒）。0 表示未配置，运行时回退到配置文件/默认值。
+	PullTimeoutSec int `json:"pullTimeoutSec,omitempty"`
 }
 
 // SettingsPath 设置文件路径。可用 APP_SETTINGS_PATH 覆盖，便于测试；否则 {DATA_DIR}/config/appSettings.json。
@@ -334,6 +337,30 @@ func SetRetention(value int) (int, error) {
 	}
 	if err := update(func(s *Settings) error {
 		s.Retention = value
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+	return value, nil
+}
+
+// ValidPullTimeoutSec 校验拉取镜像超时：1-3600 秒，0 表示未配置（使用默认值）。
+func ValidPullTimeoutSec(value int) bool {
+	return value >= 0 && value <= 3600
+}
+
+// GetPullTimeoutSec 返回拉取镜像超时（秒）。0 表示未配置，调用方应回退到配置文件/默认值。
+func GetPullTimeoutSec() int {
+	return load().PullTimeoutSec
+}
+
+// SetPullTimeoutSec 设置拉取镜像超时（秒）。0 表示未配置（清空设置）。
+func SetPullTimeoutSec(value int) (int, error) {
+	if !ValidPullTimeoutSec(value) {
+		return 0, fmt.Errorf("拉取镜像超时必须在 1-3600 秒之间，0 表示未配置")
+	}
+	if err := update(func(s *Settings) error {
+		s.PullTimeoutSec = value
 		return nil
 	}); err != nil {
 		return 0, err

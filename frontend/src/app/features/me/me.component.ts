@@ -101,6 +101,8 @@ export class MeComponent {
   backupDraft = '';
   logDraft = 'info';
   retentionDraft = 10;
+  /** 拉取镜像超时（秒），0 表示未配置 */
+  pullTimeoutDraft = 0;
   /** Docker Hub 加速源（有序）。空字符串表示正在编辑的新行，保存时会被过滤。 */
   hubUrlsDraft: string[] = [];
   /** 后端下发的默认列表；请求失败时用本地兜底。 */
@@ -177,6 +179,7 @@ export class MeComponent {
         this.backupDraft = data.autoBackup?.interval || '';
         this.logDraft = data.logLevel?.level || 'info';
         this.retentionDraft = data.retention ?? 10;
+        this.pullTimeoutDraft = data.pullTimeoutSec ?? 0;
         if (data.defaultHubUrls?.length) this.defaultHubUrls = [...data.defaultHubUrls];
         this.hubUrlsDraft = [...(data.hubUrls ?? this.defaultHubUrls)];
         if (data.proxy) this.proxyDraft = { ...data.proxy };
@@ -216,6 +219,11 @@ export class MeComponent {
       this.toast.error('保留数量必须是 1-100 的整数');
       return;
     }
+    const pullTimeout = Number(this.pullTimeoutDraft);
+    if (!Number.isInteger(pullTimeout) || pullTimeout < 0 || pullTimeout > 3600) {
+      this.toast.error('拉取镜像超时必须在 0-3600 秒之间，0 表示未配置');
+      return;
+    }
     const hubUrls = this.hubUrlsDraft.map(x => x.trim()).filter(Boolean);
     this.saving.set(true);
     this.settings
@@ -224,6 +232,7 @@ export class MeComponent {
         autoBackupInterval: this.backupDraft,
         logLevel: this.logDraft,
         retention: value,
+        pullTimeoutSec: pullTimeout,
         hubUrls,
         proxy: this.proxyDraft,
       })

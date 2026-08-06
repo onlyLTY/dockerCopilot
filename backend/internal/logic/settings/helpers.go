@@ -11,6 +11,8 @@ type AppSettingsData struct {
 	AutoBackup     IntervalSettings           `json:"autoBackup"`
 	LogLevel       LevelSettings              `json:"logLevel"`
 	Retention      int                        `json:"retention"`
+	// PullTimeoutSec 拉取镜像超时（秒），0 表示未配置。
+	PullTimeoutSec int                        `json:"pullTimeoutSec"`
 	HubURLs        []string                   `json:"hubUrls"`
 	DefaultHubURLs []string                   `json:"defaultHubUrls"`
 	Proxy          settingstore.ProxySettings `json:"proxy"`
@@ -41,6 +43,7 @@ func SnapshotAppSettings() AppSettingsData {
 			Options: settingstore.LogLevelOptions(),
 		},
 		Retention:      settingstore.GetRetention(),
+		PullTimeoutSec: settingstore.GetPullTimeoutSec(),
 		HubURLs:        settingstore.GetHubURLs(),
 		DefaultHubURLs: settingstore.DefaultHubURLList(),
 		Proxy:          settingstore.GetProxySettings(),

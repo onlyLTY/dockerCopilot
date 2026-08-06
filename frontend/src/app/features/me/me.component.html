@@ -131,6 +131,15 @@
               [(ngModel)]="logDraft"
             ></dc-form-select
           ></label>
+          <label class="form-field d-block mt-20 fs-12" title="拉取镜像超时，0 表示未配置（使用默认 5 分钟）"
+            >拉取镜像超时（秒）<input
+              class="field-control d-block mt-8 py-12 px-12"
+              type="number"
+              min="0"
+              max="3600"
+              [(ngModel)]="pullTimeoutDraft"
+              title="0 表示未配置（使用默认 5 分钟）"
+          /></label>
         </div>
         <dc-form-expansion
           class="mt-20"

@@ -185,6 +185,10 @@ export class TaskService {
     if (this.viewing() === taskID) this.viewing.set('');
     this.persist();
     if (!this.tasks().some(t => !t.isDone)) this.stopBatch();
+    // 同步删除后端持久化记录，避免刷新后重新加载
+    this.http.delete('/api/progress/' + encodeURIComponent(taskID)).subscribe({
+      error: () => this.toast.error('删除任务失败', '无法删除后端记录，刷新后可能重新出现'),
+    });
   }
 
   /** 清空全部任务 */
@@ -194,6 +198,10 @@ export class TaskService {
     this.tasks.set([]);
     this.viewing.set('');
     this.persist();
+    // 同步清空后端持久化记录
+    this.http.delete('/api/progress/clear').subscribe({
+      error: () => this.toast.error('清空任务失败', '无法清空后端记录，刷新后可能重新出现'),
+    });
   }
 
   /** 清除已完成的任务，保留进行中的 */
@@ -203,6 +211,10 @@ export class TaskService {
       this.viewing.set('');
     this.persist();
     if (!this.tasks().some(t => !t.isDone)) this.stopBatch();
+    // 同步清空后端已完成记录
+    this.http.delete('/api/progress/clear?doneOnly=true').subscribe({
+      error: () => this.toast.error('清除已完成失败', '无法清除后端记录，刷新后可能重新出现'),
+    });
   }
 
   private scheduleBatch(immediate = false): void {

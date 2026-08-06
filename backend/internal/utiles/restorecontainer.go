@@ -7,9 +7,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	dockerBackend "github.com/docker/docker/api/types/backend"
 	"github.com/docker/docker/api/types/container"
+	"github.com/onlyLTY/dockerCopilot/internal/config"
+	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -54,6 +57,15 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		return err
 	}
 	total := len(configList)
+	// 拉取镜像超时：优先使用前端设置，其次配置文件，最后默认 5 分钟
+	restorePullTimeoutSec := settingstore.GetPullTimeoutSec()
+	if restorePullTimeoutSec <= 0 {
+		restorePullTimeoutSec = int(ctx.Config.PullTimeoutSec)
+	}
+	if restorePullTimeoutSec <= 0 {
+		restorePullTimeoutSec = int(config.DefaultPullTimeoutSec)
+	}
+	restorePullTimeout := time.Duration(restorePullTimeoutSec) * time.Second
 	for i, containerInfo := range configList {
 		name := containerInfo.Name
 		if name == "" {
@@ -80,11 +92,14 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 			backupList = append(backupList, linePrefix+" 恢复失败：备份缺少镜像信息")
 			continue
 		}
-		if err := PullImageWithTask(context.TODO(), ctx, containerInfo.Config.Image, taskID); err != nil {
+		restorePullCtx, restorePullCancel := context.WithTimeout(context.Background(), restorePullTimeout)
+		if err := PullImageWithTask(restorePullCtx, ctx, containerInfo.Config.Image, taskID); err != nil {
+			restorePullCancel()
 			logx.Errorf("Failed to pull image: %s", err)
 			backupList = append(backupList, linePrefix+" 拉取镜像失败")
 			continue
 		}
+		restorePullCancel()
 		_, err = ctx.DockerClient.ContainerCreate(context.TODO(), containerInfo.Config, containerInfo.HostConfig, containerInfo.NetworkingConfig, nil, containerInfo.Name)
 		if err != nil {
 			logx.Errorf("Failed to create container: %s", err)

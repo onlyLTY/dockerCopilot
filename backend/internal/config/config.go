@@ -24,10 +24,18 @@ type Config struct {
 	}
 	CorsOrigins []string
 	Compose     ComposeConfig
+	// PullTimeoutSec 拉取镜像超时（秒），默认 300（5 分钟）。
+	// 适用于单容器更新/恢复时的镜像拉取，不适用于 Compose 部署（走 CommandTimeoutSec）。
+	// 零或负值使用默认值。
+	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
+	PullTimeoutSec int64 `json:",optional"`
 }
 
 // MinAccessSecretLen secretKey / AccessSecret 最短长度（与 go-zero JWT 下限及文案「8 位以上」一致）。
 const MinAccessSecretLen = 8
+
+// DefaultPullTimeoutSec 单容器更新/恢复拉取镜像的默认超时（秒）。
+const DefaultPullTimeoutSec int64 = 300
 
 // ValidateAccessSecret 启动时校验登录/JWT 密钥：至少 8 位，且不能为纯数字。
 // 与历史提示「非纯数字且大于八位」对齐；「8 位以上」按常见语义含 8 位（len >= 8）。

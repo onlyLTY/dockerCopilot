@@ -1,5 +1,5 @@
 import { Component, HostListener, computed, inject } from '@angular/core';
-import { TaskService } from '../../core/task.service';
+import { TaskService, TaskItem } from '../../core/task.service';
 import { IconComponent } from '../icon/icon.component';
 import { ModalHeadingComponent } from '../modal-heading/modal-heading.component';
 

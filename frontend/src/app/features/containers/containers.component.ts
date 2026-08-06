@@ -254,7 +254,10 @@ export class ContainersComponent {
     return !!x.haveUpdate;
   }
   isRunning(x: ContainerRow) {
-    return x.status.includes('Up') || x.status.includes('running') || x.status.includes('运行');
+    // status 是 Docker 的短状态（running/restarting/exited 等，全小写）。
+    // restarting（崩溃循环）的进程仍在活动，也视为运行并可停止；
+    // 必须精确匹配，避免 "restarting" 误命中 "running" 子串。
+    return x.status === 'running' || x.status === 'restarting';
   }
   icon(x: ContainerRow) {
     return this.icons.resolve(x.usingImage, this.iconMap());

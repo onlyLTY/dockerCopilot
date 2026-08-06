@@ -7,6 +7,8 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/onlyLTY/dockerCopilot/internal/config"
+	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -41,12 +43,21 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	timeout := 10
 	signal := "SIGINT"
 
-	serviceContext.UpdateProgress(taskID, oldTaskProgress)
-	oldTaskProgress.Message = "正在拉取新镜像"
-	oldTaskProgress.Percentage = 10
-	oldTaskProgress.DetailMsg = "正在拉取新镜像"
-	serviceContext.UpdateProgress(taskID, oldTaskProgress)
-	if err := PullImageWithTask(ctx, serviceContext, imageNameAndTag, taskID); err != nil {
+serviceContext.UpdateProgress(taskID, oldTaskProgress)
+		oldTaskProgress.Message = "正在拉取新镜像"
+		oldTaskProgress.Percentage = 10
+		oldTaskProgress.DetailMsg = "正在拉取新镜像"
+		serviceContext.UpdateProgress(taskID, oldTaskProgress)
+		pullTimeoutSec := settingstore.GetPullTimeoutSec()
+		if pullTimeoutSec <= 0 {
+			pullTimeoutSec = int(serviceContext.Config.PullTimeoutSec)
+		}
+		if pullTimeoutSec <= 0 {
+			pullTimeoutSec = int(config.DefaultPullTimeoutSec)
+		}
+		pullCtx, cancelPull := context.WithTimeout(context.Background(), time.Duration(pullTimeoutSec)*time.Second)
+		defer cancelPull()
+		if err := PullImageWithTask(pullCtx, serviceContext, imageNameAndTag, taskID); err != nil {
 		oldTaskProgress, _ = serviceContext.GetProgress(taskID)
 		oldTaskProgress.Message = "拉取镜像失败"
 		oldTaskProgress.DetailMsg = err.Error()

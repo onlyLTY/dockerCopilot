@@ -27,6 +27,8 @@ export interface AppSettings {
   autoBackup: BackupSettings;
   logLevel: LogSettings;
   retention: number;
+  /** 拉取镜像超时（秒），0 表示未配置 */
+  pullTimeoutSec?: number;
   hubUrls: string[];
   /** 后端内置默认加速源，供「恢复默认」 */
   defaultHubUrls?: string[];
@@ -38,6 +40,7 @@ export interface AppSettingsUpdate {
   autoBackupInterval?: string;
   logLevel?: string;
   retention?: number;
+  pullTimeoutSec?: number;
   hubUrls?: string[];
   proxy?: ProxySettings;
 }

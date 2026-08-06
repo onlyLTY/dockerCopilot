@@ -86,7 +86,7 @@ type TaskStep struct {
 	DetailMsg  string `json:"detailMsg,omitempty"`
 	StartedAt  int64  `json:"startedAt"`
 	EndedAt    int64  `json:"endedAt,omitempty"`
-	DurationMs int64  `json:"durationMs,omitempty"`
+	DurationMs int64  `json:"durationMs"`
 	IsDone     bool   `json:"isDone"`
 	Failed     bool   `json:"failed"`
 }
@@ -331,6 +331,26 @@ func (ctx *ServiceContext) ListProgress() ProgressStoreType {
 		store[taskID] = progress
 	}
 	return store
+}
+
+// DeleteProgress 删除指定任务进度记录并立即落盘。
+func (ctx *ServiceContext) DeleteProgress(taskID string) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	delete(ctx.ProgressStore, taskID)
+	ctx.persistProgressLocked()
+}
+
+// ClearProgress 清空任务进度记录，doneOnly=true 时只清空已完成任务。
+func (ctx *ServiceContext) ClearProgress(doneOnly bool) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	for id, p := range ctx.ProgressStore {
+		if !doneOnly || p.IsDone {
+			delete(ctx.ProgressStore, id)
+		}
+	}
+	ctx.persistProgressLocked()
 }
 
 func (ctx *ServiceContext) TryStartContainerUpdate(containerID, taskID string) bool {

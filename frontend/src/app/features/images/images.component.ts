@@ -45,13 +45,14 @@ export class ImagesComponent {
         (this.filter() === 'used'
           ? x.inUsed
           : this.filter() === 'unused'
-            ? !x.inUsed
+            ? !x.inUsed && !this.isUntagged(x)
             : this.isUntagged(x)),
     ),
   );
   readonly usedCount = computed(() => this.images().filter(x => x.inUsed).length);
   readonly untaggedCount = computed(() => this.images().filter(x => this.isUntagged(x)).length);
-  readonly unusedCount = computed(() => this.images().filter(x => !x.inUsed).length);
+  /** 未使用（不含无 Tag 的 dangling 镜像，与 Docker dangling=false 语义对齐） */
+  readonly unusedCount = computed(() => this.images().filter(x => !x.inUsed && !this.isUntagged(x)).length);
   readonly stats = computed<readonly StatItem[]>(() => [
     { key: 'all', value: this.images().length, label: '总镜像' },
     { key: 'used', value: this.usedCount(), label: '使用中', tone: 'green' },

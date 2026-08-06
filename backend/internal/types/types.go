@@ -15,7 +15,7 @@ type ComposeCleanupReq struct {
 }
 
 type ComposeDeployPreviewReq struct {
-	ProjectID string `json:"projectId" validate:"required"`
+	ProjectID string `path:"id" validate:"required"`
 	Filename  string `json:"filename" validate:"required"`
 }
 
@@ -53,6 +53,14 @@ type ComposeProjectValidateReq struct {
 	ProjectID string `json:"projectId" validate:"required"`
 	Filename  string `json:"filename" validate:"required"`
 	Content   string `json:"content" validate:"required"`
+}
+
+type DeleteProgressReq struct {
+	TaskId string `path:"taskid" validate:"required"`
+}
+
+type ClearProgressReq struct {
+	DoneOnly bool `form:"doneOnly,optional"`
 }
 
 type ContainerRenameReq struct {

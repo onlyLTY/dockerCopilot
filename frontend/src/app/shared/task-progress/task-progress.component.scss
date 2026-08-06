@@ -11,3 +11,17 @@
   border-radius: 50%;
   background: var(--line-color);
 }
+
+/* 自适应高度：内容短时按内容高度，超长时滚动 */
+.modal-progress {
+  height: auto;
+  max-height: 85vh;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+.modal-progress .modal-body {
+  overflow: auto;
+}
+.modal-progress > .modal-actions {
+  border-top: 1px solid var(--line);
+}

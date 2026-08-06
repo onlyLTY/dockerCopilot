@@ -60,6 +60,12 @@ func (l *UpdateAppSettingsLogic) UpdateAppSettings(body *types.UpdateAppSettings
 		}
 	}
 
+	if body.PullTimeoutSec != nil {
+		if _, err := settingstore.SetPullTimeoutSec(*body.PullTimeoutSec); err != nil {
+			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
+		}
+	}
+
 	if body.HubURLs != nil {
 		if _, err := settingstore.SetHubURLs(*body.HubURLs); err != nil {
 			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
@@ -87,16 +93,17 @@ func (l *UpdateAppSettingsLogic) UpdateAppSettings(body *types.UpdateAppSettings
 	}
 
 	data := SnapshotAppSettings()
-	if len(warnings) > 0 {
-		return logic.Biz(200, msg, map[string]interface{}{
-			"updateCheck": data.UpdateCheck,
-			"autoBackup":  data.AutoBackup,
-			"logLevel":    data.LogLevel,
-			"retention":   data.Retention,
-			"hubUrls":     data.HubURLs,
-			"proxy":       data.Proxy,
-			"warnings":    warnings,
-		}), nil
-	}
+if len(warnings) > 0 {
+			return logic.Biz(200, msg, map[string]interface{}{
+				"updateCheck":    data.UpdateCheck,
+				"autoBackup":     data.AutoBackup,
+				"logLevel":       data.LogLevel,
+				"retention":      data.Retention,
+				"pullTimeoutSec": data.PullTimeoutSec,
+				"hubUrls":        data.HubURLs,
+				"proxy":          data.Proxy,
+				"warnings":       warnings,
+			}), nil
+		}
 	return logic.Biz(200, msg, data), nil
 }

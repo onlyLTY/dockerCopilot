@@ -10,6 +10,7 @@ COPY build/docker/dist/$TARGETPLATFORM/dockerCopilot ./dockerCopilot
 COPY build/docker/etc/. ./etc
 COPY build/docker/web/. ./web
 COPY backend/start.sh ./start.sh
+COPY version .
 
 RUN apk add --no-cache tzdata wget \
     && chmod +x start.sh \

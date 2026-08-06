@@ -68,9 +68,9 @@ func PullImage(ctx context.Context, cli client.APIClient, imageRef string, onPro
 	}
 
 	if len(errs) == 0 {
-		return "", fmt.Errorf("拉取镜像失败：无可用源")
+		return "", fmt.Errorf("无可用源")
 	}
-	return "", fmt.Errorf("拉取镜像失败：%s", strings.Join(errs, "；"))
+	return "", fmt.Errorf("%s", strings.Join(errs, "；"))
 }
 
 // PullImageWithTask 供更新/恢复等带 task 进度的场景使用。

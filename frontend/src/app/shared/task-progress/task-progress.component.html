@@ -1,14 +1,14 @@
 @if (task(); as t) {
   <div class="modal-backdrop d-grid place-items-center" (click)="close($event)">
     <section
-      class="modal min-w-0 d-grid modal-content modal-m h-auto"
+      class="modal min-w-0 d-grid modal-m modal-progress"
       role="dialog"
       aria-modal="true"
       (click)="$event.stopPropagation()"
     >
       <dc-modal-heading [title]="t.title" [subtitle]="t.message" (closed)="tasks.closeView()" />
-      <div class="modal-body d-flex flex-col min-h-0 overflow-hidden">
-        <div class="mt-20 min-h-0">
+      <div class="modal-body">
+        <div class="mt-20">
           <div class="h-10 bg-line overflow-hidden rounded-6">
             <span
               class="d-block h-full bg-blue transition-width"
@@ -38,8 +38,8 @@
                   <div class="min-w-0 flex-1">
                     <div class="d-flex justify-between gap-8">
                       <span class="text-black break-word">{{ step.message }}</span>
-                      @if (step.durationMs !== undefined) {
-                        <span class="text-muted flex-none">{{ duration(step.durationMs) }}</span>
+                      @if (step.endedAt) {
+                        <span class="text-muted flex-none">{{ duration(step.durationMs ?? 0) }}</span>
                       }
                     </div>
                     @if (step.detailMsg && step.detailMsg !== step.message) {
@@ -50,18 +50,13 @@
               }
             </div>
           }
-          @if (t.detailMsg) {
-            <pre
-              class="task-detail mt-16 py-12 px-14 min-h-0 max-h-220 overflow-auto text-muted text-pre-wrap break-word bg-page-bg border-1 rounded-8 fs-12 lh-16"
-              >{{ t.detailMsg }}</pre>
-          }
         </div>
-        <div class="d-flex items-center justify-end gap-8 pt-16">
-          <button class="btn text-red bg-secondary-bg gap-4" (click)="remove(t.taskID)">
-            <dc-icon class="icon-14" name="delete"></dc-icon>删除任务
-          </button>
-          <button class="btn text-white bg-blue" (click)="tasks.closeView()">关闭</button>
-        </div>
+      </div>
+      <div class="modal-actions d-flex justify-end gap-8">
+        <button class="btn text-red bg-secondary-bg gap-4" (click)="remove(t.taskID)">
+          <dc-icon class="icon-16" name="delete"></dc-icon>删除任务
+        </button>
+        <button class="btn text-white bg-blue" (click)="tasks.closeView()">关闭</button>
       </div>
     </section>
   </div>

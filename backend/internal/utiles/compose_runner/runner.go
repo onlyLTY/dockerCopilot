@@ -90,13 +90,11 @@ func up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 	}
 
 	out := &strings.Builder{}
-	// 记录每一步耗时：以上一条日志为基准计算增量，方便前端展示每步花费的时间。
-	stepStart := time.Now()
+	// 每步耗时由前端基于 TaskStep.StartedAt/EndedAt 的 durationMs 展示；
+	// 这里只记录操作信息，不再附加“耗时”（基于相邻日志间隔的计时不准确）。
 	logf := func(format string, args ...interface{}) {
-		elapsed := time.Since(stepStart)
-		stepStart = time.Now()
 		message := fmt.Sprintf(format, args...)
-		fmt.Fprintf(out, "%s (耗时 %s)\n", message, formatDuration(elapsed))
+		fmt.Fprintf(out, "%s\n", message)
 		if report != nil {
 			report(message)
 		}
@@ -438,14 +436,6 @@ func loadProject(ctx context.Context, projectDir string, files []string, timeout
 		return nil, err
 	}
 	return composecli.ProjectFromOptions(loadCtx, options)
-}
-
-// formatDuration 输出人类可读的耗时，毫秒级用 ms，其余保留一位小数的秒。
-func formatDuration(d time.Duration) string {
-	if d < time.Second {
-		return fmt.Sprintf("%dms", d.Milliseconds())
-	}
-	return fmt.Sprintf("%.1fs", d.Seconds())
 }
 
 func sanitizeOutput(output string) string {

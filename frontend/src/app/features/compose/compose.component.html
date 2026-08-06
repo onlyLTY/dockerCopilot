@@ -9,10 +9,6 @@
   </div>
 </dc-page-heading>
 
-@if (messageType() === 'error' && (message() || '').trim()) {
-  <div class="alert error-alert">ⓘ {{ message() }}</div>
-}
-
 <dc-stats
   [items]="stats()"
   [columns]="5"
@@ -70,18 +66,16 @@
           <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="openEditor(project)">
             <dc-icon name="edit"></dc-icon>查看/编辑
           </button>
-          <button
-            class="btn text-red border-1 py-8 px-7 fs-12"
-            [disabled]="project.status !== 'unused' || !!deletingProject() || cleanupBusy()"
-            [title]="
-              project.status === 'unused'
-                ? '删除整个项目文件夹'
-                : '只有未使用的项目可以删除'
-            "
-            (click)="deleteProject(project)"
-          >
-            <dc-icon name="delete"></dc-icon>{{ deletingProject() === project.id ? '删除中…' : '删除项目' }}
-          </button>
+          @if (project.status === 'unused') {
+            <button
+              class="btn text-red border-1 py-8 px-7 fs-12"
+              [disabled]="!!deletingProject() || cleanupBusy()"
+              title="删除整个项目文件夹"
+              (click)="deleteProject(project)"
+            >
+              <dc-icon name="delete"></dc-icon>{{ deletingProject() === project.id ? '删除中…' : '删除项目' }}
+            </button>
+          }
         </div>
       </dc-resource-card>
     }

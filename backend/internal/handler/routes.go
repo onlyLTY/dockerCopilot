@@ -249,22 +249,32 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		rest.WithPrefix("/api"),
 	)
 
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/progress/:taskid",
-				Handler: progress.GetProgressHandler(serverCtx),
+server.AddRoutes(
+			[]rest.Route{
+				{
+					Method:  http.MethodDelete,
+					Path:    "/progress/clear",
+					Handler: progress.ClearProgressHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/progress/:taskid",
+					Handler: progress.DeleteProgressHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/progress/:taskid",
+					Handler: progress.GetProgressHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/progress/list",
+					Handler: progress.ListProgressHandler(serverCtx),
+				},
 			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/progress/list",
-				Handler: progress.ListProgressHandler(serverCtx),
-			},
-		},
-		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/api"),
-	)
+			rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+			rest.WithPrefix("/api"),
+		)
 
 	server.AddRoutes(
 		[]rest.Route{
