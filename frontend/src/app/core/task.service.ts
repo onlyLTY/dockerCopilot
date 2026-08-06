@@ -7,6 +7,16 @@ import { CacheBus } from './cache-bus';
 import { ToastService } from './toast.service';
 
 /** 单个任务的进度快照 */
+export interface TaskStep {
+  message: string;
+  detailMsg: string;
+  startedAt: number;
+  endedAt?: number;
+  durationMs?: number;
+  isDone: boolean;
+  failed: boolean;
+}
+
 export interface TaskItem {
   taskID: string;
   title: string; // 展示用标题，如 “更新 nginx”“恢复 backup-2026-07-28”
@@ -19,6 +29,7 @@ export interface TaskItem {
   createdAt: number; // 创建时间戳，用于排序/清理
   updatedAt: number; // 最近一次进度更新时间
   resourceID?: string; // 关联资源 ID，例如容器更新对应的容器 ID
+  steps: TaskStep[];
 }
 
 /** 后端 /api/progress/:taskid 的 data 结构 */
@@ -28,6 +39,7 @@ interface ProgressData {
   message: string;
   name: string;
   detailMsg: string;
+  steps?: TaskStep[];
   isDone: boolean;
   /** Unix 毫秒；旧后端可能缺失 */
   updatedAt?: number;
@@ -94,6 +106,7 @@ export class TaskService {
       createdAt: now,
       updatedAt: now,
       resourceID,
+      steps: [],
     };
     this.tasks.update(list => [item, ...list]);
     this.persist();
@@ -122,6 +135,7 @@ export class TaskService {
               percentage: progress.percentage,
               message: progress.message || existing.message,
               detailMsg: progress.detailMsg || existing.detailMsg,
+              steps: progress.steps || existing.steps || [],
               isDone: progress.isDone,
               failed:
                 progress.isDone &&
@@ -135,6 +149,7 @@ export class TaskService {
             percentage: progress.percentage,
             message: progress.message || '任务已恢复',
             detailMsg: progress.detailMsg || '',
+            steps: progress.steps || [],
             isDone: progress.isDone,
             failed:
               progress.isDone &&
@@ -310,6 +325,7 @@ export class TaskService {
           percentage: d.percentage,
           message: d.message || t.message,
           detailMsg: d.detailMsg || '',
+          steps: d.steps || t.steps || [],
           isDone: d.isDone,
           failed,
           updatedAt,

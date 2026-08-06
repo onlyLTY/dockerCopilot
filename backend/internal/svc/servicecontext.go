@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -69,14 +70,25 @@ type cronTask struct {
 }
 
 type TaskProgress struct {
-	TaskID     string `json:"taskID"`
-	Percentage int    `json:"percentage"`
-	Message    string `json:"message"`
-	Name       string `json:"name"`
-	DetailMsg  string `json:"detailMsg"`
-	IsDone     bool   `json:"isDone"`
+	TaskID     string     `json:"taskID"`
+	Percentage int        `json:"percentage"`
+	Message    string     `json:"message"`
+	Name       string     `json:"name"`
+	DetailMsg  string     `json:"detailMsg"`
+	IsDone     bool       `json:"isDone"`
+	Steps      []TaskStep `json:"steps"`
 	// UpdatedAt 最近一次进度变更时间（Unix 毫秒）。用于按时间淘汰与前端展示。
 	UpdatedAt int64 `json:"updatedAt"`
+}
+
+type TaskStep struct {
+	Message    string `json:"message"`
+	DetailMsg  string `json:"detailMsg,omitempty"`
+	StartedAt  int64  `json:"startedAt"`
+	EndedAt    int64  `json:"endedAt,omitempty"`
+	DurationMs int64  `json:"durationMs,omitempty"`
+	IsDone     bool   `json:"isDone"`
+	Failed     bool   `json:"failed"`
 }
 
 type ProgressStoreType map[string]TaskProgress
@@ -226,12 +238,31 @@ func (ctx *ServiceContext) scheduleProgressPersistLocked() {
 func (ctx *ServiceContext) UpdateProgress(taskID string, progress TaskProgress) {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
+	now := time.Now().UnixMilli()
 	if progress.UpdatedAt == 0 {
-		progress.UpdatedAt = time.Now().UnixMilli()
+		progress.UpdatedAt = now
+	}
+	previous := ctx.ProgressStore[taskID]
+	progress.Steps = append([]TaskStep(nil), previous.Steps...)
+	if progress.Message != "" {
+		failed := progress.IsDone && (progress.Percentage < 100 || strings.Contains(strings.ToLower(progress.Message), "失败") || strings.Contains(strings.ToLower(progress.Message), "error"))
+		if len(progress.Steps) == 0 || progress.Steps[len(progress.Steps)-1].Message != progress.Message {
+			if len(progress.Steps) > 0 && progress.Steps[len(progress.Steps)-1].EndedAt == 0 {
+				closeTaskStep(&progress.Steps[len(progress.Steps)-1], now)
+			}
+			progress.Steps = append(progress.Steps, TaskStep{Message: progress.Message, DetailMsg: progress.DetailMsg, StartedAt: now, IsDone: progress.IsDone, Failed: failed})
+		} else {
+			step := &progress.Steps[len(progress.Steps)-1]
+			step.DetailMsg = progress.DetailMsg
+			step.IsDone = progress.IsDone
+			step.Failed = failed
+		}
+	}
+	if progress.IsDone && len(progress.Steps) > 0 && progress.Steps[len(progress.Steps)-1].EndedAt == 0 {
+		closeTaskStep(&progress.Steps[len(progress.Steps)-1], now)
 	}
 	ctx.ProgressStore[taskID] = progress
 	ctx.pruneProgressLocked()
-	// 终态立即落盘，避免重启丢失；进行中合并写盘
 	if progress.IsDone {
 		if ctx.progressPersistTimer != nil {
 			ctx.progressPersistTimer.Stop()
@@ -241,6 +272,12 @@ func (ctx *ServiceContext) UpdateProgress(taskID string, progress TaskProgress) 
 		return
 	}
 	ctx.scheduleProgressPersistLocked()
+}
+
+func closeTaskStep(step *TaskStep, endedAt int64) {
+	step.EndedAt = endedAt
+	step.DurationMs = endedAt - step.StartedAt
+	step.IsDone = true
 }
 
 // pruneProgressLocked 限制已完成任务数量与年龄，避免 taskProgress.json 无限增长。

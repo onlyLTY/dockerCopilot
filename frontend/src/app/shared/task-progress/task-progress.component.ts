@@ -22,6 +22,11 @@ export class TaskProgressComponent {
     if (this.task()) this.tasks.closeView();
   }
 
+  duration(ms: number): string {
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)}s`;
+  }
+
   close(e: Event) {
     if (e.target === e.currentTarget) this.tasks.closeView();
   }

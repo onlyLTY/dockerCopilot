@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { ApiResponse } from './compose.service';
 import { CacheStore, CacheView } from './cache-store';
@@ -71,6 +71,7 @@ export class ContainerService {
       this.http.post<ApiResponse<unknown>>(
         '/api/container/' + encodeURIComponent(id) + '/rename',
         { newName },
+        { headers: new HttpHeaders({ 'Content-Type': 'application/json' }) },
       ),
     );
   }

@@ -28,6 +28,8 @@ type Result struct {
 	Output string `json:"output"`
 }
 
+type ProgressReporter func(message string)
+
 // Available 通过注入的 API 客户端探测 Docker 守护进程是否可用。
 // 不检查 PATH，也不依赖 Docker CLI / Compose 插件二进制。
 func Available(ctx context.Context, dockerClient client.APIClient) bool {
@@ -62,6 +64,14 @@ func Config(ctx context.Context, dockerClient client.APIClient, projectDir strin
 // depends_on 多服务排序、命名网络与数据卷。
 // 不支持：build:（镜像须已存在或可拉取）、secrets、configs、profiles、swarm 多副本编排。
 func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool) (Result, error) {
+	return up(ctx, dockerClient, projectDir, files, timeout, pullImages, nil)
+}
+
+func UpWithProgress(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool, report ProgressReporter) (Result, error) {
+	return up(ctx, dockerClient, projectDir, files, timeout, pullImages, report)
+}
+
+func up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool, report ProgressReporter) (Result, error) {
 	if projectDir == "" || len(files) == 0 {
 		return Result{}, fmt.Errorf("Compose 执行参数不完整")
 	}
@@ -85,7 +95,11 @@ func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 	logf := func(format string, args ...interface{}) {
 		elapsed := time.Since(stepStart)
 		stepStart = time.Now()
-		fmt.Fprintf(out, format+" (耗时 %s)\n", append(args, formatDuration(elapsed))...)
+		message := fmt.Sprintf(format, args...)
+		fmt.Fprintf(out, "%s (耗时 %s)\n", message, formatDuration(elapsed))
+		if report != nil {
+			report(message)
+		}
 	}
 
 	// 提前拒绝仅 build 的服务：无 image 无法继续，且构建明确不在本实现范围内（会引入 buildkit）。

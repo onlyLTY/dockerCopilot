@@ -25,6 +25,31 @@
               <span class="text-muted">后台执行中，可关闭此窗口</span>
             }
           </div>
+          @if ((t.steps || []).length) {
+            <div class="task-steps mt-16 d-flex flex-col gap-8">
+              @for (step of (t.steps || []); track step.startedAt + step.message) {
+                <div class="task-step d-flex items-start gap-8 fs-12">
+                  <span
+                    class="task-step-mark flex-none"
+                    [class.bg-green]="step.isDone && !step.failed"
+                    [class.bg-red]="step.failed"
+                    [class.bg-blue]="!step.isDone"
+                  ></span>
+                  <div class="min-w-0 flex-1">
+                    <div class="d-flex justify-between gap-8">
+                      <span class="text-black break-word">{{ step.message }}</span>
+                      @if (step.durationMs !== undefined) {
+                        <span class="text-muted flex-none">{{ duration(step.durationMs) }}</span>
+                      }
+                    </div>
+                    @if (step.detailMsg && step.detailMsg !== step.message) {
+                      <div class="text-muted mt-2 break-word">{{ step.detailMsg }}</div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
           @if (t.detailMsg) {
             <pre
               class="task-detail mt-16 py-12 px-14 min-h-0 max-h-220 overflow-auto text-muted text-pre-wrap break-word bg-page-bg border-1 rounded-8 fs-12 lh-16"
