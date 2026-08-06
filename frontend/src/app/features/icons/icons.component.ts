@@ -51,7 +51,23 @@ export class IconsComponent {
   constructor() { this.service.ensureLoaded(); }
   openUpload(): void { this.editing.set(''); this.name = ''; this.file.set(undefined); this.error.set(''); this.show.set(true); }
   edit(name: string): void { this.editing.set(name); this.name = name; this.file.set(undefined); this.error.set(''); this.show.set(true); }
-  choose(event: Event): void { const input = event.target as HTMLInputElement; this.file.set(input.files?.[0]); }
+  choose(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const selected = input.files?.[0];
+    this.error.set('');
+    if (!selected) {
+      this.file.set(undefined);
+      return;
+    }
+    const name = selected.name.toLowerCase();
+    if (!name.endsWith('.png') || (selected.type && selected.type !== 'image/png')) {
+      this.file.set(undefined);
+      this.error.set('仅支持 PNG 图标');
+      input.value = '';
+      return;
+    }
+    this.file.set(selected);
+  }
   upload(): void { const file = this.file(); if (!file || !this.name.trim()) return; this.uploading.set(true); this.service.upload(this.name.trim(), file).subscribe({ next: result => { this.uploading.set(false); if (result.code === 200) { this.show.set(false); this.toast.success('图标已保存'); } else this.error.set(result.msg); }, error: error => { this.uploading.set(false); this.error.set(error.error?.msg || '上传失败'); } }); }
   async remove(name: string): Promise<void> { if (!(await this.confirm.open({ title: '删除图标', message: `删除图标 ${name}？`, confirmText: '删除', danger: true }))) return; this.service.remove(name).subscribe({ next: result => { if (result.code === 200) this.toast.success('图标已删除'); else this.toast.error(`删除失败：${result.msg || '未知错误'}`); }, error: e => this.toast.error(`删除失败：${e.error?.msg || e.message || '请求错误'}`) }); }
   close(event: Event): void { if (event.target === event.currentTarget) this.show.set(false); }

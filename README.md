@@ -120,7 +120,7 @@ docker compose -f docker/docker-compose.yml down
 
 | 变量 | 默认值 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `secretKey` | 无 | **是** | 登录密钥与 JWT 签名密钥，变量名区分大小写 |
+| `secretKey` | 无 | **是** | 登录密钥与 JWT 签名密钥；至少 8 位且不能为纯数字（启动强制校验） |
 | `DOCKER_COPILOT_IMAGE` | `dockercopilot:latest` | 否 | 镜像地址与标签 |
 | `DOCKER_COPILOT_CONTAINER` | `dockercopilot` | 否 | 容器名称 |
 | `DOCKER_BIND_ADDRESS` | `127.0.0.1` | 否 | 宿主机监听地址；局域网访问改为 `0.0.0.0` 并做好隔离 |
@@ -202,6 +202,10 @@ docker build -f docker/Dockerfile \
   -t dockercopilot:local .
 ```
 
+#### Compose 变量插值
+
+部署/解析时 `${VAR}` **只**从该项目目录的 `.env` 读取，**不会**读取 Docker Copilot 进程环境（避免 `secretKey` 等被写进业务容器）。业务所需变量请写在项目 `.env` 或 compose 字面量中。
+
 #### Compose 风险控制（`AllowHighRisk`）
 
 部署用户 Compose 项目前会检查风险项。极高危配置（如 `privileged`、挂载 `docker.sock`、敏感宿主机路径）**默认拒绝**；仅当服务端 `backend/etc/dockerCopilot.yaml`（镜像内 `etc/dockerCopilot.yaml`）中：
@@ -211,7 +215,7 @@ Compose:
   AllowHighRisk: false   # 仅在可信环境、确需特权时改为 true，并重启服务
 ```
 
-说明：前端确认无法绕过；开启后仍走预览与确认。备份恢复同样会拒绝含特权/敏感挂载的容器配置。
+说明：前端确认无法绕过；开启后仍走预览与确认。备份恢复与 Compose 部署使用同一套高危规则：默认拒绝 privileged、docker.sock、敏感路径，以及 host 网络/PID、devices、cap_add、security_opt；仅 `AllowHighRisk: true` 可放行。
 
 ---
 
@@ -219,8 +223,8 @@ Compose:
 
 ### 认证与界面
 
-- 使用 `secretKey` 登录并签发 JWT；除登录外管理 API 默认需认证
-- 登录按客户端 IP 限制失败次数；会话过期（401）时提示并保留 `returnUrl` 回到原页面
+- 使用 `secretKey` 登录并签发 JWT；启动要求至少 8 位且不能为纯数字；除登录外管理 API 默认需认证
+- 登录按客户端 IP 限制失败次数（约 5 次/分钟后短暂封禁；状态落盘至 `/data/config/loginAttempts.json`，重启仍生效）；会话过期（401）时提示并保留 `returnUrl` 回到原页面
 - Token 有效期由 `Auth.AccessExpire` 配置（默认 7 天）；共享设备请自行缩短并保护 `secretKey`
 - 浅色/深色主题、紧凑模式、移动端菜单
 - 全局安全响应头（CSP / X-Frame-Options 等）
@@ -243,7 +247,7 @@ Compose:
 - 创建容器配置 JSON 备份；列表、筛选、删除
 - 异步恢复 JSON 备份；导出 YAML/Compose 作迁移参考（恢复以 JSON 为准）
 - 自动备份频率与保留数量可配
-- 恢复拒绝含 `privileged`、docker.sock 或敏感挂载的配置
+- 恢复门禁与 Compose 部署对齐：默认拒绝 privileged / docker.sock / 敏感挂载，以及 host 网络·PID、devices、cap_add、security_opt（`AllowHighRisk` 可放行）
 
 ### Compose 项目管理
 
@@ -262,9 +266,9 @@ Compose:
 
 ### 图标与应用设置
 
-- 自定义镜像图标（PNG / JPEG / WebP / SVG）
+- 自定义镜像图标（仅 PNG）
 - 更新检查频率、自动备份、日志级别、代理、忽略名单等
-- 本地/远程版本信息与程序更新（重启后切换生效）
+- 本地/远程版本信息与程序更新（官方域名白名单 + 更新包 SHA256 校验；重启后切换生效）
 
 ### 当前边界
 

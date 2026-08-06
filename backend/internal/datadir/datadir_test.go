@@ -26,4 +26,8 @@ func TestRootOverride(t *testing.T) {
 	if AppSettingsPath() != wantSettings {
 		t.Fatalf("AppSettingsPath() = %q, want %q", AppSettingsPath(), wantSettings)
 	}
+	wantLogin := filepath.Join(dir, "config", "loginAttempts.json")
+	if LoginAttemptsPath() != wantLogin {
+		t.Fatalf("LoginAttemptsPath() = %q, want %q", LoginAttemptsPath(), wantLogin)
+	}
 }

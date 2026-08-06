@@ -401,10 +401,10 @@ func loadProject(ctx context.Context, projectDir string, files []string, timeout
 		loadCtx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
+	// 仅 WithDotEnv：与 compose_project.LoadProject 一致，不读取面板进程环境变量。
 	options, err := composecli.NewProjectOptions(
 		files,
 		composecli.WithWorkingDirectory(projectDir),
-		composecli.WithOsEnv,
 		composecli.WithDotEnv,
 		composecli.WithResolvedPaths(true),
 		composecli.WithDiscardEnvFile,

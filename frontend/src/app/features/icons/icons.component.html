@@ -42,7 +42,7 @@
       <div class="modal-body">
         <label class="form-field d-block mt-20 fs-12">镜像仓库名称<input class="d-block mt-8 py-12 px-12" [(ngModel)]="name" placeholder="例如 nginx 或 ghcr.io/company/app"></label>
         <p class="form-hint m-0 mt-8 fs-12">输入 tag 或 digest 也会自动归一化，同一镜像仓库的所有版本共用此图标。</p>
-        <label class="form-field d-block mt-20 fs-12">图标文件<input class="d-block mt-8 py-12 px-12" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" (change)="choose($event)"></label>
+        <label class="form-field d-block mt-20 fs-12">图标文件（仅 PNG）<input class="d-block mt-8 py-12 px-12" type="file" accept="image/png" (change)="choose($event)"></label>
         @if (error()) {
           <p class="message error">{{ error() }}</p>
         }

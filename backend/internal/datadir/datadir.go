@@ -44,3 +44,6 @@ func TaskProgressPath() string { return Join("config", "taskProgress.json") }
 
 // AppSettingsPath 应用设置文件。
 func AppSettingsPath() string { return Join("config", "appSettings.json") }
+
+// LoginAttemptsPath 登录失败/封禁计数持久化文件（重启后仍生效）。
+func LoginAttemptsPath() string { return Join("config", "loginAttempts.json") }

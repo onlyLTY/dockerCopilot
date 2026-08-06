@@ -1,24 +1,31 @@
 package middleware
 
 import (
+	"encoding/json"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/onlyLTY/dockerCopilot/internal/datadir"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 // LoginRateLimit 对登录接口按客户端 IP 做失败次数限制，防止暴力猜测 secretKey。
 // 成功登录会清零该 IP 的失败计数。
+// 状态持久化到 DATA_DIR/config/loginAttempts.json（可用 LOGIN_ATTEMPTS_PATH 覆盖），重启后仍生效。
 type LoginRateLimit struct {
 	mu       sync.Mutex
 	failures map[string]*loginAttempt
 	maxFail  int
 	window   time.Duration
 	banFor   time.Duration
+	path     string
 }
 
 type loginAttempt struct {
@@ -27,13 +34,34 @@ type loginAttempt struct {
 	bannedUntil time.Time
 }
 
+// 落盘 DTO（Unix 秒，便于跨重启与可读）。
+type loginAttemptsFile struct {
+	Entries map[string]loginAttemptDTO `json:"entries"`
+}
+
+type loginAttemptDTO struct {
+	Count       int   `json:"count"`
+	WindowStart int64 `json:"windowStart"`
+	BannedUntil int64 `json:"bannedUntil,omitempty"`
+}
+
 func NewLoginRateLimit() *LoginRateLimit {
-	return &LoginRateLimit{
+	m := &LoginRateLimit{
 		failures: make(map[string]*loginAttempt),
 		maxFail:  5,
 		window:   time.Minute,
 		banFor:   2 * time.Minute,
+		path:     loginAttemptsStorePath(),
 	}
+	m.load()
+	return m
+}
+
+func loginAttemptsStorePath() string {
+	if p := strings.TrimSpace(os.Getenv("LOGIN_ATTEMPTS_PATH")); p != "" {
+		return p
+	}
+	return datadir.LoginAttemptsPath()
 }
 
 // Handle 作为 rest.Middleware 使用：仅应挂在 POST /api/auth。
@@ -77,30 +105,33 @@ func (m *LoginRateLimit) isBanned(ip string) bool {
 
 func (m *LoginRateLimit) RecordFailure(ip string) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	now := time.Now()
 	m.cleanupLocked(now)
 	a, ok := m.failures[ip]
 	if !ok {
 		m.failures[ip] = &loginAttempt{count: 1, windowStart: now}
-		return
-	}
-	if now.Sub(a.windowStart) > m.window {
+	} else if now.Sub(a.windowStart) > m.window {
 		a.count = 1
 		a.windowStart = now
 		a.bannedUntil = time.Time{}
-		return
+	} else {
+		a.count++
+		if a.count >= m.maxFail {
+			a.bannedUntil = now.Add(m.banFor)
+		}
 	}
-	a.count++
-	if a.count >= m.maxFail {
-		a.bannedUntil = now.Add(m.banFor)
-	}
+	m.persistLocked()
+	m.mu.Unlock()
 }
 
 func (m *LoginRateLimit) Clear(ip string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if _, ok := m.failures[ip]; !ok {
+		return
+	}
 	delete(m.failures, ip)
+	m.persistLocked()
 }
 
 func (m *LoginRateLimit) cleanupLocked(now time.Time) {
@@ -110,6 +141,99 @@ func (m *LoginRateLimit) cleanupLocked(now time.Time) {
 		if expiredBan && expiredWindow {
 			delete(m.failures, ip)
 		}
+	}
+}
+
+func (m *LoginRateLimit) load() {
+	if m.path == "" {
+		return
+	}
+	content, err := os.ReadFile(m.path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logx.Errorf("读取登录限流文件失败 %s: %v", m.path, err)
+		}
+		return
+	}
+	var stored loginAttemptsFile
+	if err := json.Unmarshal(content, &stored); err != nil {
+		logx.Errorf("解析登录限流文件失败 %s: %v", m.path, err)
+		return
+	}
+	now := time.Now()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for ip, dto := range stored.Entries {
+		ip = strings.TrimSpace(ip)
+		if ip == "" || dto.Count <= 0 {
+			continue
+		}
+		a := &loginAttempt{
+			count:       dto.Count,
+			windowStart: time.Unix(dto.WindowStart, 0),
+		}
+		if dto.BannedUntil > 0 {
+			a.bannedUntil = time.Unix(dto.BannedUntil, 0)
+		}
+		m.failures[ip] = a
+	}
+	m.cleanupLocked(now)
+	// 若清理掉过期项，回写缩小文件（失败不影响启动）
+	if len(m.failures) != len(stored.Entries) {
+		m.persistLocked()
+	}
+}
+
+// persistLocked 原子写入当前 failures。调用方必须已持有 m.mu。
+func (m *LoginRateLimit) persistLocked() {
+	if m.path == "" {
+		return
+	}
+	now := time.Now()
+	m.cleanupLocked(now)
+	payload := loginAttemptsFile{Entries: make(map[string]loginAttemptDTO, len(m.failures))}
+	for ip, a := range m.failures {
+		dto := loginAttemptDTO{
+			Count:       a.count,
+			WindowStart: a.windowStart.Unix(),
+		}
+		if !a.bannedUntil.IsZero() {
+			dto.BannedUntil = a.bannedUntil.Unix()
+		}
+		payload.Entries[ip] = dto
+	}
+	content, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		logx.Errorf("序列化登录限流失败: %v", err)
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(m.path), 0750); err != nil {
+		logx.Errorf("创建登录限流目录失败: %v", err)
+		return
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(m.path), ".loginAttempts-*.tmp")
+	if err != nil {
+		logx.Errorf("创建登录限流临时文件失败: %v", err)
+		return
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err := tmp.Chmod(0600); err != nil {
+		_ = tmp.Close()
+		logx.Errorf("设置登录限流文件权限失败: %v", err)
+		return
+	}
+	if _, err := tmp.Write(content); err != nil {
+		_ = tmp.Close()
+		logx.Errorf("写入登录限流失败: %v", err)
+		return
+	}
+	if err := tmp.Close(); err != nil {
+		logx.Errorf("关闭登录限流临时文件失败: %v", err)
+		return
+	}
+	if err := os.Rename(tmpName, m.path); err != nil {
+		logx.Errorf("保存登录限流失败: %v", err)
 	}
 }
 

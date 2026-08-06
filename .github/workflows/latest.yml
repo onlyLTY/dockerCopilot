@@ -78,11 +78,13 @@ jobs:
         run: |
           # 组装更新包：dockerCopilot-new(后端) + web/(前端)。
           # updateprogram.go 会在解压后分别取二进制与 web 目录，实现前后端同步更新。
+          # 同步生成 .sha256，供客户端下载后做完整性校验。
           rm -rf release-pkg
           mkdir -p release-pkg/web
           cp build/backend/linux/${{ matrix.arch }}/dockerCopilot-new release-pkg/dockerCopilot-new
           cp -r frontend-dist/. release-pkg/web/
           tar -czvf dockerCopilot-${{ matrix.arch }}.tar.gz -C release-pkg .
+          sha256sum "dockerCopilot-${{ matrix.arch }}.tar.gz" | tee "dockerCopilot-${{ matrix.arch }}.tar.gz.sha256"
 
       - name: List current directory
         run: ls -la
@@ -112,6 +114,8 @@ jobs:
 
       - name: Upload Asset for ${{ matrix.arch }}
         run: |
-          gh release upload ${{ env.version }} dockerCopilot-${{ matrix.arch }}.tar.gz
+          gh release upload ${{ env.version }} \
+            dockerCopilot-${{ matrix.arch }}.tar.gz \
+            dockerCopilot-${{ matrix.arch }}.tar.gz.sha256
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -27,8 +27,11 @@ type ServiceContext struct {
 	mu                   sync.Mutex
 	ComposeMu            sync.Mutex
 	ComposeTokens        map[string]ComposeToken
-	updateMu             sync.Mutex
-	updatingContainers   map[string]string
+	// composeOps 按项目 ID 互斥：同一项目同时只允许一个 deploy/cleanup 进行中。
+	composeOpsMu       sync.Mutex
+	composeOps         map[string]string
+	updateMu           sync.Mutex
+	updatingContainers map[string]string
 
 	// 定时任务：更新检查与自动备份各持有一个 cronTask，job 由 main 注入（避免 svc 反向依赖 utiles）
 	updateTask cronTask
@@ -86,12 +89,12 @@ type ComposeToken struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-		if err != nil {
-			// 不 Panic：后续 API 经 RequireDocker 返回 503，/healthz 报 degraded
-			logx.Errorf("Unable to create docker client: %s", err)
-			cli = nil
-		}
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		// 不 Panic：后续 API 经 RequireDocker 返回 503，/healthz 报 degraded
+		logx.Errorf("Unable to create docker client: %s", err)
+		cli = nil
+	}
 	progressPath := progressStorePath()
 	progressStore := loadProgressStore(progressPath)
 	nowMs := time.Now().UnixMilli()
@@ -120,6 +123,7 @@ cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegoti
 		ProgressStore:      progressStore,
 		progressPath:       progressPath,
 		ComposeTokens:      make(map[string]ComposeToken),
+		composeOps:         make(map[string]string),
 		DockerClient:       cli,
 		updatingContainers: make(map[string]string),
 	}
@@ -310,6 +314,36 @@ func (ctx *ServiceContext) FinishContainerUpdate(containerID, taskID string) {
 	}
 }
 
+// TryStartComposeOp 尝试占用某 Compose 项目的操作锁（deploy/cleanup）。
+// 返回 false 表示该项目已有进行中的操作。
+func (ctx *ServiceContext) TryStartComposeOp(projectID, op string) bool {
+	if ctx == nil || projectID == "" {
+		return false
+	}
+	ctx.composeOpsMu.Lock()
+	defer ctx.composeOpsMu.Unlock()
+	if ctx.composeOps == nil {
+		ctx.composeOps = make(map[string]string)
+	}
+	if _, exists := ctx.composeOps[projectID]; exists {
+		return false
+	}
+	ctx.composeOps[projectID] = op
+	return true
+}
+
+// FinishComposeOp 释放项目操作锁；仅当当前占用方仍是 op 时删除。
+func (ctx *ServiceContext) FinishComposeOp(projectID, op string) {
+	if ctx == nil || projectID == "" {
+		return
+	}
+	ctx.composeOpsMu.Lock()
+	defer ctx.composeOpsMu.Unlock()
+	if current, ok := ctx.composeOps[projectID]; ok && current == op {
+		delete(ctx.composeOps, projectID)
+	}
+}
+
 // spec 为 5 段 cron 表达式（分 时 日 月 周）。
 func (ctx *ServiceContext) StartUpdateCron(spec string, job func()) error {
 	ctx.cronMu.Lock()
@@ -359,54 +393,54 @@ func (ctx *ServiceContext) rescheduleLocked(t *cronTask, spec string) error {
 }
 
 // scheduleLocked 移除旧任务并按 spec 添加新任务；spec 为空表示关闭（仅移除）。需持有 cronMu。
-	func (ctx *ServiceContext) scheduleLocked(t *cronTask, spec string) error {
+func (ctx *ServiceContext) scheduleLocked(t *cronTask, spec string) error {
+	if t.jobID != 0 {
+		t.cron.Remove(t.jobID)
+		t.jobID = 0
+	}
+	if spec == "" {
+		return nil
+	}
+	id, err := t.cron.AddFunc(spec, t.job)
+	if err != nil {
+		return err
+	}
+	t.jobID = id
+	return nil
+}
+
+// StopCrons 停止更新检查与自动备份调度器，阻塞至已触发的任务结束（cron.Stop）。
+func (ctx *ServiceContext) StopCrons() {
+	ctx.cronMu.Lock()
+	defer ctx.cronMu.Unlock()
+	stopOne := func(t *cronTask) {
+		if t.cron == nil {
+			return
+		}
 		if t.jobID != 0 {
 			t.cron.Remove(t.jobID)
 			t.jobID = 0
 		}
-		if spec == "" {
-			return nil
-		}
-		id, err := t.cron.AddFunc(spec, t.job)
-		if err != nil {
-			return err
-		}
-		t.jobID = id
-		return nil
+		// Stop 返回的 context 在运行中的 job 结束后 Done
+		stopCtx := t.cron.Stop()
+		<-stopCtx.Done()
+		t.cron = nil
 	}
+	stopOne(&ctx.updateTask)
+	stopOne(&ctx.backupTask)
+}
 
-	// StopCrons 停止更新检查与自动备份调度器，阻塞至已触发的任务结束（cron.Stop）。
-	func (ctx *ServiceContext) StopCrons() {
-		ctx.cronMu.Lock()
-		defer ctx.cronMu.Unlock()
-		stopOne := func(t *cronTask) {
-			if t.cron == nil {
-				return
-			}
-			if t.jobID != 0 {
-				t.cron.Remove(t.jobID)
-				t.jobID = 0
-			}
-			// Stop 返回的 context 在运行中的 job 结束后 Done
-			stopCtx := t.cron.Stop()
-			<-stopCtx.Done()
-			t.cron = nil
-		}
-		stopOne(&ctx.updateTask)
-		stopOne(&ctx.backupTask)
+// Close 优雅收尾：停 cron、刷进度、关 Docker 客户端。可重复调用。
+func (ctx *ServiceContext) Close() {
+	if ctx == nil {
+		return
 	}
-
-	// Close 优雅收尾：停 cron、刷进度、关 Docker 客户端。可重复调用。
-	func (ctx *ServiceContext) Close() {
-		if ctx == nil {
-			return
+	ctx.StopCrons()
+	ctx.FlushProgress()
+	if ctx.DockerClient != nil {
+		if err := ctx.DockerClient.Close(); err != nil {
+			logx.Errorf("关闭 Docker 客户端失败: %v", err)
 		}
-		ctx.StopCrons()
-		ctx.FlushProgress()
-		if ctx.DockerClient != nil {
-			if err := ctx.DockerClient.Close(); err != nil {
-				logx.Errorf("关闭 Docker 客户端失败: %v", err)
-			}
-			ctx.DockerClient = nil
-		}
+		ctx.DockerClient = nil
 	}
+}

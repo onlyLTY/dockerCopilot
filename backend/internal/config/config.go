@@ -1,10 +1,12 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/zeromicro/go-zero/rest"
 )
@@ -17,6 +19,37 @@ type Config struct {
 	}
 	CorsOrigins []string
 	Compose     ComposeConfig
+}
+
+// MinAccessSecretLen secretKey / AccessSecret 最短长度（与 go-zero JWT 下限及文案「8 位以上」一致）。
+const MinAccessSecretLen = 8
+
+// ValidateAccessSecret 启动时校验登录/JWT 密钥：至少 8 位，且不能为纯数字。
+// 与历史提示「非纯数字且大于八位」对齐；「8 位以上」按常见语义含 8 位（len >= 8）。
+func ValidateAccessSecret(secret string) error {
+	secret = strings.TrimSpace(secret)
+	if secret == "" {
+		return fmt.Errorf("secretKey 不能为空，要求至少 %d 位且不能为纯数字", MinAccessSecretLen)
+	}
+	if len(secret) < MinAccessSecretLen {
+		return fmt.Errorf("secretKey 长度不足：至少 %d 位，当前 %d 位", MinAccessSecretLen, len(secret))
+	}
+	if isAllDigits(secret) {
+		return fmt.Errorf("secretKey 不能为纯数字，请混用字母或其它字符")
+	}
+	return nil
+}
+
+func isAllDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
 }
 
 type ComposeConfig struct {

@@ -248,10 +248,10 @@ func LoadProject(ctx context.Context, root string, files []string) (*composeType
 	if root == "" || len(files) == 0 {
 		return nil, fmt.Errorf("Compose 项目文件不完整")
 	}
+	// 仅 WithDotEnv：${VAR} 来自项目目录 .env，不注入面板进程环境（避免 secretKey 等泄露进业务容器）。
 	options, err := composecli.NewProjectOptions(
 		files,
 		composecli.WithWorkingDirectory(root),
-		composecli.WithOsEnv,
 		composecli.WithDotEnv,
 		composecli.WithResolvedPaths(true),
 		composecli.WithDiscardEnvFile,

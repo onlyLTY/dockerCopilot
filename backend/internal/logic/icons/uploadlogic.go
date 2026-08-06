@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
@@ -117,21 +116,8 @@ func generateStoredFilename(file io.ReadSeeker, original string) (string, error)
 		return "", fmt.Errorf("failed to reset upload stream")
 	}
 
-	if ext == ".svg" {
-		if !strings.Contains(strings.ToLower(string(header[:n])), "<svg") {
-			return "", fmt.Errorf("uploaded file content does not match its extension")
-		}
-	} else {
-		expected := map[string]string{
-			".png":  "image/png",
-			".jpg":  "image/jpeg",
-			".jpeg": "image/jpeg",
-			".webp": "image/webp",
-			".gif":  "image/gif",
-		}[ext]
-		if detected := http.DetectContentType(header[:n]); detected != expected {
-			return "", fmt.Errorf("uploaded file content does not match its extension")
-		}
+	if detected := http.DetectContentType(header[:n]); detected != "image/png" {
+		return "", fmt.Errorf("uploaded file content does not match its extension")
 	}
 
 	return uuid.NewString() + ext, nil

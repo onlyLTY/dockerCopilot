@@ -9,7 +9,7 @@ Log:
   # 实际文件日志由程序 SetupLog 配置：Mode=file、按天轮转(daily)、保留 7 天、压缩历史。
   # 目录默认 ./logs（容器内 /app/logs）。
 Auth:
-  AccessSecret: ${secretKey} # JWT 签名密钥，来自环境变量 secretKey（就是你登录用的那个）
+  AccessSecret: ${secretKey} # 登录密钥 + JWT 签名密钥（环境变量 secretKey）。启动要求：至少 8 位且不能为纯数字
   AccessExpire: 604800       # token 有效期(秒)，604800=7天；共享设备可再缩短
 CorsOrigins: []              # 允许的跨域来源。空=不额外放行；填了才会开 CORS
 Compose:                     # Compose 项目管理相关

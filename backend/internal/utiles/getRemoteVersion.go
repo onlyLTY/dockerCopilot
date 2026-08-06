@@ -3,19 +3,18 @@ package utiles
 import (
 	"io"
 	"net/http"
-	"os"
 	"strings"
+	"time"
 
 	"github.com/onlyLTY/dockerCopilot/internal/config"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
 func GetRemoteVersion() (remoteVersion string, err error) {
-	githubProxy := os.Getenv("githubProxy")
-	if githubProxy != "" {
-		githubProxy = strings.TrimRight(githubProxy, "/") + "/"
+	versionURL, err := OfficialVersionURL()
+	if err != nil {
+		return "0.0.0", err
 	}
-	versionURL := githubProxy + "https://raw.githubusercontent.com/onlyLTY/dockerCopilot/latest/version"
 	remoteVersion, err = fetchVersionFromURL(versionURL)
 	if err != nil {
 		return "0.0.0", err
@@ -29,32 +28,30 @@ func GetRemoteVersion() (remoteVersion string, err error) {
 	if localVersion == remoteVersion {
 		logx.Info("版本一致:", localVersion)
 		return remoteVersion, nil
-	} else {
-		logx.Infof("版本不一致! 本地: %s, 远程: %s\n", localVersion, remoteVersion)
-		return remoteVersion, nil
 	}
-
+	logx.Infof("版本不一致! 本地: %s, 远程: %s\n", localVersion, remoteVersion)
+	return remoteVersion, nil
 }
 
-func fetchVersionFromURL(url string) (string, error) {
+func fetchVersionFromURL(rawURL string) (string, error) {
 	client := &http.Client{
+		Timeout: 15 * time.Second,
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
 	}
 
-	resp, err := client.Get(url)
+	resp, err := client.Get(rawURL)
 	if err != nil {
 		return "", err
 	}
 	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
+		if err := Body.Close(); err != nil {
 			logx.Error("关闭Body失败:", err)
 		}
 	}(resp.Body)
 
-	versionData, err := io.ReadAll(resp.Body)
+	versionData, err := io.ReadAll(io.LimitReader(resp.Body, 1024))
 	if err != nil {
 		return "", err
 	}

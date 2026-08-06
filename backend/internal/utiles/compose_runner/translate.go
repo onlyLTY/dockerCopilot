@@ -19,12 +19,12 @@ import (
 // containers back to their project. Missing these means deployed containers become
 // invisible in the project list.
 const (
-	labelProject    = "com.docker.compose.project"
-	labelService    = "com.docker.compose.service"
-	labelWorkingDir = "com.docker.compose.project.working_dir"
-	labelConfigHash = "com.docker.compose.config-hash"
-	labelOneoff     = "com.docker.compose.oneoff"
-	labelVersion    = "com.docker.compose.version"
+	labelProject         = "com.docker.compose.project"
+	labelService         = "com.docker.compose.service"
+	labelWorkingDir      = "com.docker.compose.project.working_dir"
+	labelConfigHash      = "com.docker.compose.config-hash"
+	labelOneoff          = "com.docker.compose.oneoff"
+	labelVersion         = "com.docker.compose.version"
 	labelContainerNumber = "com.docker.compose.container-number"
 )
 
@@ -151,7 +151,7 @@ func buildLabels(projectName, root, serviceName string, svc composeTypes.Service
 
 // environmentSlice converts compose MappingWithEquals into the KEY=VALUE slice
 // docker expects. A nil value means "pass through host env"; we skip those since
-// the loader has already resolved values via WithOsEnv.
+// the loader has already resolved values via WithDotEnv / explicit env.
 func environmentSlice(env composeTypes.MappingWithEquals) []string {
 	if len(env) == 0 {
 		return nil

@@ -3,30 +3,37 @@ package utiles
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/onlyLTY/dockerCopilot/internal/svc"
 )
 
 const maxUpdateDownload = 256 << 20
 
 var releaseVersionPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 
+// 官方下载源 host 白名单（未走 proxy 时最终 URL 必须落在这些 host 上）。
+var officialUpdateHosts = map[string]struct{}{
+	"github.com":                {},
+	"raw.githubusercontent.com": {},
+}
+
 func UpdateProgram(ctx *svc.ServiceContext) error {
-	githubProxy := strings.TrimRight(os.Getenv("githubProxy"), "/")
-	prefix := ""
-	if githubProxy != "" {
-		prefix = githubProxy + "/"
+	versionURL, err := OfficialVersionURL()
+	if err != nil {
+		return err
 	}
-	versionURL := prefix + "https://raw.githubusercontent.com/onlyLTY/dockerCopilot/latest/version"
-	releaseBaseURL := prefix + "https://github.com/onlyLTY/dockerCopilot/releases/download"
 	client := &http.Client{Timeout: 30 * time.Second}
 	versionResp, err := client.Get(versionURL)
 	if err != nil {
@@ -45,7 +52,21 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 		return fmt.Errorf("版本号格式不合法")
 	}
 
-	downloadURL := fmt.Sprintf("%s/%s/dockerCopilot-%s.tar.gz", releaseBaseURL, version, runtime.GOARCH)
+	arch := runtime.GOARCH
+	downloadURL, err := OfficialReleaseAssetURL(version, fmt.Sprintf("dockerCopilot-%s.tar.gz", arch))
+	if err != nil {
+		return err
+	}
+	checksumURL, err := OfficialReleaseAssetURL(version, fmt.Sprintf("dockerCopilot-%s.tar.gz.sha256", arch))
+	if err != nil {
+		return err
+	}
+
+	expectedSHA, err := fetchReleaseSHA256(client, checksumURL)
+	if err != nil {
+		return fmt.Errorf("获取更新包校验和失败: %w", err)
+	}
+
 	tmp, err := os.CreateTemp("", "dockercopilot-update-*.tar.gz")
 	if err != nil {
 		return err
@@ -53,10 +74,19 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
 	if err := downloadFile(client, downloadURL, tmp); err != nil {
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Close(); err != nil {
 		return err
+	}
+
+	actualSHA, err := fileSHA256(tmpPath)
+	if err != nil {
+		return err
+	}
+	if !strings.EqualFold(actualSHA, expectedSHA) {
+		return fmt.Errorf("更新包 SHA256 校验失败")
 	}
 
 	extractDir, err := os.MkdirTemp("", "dockercopilot-extract-*")
@@ -93,6 +123,161 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 
 	// 二进制最后写：它是 start.sh 触发切换的信号。
 	return os.WriteFile("dockerCopilot-new", content, 0755)
+}
+
+// OfficialVersionURL 返回（可选 githubProxy 前缀后的）官方 version 文件 URL。
+func OfficialVersionURL() (string, error) {
+	official := "https://raw.githubusercontent.com/onlyLTY/dockerCopilot/latest/version"
+	return withGithubProxy(os.Getenv("githubProxy"), official)
+}
+
+// OfficialReleaseAssetURL 返回指定 release 资产的官方下载 URL（可经 githubProxy）。
+func OfficialReleaseAssetURL(version, asset string) (string, error) {
+	if !releaseVersionPattern.MatchString(version) {
+		return "", fmt.Errorf("版本号格式不合法")
+	}
+	rawAsset := strings.TrimSpace(asset)
+	// 拒绝路径分隔与 ..，避免依赖 filepath.Base 在各平台上的剥离行为。
+	if rawAsset == "" || strings.Contains(rawAsset, "..") || strings.ContainsAny(rawAsset, `/\:`) {
+		return "", fmt.Errorf("更新资产名不合法")
+	}
+	asset = filepath.Base(rawAsset)
+	if asset == "" || asset != rawAsset {
+		return "", fmt.Errorf("更新资产名不合法")
+	}
+	official := fmt.Sprintf("https://github.com/onlyLTY/dockerCopilot/releases/download/%s/%s", version, asset)
+	return withGithubProxy(os.Getenv("githubProxy"), official)
+}
+
+// withGithubProxy 仅允许「代理前缀 + 官方 https URL」形式；官方 host 必须在白名单内。
+// githubProxy 为空时直接返回官方 URL。代理本身不得改写官方 path/host 语义。
+func withGithubProxy(githubProxy, officialURL string) (string, error) {
+	if err := assertOfficialUpdateURL(officialURL); err != nil {
+		return "", err
+	}
+	proxy := strings.TrimSpace(githubProxy)
+	if proxy == "" {
+		return officialURL, nil
+	}
+	proxy = strings.TrimRight(proxy, "/")
+	parsed, err := url.Parse(proxy)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("githubProxy 不是合法 URL")
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return "", fmt.Errorf("githubProxy 仅支持 http/https")
+	}
+	// 禁止在 proxy 里夹带 userinfo，避免凭据进日志/环境
+	if parsed.User != nil {
+		return "", fmt.Errorf("githubProxy 不支持账号密码")
+	}
+	final := proxy + "/" + officialURL
+	// 最终 URL 必须仍以官方 URL 为后缀，防止 proxy 值本身吞掉/改写目标
+	if !strings.HasSuffix(final, "/"+officialURL) && !strings.HasSuffix(final, officialURL) {
+		return "", fmt.Errorf("githubProxy 无法安全拼接到官方地址")
+	}
+	if _, err := url.ParseRequestURI(final); err != nil {
+		return "", fmt.Errorf("更新地址不合法")
+	}
+	return final, nil
+}
+
+func assertOfficialUpdateURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("官方更新地址解析失败")
+	}
+	if !strings.EqualFold(u.Scheme, "https") {
+		return fmt.Errorf("官方更新地址必须使用 https")
+	}
+	host := strings.ToLower(u.Hostname())
+	if _, ok := officialUpdateHosts[host]; !ok {
+		return fmt.Errorf("官方更新地址 host 不在白名单")
+	}
+	path := u.EscapedPath()
+	switch host {
+	case "raw.githubusercontent.com":
+		if path != "/onlyLTY/dockerCopilot/latest/version" {
+			return fmt.Errorf("官方 version 路径不合法")
+		}
+	case "github.com":
+		// /onlyLTY/dockerCopilot/releases/download/<ver>/<asset>
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		if len(parts) != 6 ||
+			parts[0] != "onlyLTY" ||
+			parts[1] != "dockerCopilot" ||
+			parts[2] != "releases" ||
+			parts[3] != "download" ||
+			!releaseVersionPattern.MatchString(parts[4]) ||
+			parts[5] == "" || strings.Contains(parts[5], "..") {
+			return fmt.Errorf("官方 release 资产路径不合法")
+		}
+	}
+	if u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return fmt.Errorf("官方更新地址包含非法附加信息")
+	}
+	return nil
+}
+
+func fetchReleaseSHA256(client *http.Client, checksumURL string) (string, error) {
+	resp, err := client.Get(checksumURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("校验和文件返回状态 %s", resp.Status)
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		return "", err
+	}
+	sum, err := parseSHA256File(string(data))
+	if err != nil {
+		return "", err
+	}
+	return sum, nil
+}
+
+// parseSHA256File 接受 `sha256sum` 行（`<hex>  filename` / `<hex> *filename`）或纯 64 位 hex。
+func parseSHA256File(content string) (string, error) {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return "", fmt.Errorf("校验和文件为空")
+	}
+	// 只取第一行有效内容
+	line := content
+	if i := strings.IndexAny(content, "\r\n"); i >= 0 {
+		line = strings.TrimSpace(content[:i])
+	}
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return "", fmt.Errorf("校验和文件格式不合法")
+	}
+	sum := strings.ToLower(fields[0])
+	if len(sum) != 64 {
+		return "", fmt.Errorf("校验和长度不合法")
+	}
+	for _, c := range sum {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return "", fmt.Errorf("校验和不是合法十六进制")
+		}
+	}
+	return sum, nil
+}
+
+func fileSHA256(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, io.LimitReader(f, maxUpdateDownload+1)); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // findUpdateWebDir 在解压目录中查找名为 web 的目录，返回其路径；未找到返回空串。
@@ -136,8 +321,8 @@ func copyDir(src, dst string) error {
 	})
 }
 
-func downloadFile(client *http.Client, url string, out *os.File) error {
-	resp, err := client.Get(url)
+func downloadFile(client *http.Client, rawURL string, out *os.File) error {
+	resp, err := client.Get(rawURL)
 	if err != nil {
 		return err
 	}

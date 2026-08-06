@@ -88,7 +88,7 @@ go build ./...
 go test ./...
 ```
 
-- `etc/dockerCopilot.yaml`：`Auth.AccessSecret: ${secretKey}`；`Timeout` 默认 10 分钟；`AccessExpire` 默认 7 天
+- `etc/dockerCopilot.yaml`：`Auth.AccessSecret: ${secretKey}`（启动强制：至少 8 位且不能为纯数字）；`Timeout` 默认 10 分钟；`AccessExpire` 默认 7 天
 - `etc/dockerCopilot.local.yaml`：本机开发；`Compose.AllowHighRisk` 控制极高危部署门禁
 - 进程退出：`proc` WrapUp 刷任务进度，Shutdown 停 cron 并关闭 Docker 客户端
 
@@ -96,7 +96,7 @@ go test ./...
 
 ### 认证
 
-- `POST /api/auth` — 登录（含 IP 失败限流，见 `routes_manual`）
+- `POST /api/auth` — 登录（含 IP 失败限流，状态持久化到 `loginAttempts.json`，见 `routes_manual`）
 
 ### 容器
 

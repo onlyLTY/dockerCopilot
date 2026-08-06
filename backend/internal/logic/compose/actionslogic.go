@@ -57,6 +57,20 @@ func (l *ActionsLogic) DeployPreview(req *types.ComposeDeployPreviewReq) (*types
 func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) {
 	resp := &types.Resp{}
 	logx.Infof("compose operation=deploy project=%s filename=%s stage=submit", req.ProjectID, req.Filename)
+
+	// 先占项目锁，再消费 confirm token，避免忙时把一次性 token 白白作废。
+	const deployOp = "deploy"
+	if !l.svcCtx.TryStartComposeOp(req.ProjectID, deployOp) {
+		logx.Errorf("compose operation=deploy project=%s filename=%s failed=project_busy", req.ProjectID, req.Filename)
+		return errorResp(resp, 409, "该项目正在部署或清理中，请稍后再试"), nil
+	}
+	started := false
+	defer func() {
+		if !started {
+			l.svcCtx.FinishComposeOp(req.ProjectID, deployOp)
+		}
+	}()
+
 	token, ok := l.takeToken(req.ConfirmToken, req.ProjectID, req.Filename)
 	if !ok {
 		logx.Errorf("compose operation=deploy project=%s filename=%s failed=invalid confirmation", req.ProjectID, req.Filename)
@@ -103,10 +117,15 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 	})
 	logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=submit success", req.ProjectID, req.Filename, taskID)
 	svcCtx := l.svcCtx
+	projectID := req.ProjectID
+	filename := req.Filename
+	pullImages := req.PullImages
+	started = true // 锁交给异步任务释放
 	go func() {
+		defer svcCtx.FinishComposeOp(projectID, deployOp)
 		defer func() {
 			if r := recover(); r != nil {
-				logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=panic failed=%v", req.ProjectID, req.Filename, taskID, r)
+				logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=panic failed=%v", projectID, filename, taskID, r)
 				logx.Errorf("compose deploy panic detail=%v", r)
 				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "部署异常", DetailMsg: "部署过程发生内部错误，请查看服务日志", IsDone: true})
 			}
@@ -115,19 +134,19 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 20, Message: "正在检查配置", DetailMsg: "", IsDone: false})
 		configResult, err := composeRunner.Config(bg, svcCtx.DockerClient, root, files, timeout)
 		if err != nil {
-			logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=config failed=%v output=%q", req.ProjectID, req.Filename, taskID, err, configResult.Output)
+			logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=config failed=%v output=%q", projectID, filename, taskID, err, configResult.Output)
 			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 20, Message: "配置检查失败", DetailMsg: composeErrMsg("Compose 配置检查失败", err, configResult.Output), IsDone: true})
 			return
 		}
-		logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=config success", req.ProjectID, req.Filename, taskID)
+		logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=config success", projectID, filename, taskID)
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "正在部署（compose up）", DetailMsg: "", IsDone: false})
-		result, err := composeRunner.Up(bg, svcCtx.DockerClient, root, files, timeout, req.PullImages)
+		result, err := composeRunner.Up(bg, svcCtx.DockerClient, root, files, timeout, pullImages)
 		if err != nil {
-			logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=up failed=%v output=%q", req.ProjectID, req.Filename, taskID, err, result.Output)
+			logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=up failed=%v output=%q", projectID, filename, taskID, err, result.Output)
 			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "部署失败", DetailMsg: composeErrMsg("Compose 部署失败", err, result.Output), IsDone: true})
 			return
 		}
-		logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=up success", req.ProjectID, req.Filename, taskID)
+		logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=up success", projectID, filename, taskID)
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "部署完成", DetailMsg: result.Output, IsDone: true})
 	}()
 
@@ -183,10 +202,19 @@ func (l *ActionsLogic) Cleanup(req *types.ComposeCleanupReq) (*types.Resp, error
 		logx.Errorf("compose operation=cleanup project=%s failed=confirmation_required", req.ProjectID)
 		return errorResp(resp, 400, "必须明确确认清理操作"), nil
 	}
+	// 先占项目锁再消费 preview token，避免忙时把一次性 token 作废。
+	const cleanupOp = "cleanup"
+	if !l.svcCtx.TryStartComposeOp(req.ProjectID, cleanupOp) {
+		logx.Errorf("compose operation=cleanup project=%s failed=project_busy", req.ProjectID)
+		return errorResp(resp, 409, "该项目正在部署或清理中，请稍后再试"), nil
+	}
+	defer l.svcCtx.FinishComposeOp(req.ProjectID, cleanupOp)
+
 	if !l.takeCleanupToken(req.PreviewToken, req.ProjectID) {
 		logx.Errorf("compose operation=cleanup project=%s failed=invalid_preview", req.ProjectID)
 		return errorResp(resp, 400, "清理预览已失效，请重新生成"), nil
 	}
+
 	root, err := composeProject.FindProjectRoot(l.svcCtx, req.ProjectID)
 	if err != nil {
 		logx.Errorf("compose operation=cleanup project=%s failed=find_root error=%v", req.ProjectID, err)

@@ -61,12 +61,22 @@ func TestUploadRejectsContentThatDoesNotMatchExtension(t *testing.T) {
 	}
 }
 
-func TestUploadRejectsMismatchedExtension(t *testing.T) {
+func TestUploadRejectsNonPNGExtension(t *testing.T) {
 	withIconTestPaths(t)
 	validPNG := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
 	recorder := httptest.NewRecorder()
 	UploadHandler(nil)(recorder, makeUploadRequest(t, "logo.jpg", "image/jpeg", validPNG))
 
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadRequest)
+	}
+}
+
+func TestUploadRejectsSVG(t *testing.T) {
+	withIconTestPaths(t)
+	svg := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`)
+	recorder := httptest.NewRecorder()
+	UploadHandler(nil)(recorder, makeUploadRequest(t, "logo.svg", "image/svg+xml", svg))
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadRequest)
 	}

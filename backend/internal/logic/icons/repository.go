@@ -59,10 +59,9 @@ func NormalizeRepository(value string) (string, error) {
 
 func iconExtension(original string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(filepath.Base(original)))
-	switch ext {
-	case ".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif":
-	default:
-		return "", fmt.Errorf("仅支持 png、jpg、jpeg、webp、svg、gif 图标")
+	// 仅 PNG：避免 SVG 可执行脚本面，也去掉易被伪装的其它格式。
+	if ext != ".png" {
+		return "", fmt.Errorf("仅支持 png 图标")
 	}
 	return ext, nil
 }
