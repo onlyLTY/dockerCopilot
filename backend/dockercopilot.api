@@ -36,6 +36,11 @@ type RemoveImageReq {
 	Force bool `form:"force,default=false"`
 }
 
+type RemoveContainerReq {
+	IdReq
+	Force bool `form:"force,default=false"`
+}
+
 type ImagePruneReq {
 	Kind string `form:"kind,optional"`
 }
@@ -196,6 +201,9 @@ service dockerCopilot {
 
 	@handler restart
 	post /container/:id/restart (IdReq) returns (Resp)
+
+	@handler remove
+	delete /container/:id (RemoveContainerReq) returns (Resp)
 
 	@handler rename
 	post /container/:id/rename (ContainerRenameReq) returns (Resp)

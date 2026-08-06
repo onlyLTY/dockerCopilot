@@ -16,7 +16,8 @@ type Config struct {
 	// DataDir 应用数据根目录（设置/备份/图标/任务进度）。
 	// 可省略；优先级：环境变量 DATA_DIR > 本字段 > 默认 /data。
 	// 相对路径相对进程工作目录解析。容器内通常不写，挂载 /data 即可。
-	DataDir string `json:",optional"`
+	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
+	DataDir string   `json:",optional"`
 	Auth    struct { // JWT 认证需要的密钥和过期时间配置
 		AccessSecret string
 		AccessExpire int64
@@ -60,8 +61,10 @@ type ComposeConfig struct {
 	ScanPaths []string
 	// BackupDir 可省略：空时使用 {DataDir}/backups/compose-projects（或 BACKUP_DIR/compose-projects）。
 	// 仅 Compose 文件版本/清理备份；容器备份页走 {DataDir}/backups。
-	BackupDir         string `json:",optional"`
-	PathMappings      []ComposePathMapping
+	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
+	BackupDir string `json:",optional"`
+	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
+	PathMappings      []ComposePathMapping `json:",optional"`
 	MaxDepth          int
 	MaxFileSize       int64
 	MaxFiles          int

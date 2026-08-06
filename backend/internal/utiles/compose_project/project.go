@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	pathpkg "path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -12,6 +14,7 @@ import (
 	composeTypes "github.com/compose-spec/compose-go/v2/types"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	appTypes "github.com/onlyLTY/dockerCopilot/internal/types"
@@ -36,6 +39,13 @@ type projectFiles struct {
 	files []string
 }
 
+type composePathMapping struct {
+	source      string
+	destination string
+}
+
+var containerIDPattern = regexp.MustCompile(`(?i)[0-9a-f]{64}`)
+
 func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.ComposeProjectsResponse, error) {
 	if err := svcCtx.RequireDocker(); err != nil {
 		return nil, err
@@ -48,6 +58,7 @@ func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.Co
 	if err != nil {
 		return nil, err
 	}
+	mappings := composePathMappings(svcCtx, containers)
 
 	result := &appTypes.ComposeProjectsResponse{
 		Projects: make([]appTypes.ComposeProject, 0, len(groups)),
@@ -87,7 +98,7 @@ func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.Co
 			for i := range project.Files {
 				project.Files[i].Valid = true
 			}
-			project.Containers = matchingContainers(ctx, svcCtx, parsed.Name, group.root, containers)
+			project.Containers = matchingContainers(ctx, svcCtx, parsed.Name, group.root, containers, mappings)
 			for _, c := range project.Containers {
 				project.Ports = append(project.Ports, c.Ports...)
 			}
@@ -267,10 +278,10 @@ type composeProject struct {
 	Image string
 }
 
-func matchingContainers(ctx context.Context, svcCtx *svc.ServiceContext, projectName, root string, containers []dockerTypes.Container) []appTypes.ComposeContainer {
+func matchingContainers(ctx context.Context, svcCtx *svc.ServiceContext, projectName, root string, containers []container.Summary, mappings []composePathMapping) []appTypes.ComposeContainer {
 	result := make([]appTypes.ComposeContainer, 0)
 	for _, item := range containers {
-		if item.Labels["com.docker.compose.project"] != projectName || !sameComposeRoot(item.Labels, root) {
+		if item.Labels["com.docker.compose.project"] != projectName || !sameComposeRoot(item.Labels, root, mappings) {
 			continue
 		}
 		inspect, err := svcCtx.DockerClient.ContainerInspect(ctx, item.ID)
@@ -285,13 +296,148 @@ func matchingContainers(ctx context.Context, svcCtx *svc.ServiceContext, project
 	return result
 }
 
-func sameComposeRoot(labels map[string]string, root string) bool {
-	labelRoot := labels["com.docker.compose.project.working_dir"]
-	if labelRoot == "" {
+func sameComposeRoot(labels map[string]string, root string, mappings []composePathMapping) bool {
+	labelRoot := normalizeComposePath(labels["com.docker.compose.project.working_dir"])
+	root = normalizeComposePath(root)
+	if labelRoot == "" || root == "" {
+		return false
+	}
+	if labelRoot == root {
 		return true
 	}
-	abs, err := filepath.Abs(labelRoot)
-	return err == nil && filepath.Clean(abs) == filepath.Clean(root)
+	for _, mapping := range mappings {
+		if mapped, ok := mapComposePath(labelRoot, mapping); ok && mapped == root {
+			return true
+		}
+		if mapped, ok := mapComposePath(root, reverseComposePathMapping(mapping)); ok && mapped == labelRoot {
+			return true
+		}
+	}
+	return false
+}
+
+func reverseComposePathMapping(mapping composePathMapping) composePathMapping {
+	return composePathMapping{source: mapping.destination, destination: mapping.source}
+}
+
+func composePathMappings(svcCtx *svc.ServiceContext, containers []container.Summary) []composePathMapping {
+	mappings := make([]composePathMapping, 0, len(svcCtx.Config.Compose.PathMappings)+2)
+	for _, configured := range svcCtx.Config.Compose.PathMappings {
+		source := normalizeComposePath(configured.HostPath)
+		destination := normalizeComposePath(configured.ContainerPath)
+		if source != "" && destination != "" {
+			mappings = append(mappings, composePathMapping{source: source, destination: destination})
+		}
+	}
+
+	self := selfContainer(containers)
+	if self == nil {
+		return mappings
+	}
+	for _, mounted := range self.Mounts {
+		if mounted.Type != mount.TypeBind {
+			continue
+		}
+		source := normalizeComposePath(mounted.Source)
+		destination := normalizeComposePath(mounted.Destination)
+		if source == "" || destination == "" || !composeMountIsRelevant(destination, svcCtx.Config.Compose.ScanPaths) {
+			continue
+		}
+		mappings = append(mappings, composePathMapping{source: source, destination: destination})
+	}
+	return mappings
+}
+
+func selfContainer(containers []container.Summary) *container.Summary {
+	selfID := currentContainerID()
+	for i := range containers {
+		item := &containers[i]
+		if selfID != "" && (item.ID == selfID || strings.HasPrefix(item.ID, selfID) || strings.HasPrefix(selfID, item.ID)) {
+			return item
+		}
+	}
+
+	candidates := make([]string, 0, 2)
+	if name := strings.TrimPrefix(strings.TrimSpace(os.Getenv("DOCKER_COPILOT_CONTAINER")), "/"); name != "" {
+		candidates = append(candidates, name)
+	}
+	if hostname, err := os.Hostname(); err == nil {
+		if hostname = strings.TrimPrefix(strings.TrimSpace(hostname), "/"); hostname != "" {
+			candidates = append(candidates, hostname)
+		}
+	}
+	for i := range containers {
+		item := &containers[i]
+		for _, candidate := range candidates {
+			if candidate == item.ID || (len(candidate) >= 12 && strings.HasPrefix(item.ID, candidate)) {
+				return item
+			}
+			for _, itemName := range item.Names {
+				if strings.TrimPrefix(itemName, "/") == candidate {
+					return item
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func currentContainerID() string {
+	content, err := os.ReadFile("/proc/self/cgroup")
+	if err != nil {
+		return ""
+	}
+	matches := containerIDPattern.FindAllString(string(content), -1)
+	var id string
+	for _, match := range matches {
+		if len(match) > len(id) {
+			id = match
+		}
+	}
+	return strings.ToLower(id)
+}
+
+func composeMountIsRelevant(destination string, scanPaths []string) bool {
+	for _, scanPath := range scanPaths {
+		if composePathWithin(destination, scanPath) || composePathWithin(scanPath, destination) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeComposePath(raw string) string {
+	value := strings.TrimSpace(strings.ReplaceAll(raw, "\\", "/"))
+	if value == "" {
+		return ""
+	}
+	value = pathpkg.Clean(value)
+	if len(value) >= 2 && value[1] == ':' {
+		value = strings.ToLower(value)
+	}
+	return value
+}
+
+func composePathWithin(parent, child string) bool {
+	parent = normalizeComposePath(parent)
+	child = normalizeComposePath(child)
+	if parent == "" || child == "" {
+		return false
+	}
+	return child == parent || parent == "/" || strings.HasPrefix(child, parent+"/")
+}
+
+func mapComposePath(value string, mapping composePathMapping) (string, bool) {
+	value = normalizeComposePath(value)
+	source := normalizeComposePath(mapping.source)
+	destination := normalizeComposePath(mapping.destination)
+	if value == "" || source == "" || destination == "" || !composePathWithin(source, value) {
+		return "", false
+	}
+	if value == source {
+		return destination, true
+	}
+	return destination + strings.TrimPrefix(value, source), true
 }
 
 func projectStatus(containers []appTypes.ComposeContainer) string {

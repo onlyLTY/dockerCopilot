@@ -65,6 +65,13 @@ export class ContainerService {
       ),
     );
   }
+  remove(id: string, force = false) {
+    return this.done(
+      this.http.delete<ApiResponse<unknown>>(
+        '/api/container/' + encodeURIComponent(id) + '?force=' + force,
+      ),
+    );
+  }
   update(id: string, imageNameAndTag = '', containerName = '') {
     return this.http.post<ApiResponse<unknown>>(
       '/api/container/' + encodeURIComponent(id) + '/update',

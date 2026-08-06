@@ -69,7 +69,7 @@
           <button class="btn text-red border-1 py-8 px-7 fs-12" (click)="remove(image, false)">
             <dc-icon name="delete"></dc-icon>删除
           </button>
-          @if (!image.inUsed) {
+          @if (image.inUsed) {
             <button
               class="btn text-critical border-1 py-8 px-7 fs-12"
               (click)="remove(image, true)"

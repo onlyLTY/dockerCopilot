@@ -1,4 +1,4 @@
-<dc-page-heading title="容器管理" subtitle="管理您的 Docker 容器，包括启动、停止、重启等操作">
+<dc-page-heading title="容器管理" subtitle="管理您的 Docker 容器，包括启动、停止、重启、删除等操作">
   <div page-heading-actions>
     @if (selectionMode()) {
       <label class="select-all heading-select-all"
@@ -20,6 +20,14 @@
         title="批量停止容器"
       >
         <dc-icon name="stop"></dc-icon>{{ bulkAction() === '停止' ? '停止中…' : '停止' }}
+      </button>
+      <button
+        class="btn text-secondary-text bg-secondary-bg gap-8 text-red"
+        [disabled]="!selectedCount() || busy()"
+        (click)="bulkRemove()"
+        title="批量删除容器"
+      >
+        <dc-icon name="delete"></dc-icon>{{ bulkAction() === '删除' ? '删除中…' : '删除' }}
       </button>
       <button
         class="btn text-secondary-text bg-secondary-bg gap-8 text-purple"
@@ -139,6 +147,18 @@
           >
             <dc-icon name="restart"></dc-icon
             >{{ actionBusyLabel(item.id) === '重启' ? '重启中' : '重启' }}
+          </button>
+          <button
+            class="btn text-red border-1 py-8 px-7 fs-12"
+            [disabled]="isActionBusy(item.id)"
+            (click)="remove(item)"
+          >
+            <dc-icon name="delete"></dc-icon
+            >{{
+              actionBusyLabel(item.id) === '删除' || actionBusyLabel(item.id) === '强制删除'
+                ? '删除中'
+                : '删除'
+            }}
           </button>
           <button
             class="btn text-purple border-1 py-8 px-7 fs-12"

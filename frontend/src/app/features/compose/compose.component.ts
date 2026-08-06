@@ -1,6 +1,5 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ComposeService, ComposeProject, ProjectsData } from '../../core/compose.service';
 import { ToastService } from '../../core/toast.service';
 import { TaskService } from '../../core/task.service';
@@ -37,22 +36,13 @@ export class ComposeComponent {
   private readonly toast = inject(ToastService);
   private readonly tasks = inject(TaskService);
   private readonly confirm = inject(ConfirmService);
-  private readonly sanitizer = inject(DomSanitizer);
-  // 行号：基于编辑器内容行数生成，外层 textarea 滚动时同步 gutter 的 scrollTop
-  readonly lineCount = computed(() => Math.max(1, (this.content() || '').split('\n').length));
-  readonly lineNumbers = computed<SafeHtml>(() =>
-    this.sanitizer.bypassSecurityTrustHtml(this.buildLines(this.lineCount())),
-  );
-  readonly createLineCount = computed(() =>
-    Math.max(1, (this.projectContent() || '').split('\n').length),
-  );
-  readonly createLineNumbers = computed<SafeHtml>(() =>
-    this.sanitizer.bypassSecurityTrustHtml(this.buildLines(this.createLineCount())),
-  );
-  private buildLines(n: number): string {
-    let out = '';
-    for (let i = 1; i <= n; i++) out += `<span>${i}</span>`;
-    return out;
+  // 行号：基于编辑器内容行数生成（模板 @for 渲染，避免 innerHTML 丢失 encapsulation）
+  // 外层 textarea 滚动时同步 gutter 的 scrollTop
+  readonly lineNumbers = computed(() => this.buildLineNumbers(this.content()));
+  readonly createLineNumbers = computed(() => this.buildLineNumbers(this.projectContent()));
+  private buildLineNumbers(text: string | undefined): number[] {
+    const n = Math.max(1, (text || '').split('\n').length);
+    return Array.from({ length: n }, (_, i) => i + 1);
   }
   onEditorScroll(e: Event) {
     this.syncGutter(e);

@@ -17,9 +17,6 @@ CorsOrigins: []              # 允许的跨域来源。空=不额外放行；填
 Compose:                     # Compose 项目管理相关
   ScanPaths:
     - /compose               # 扫描 compose 项目的目录（对应你挂载到容器的 /compose）
-  # BackupDir 可省略：默认 {DataDir}/backups/compose-projects（或 BACKUP_DIR/compose-projects）
-  # 仅 Compose 文件版本/清理备份；容器备份页走 {DataDir}/backups
-  PathMappings: []           # 宿主↔容器路径映射，用于修正 compose 里的挂载路径
   MaxDepth: 3                # 扫描子目录最大深度
   MaxFileSize: 10485760      # 单个 compose 文件大小上限(字节)=10MB
   MaxFiles: 20               # 单项目最多识别的文件数

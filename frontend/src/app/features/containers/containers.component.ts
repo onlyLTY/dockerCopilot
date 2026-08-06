@@ -248,6 +248,24 @@ export class ContainersComponent {
   restart(x: ContainerRow) {
     this.run(x, id => this.service.restart(id), '重启');
   }
+  async remove(x: ContainerRow) {
+    if (this.actionBusy().has(x.id)) return;
+    const running = this.isRunning(x);
+    const label = running ? '强制删除' : '删除';
+    if (
+      !(await this.confirm.open({
+        title: `${label}容器`,
+        message: running
+          ? `容器 ${x.name} 正在运行，确定强制停止并删除吗？此操作不可恢复。`
+          : `确定删除容器 ${x.name} 吗？此操作不可恢复。`,
+        confirmText: label,
+        danger: true,
+        critical: running,
+      }))
+    )
+      return;
+    this.run(x, id => this.service.remove(id, running), label);
+  }
   private clearActionBusy(id: string): void {
     this.actionBusy.update(m => {
       const next = new Map(m);
@@ -346,6 +364,30 @@ export class ContainersComponent {
   }
   bulkStop() {
     this.bulk(id => this.service.stop(id), '停止');
+  }
+  async bulkRemove() {
+    const targets = this.filteredContainers().filter(x => this.selected().has(x.id));
+    if (!targets.length || this.busy()) return;
+    const runningCount = targets.filter(x => this.isRunning(x)).length;
+    if (
+      !(await this.confirm.open({
+        title: '批量删除容器',
+        message:
+          runningCount > 0
+            ? `将删除 ${targets.length} 个容器（其中 ${runningCount} 个正在运行，会先强制停止）。此操作不可恢复，确定继续吗？`
+            : `将删除 ${targets.length} 个容器。此操作不可恢复，确定继续吗？`,
+        confirmText: '确认删除',
+        danger: true,
+        critical: runningCount > 0,
+      }))
+    )
+      return;
+    // 运行中的容器用 force，已停止的普通删除
+    const targetsById = new Map(targets.map(x => [x.id, x]));
+    this.bulk(id => {
+      const item = targetsById.get(id);
+      return this.service.remove(id, item ? this.isRunning(item) : true);
+    }, '删除');
   }
   // 批量更新使用固定并发窗口，避免一次性启动大量 Docker 重建任务
   bulkUpdate() {

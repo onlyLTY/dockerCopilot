@@ -126,6 +126,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				Method:  http.MethodDelete,
+				Path:    "/container/:id",
+				Handler: container.RemoveHandler(serverCtx),
+			},
+			{
 				Method:  http.MethodPost,
 				Path:    "/container/:id/rename",
 				Handler: container.RenameHandler(serverCtx),

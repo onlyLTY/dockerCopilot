@@ -53,10 +53,8 @@ go run dockercopilot.go -f etc/dockerCopilot.yaml
 ```
 
 - 默认监听 `12712`
-- 本地未用 `-ldflags` 注入版本时，会尝试读取仓库根目录的 `version` 文件（可用 `VERSION_FILE` 指定）
-- **数据根目录**优先级：`DATA_DIR` 环境变量 > yaml `DataDir` > 默认 `/data`。其下：`config/appSettings.json`（设置/加速源）、`backups/`（**容器备份页**）、`icon/`
-- **Compose 路径**在 yaml：`Compose.ScanPaths` 扫描项目；`Compose.BackupDir` 可省略（默认 `{DataDir}/backups/compose-projects`），**仅** Compose 文件版本/清理备份，**不是**备份页目录
-- 仍可用 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖
+- **数据根目录**优先级：`DATA_DIR` 环境变量 > yaml `DataDir` > 默认 `/data`。其下：`config/appSettings.json`（设置/加速源）、`backups/`（**容器备份页**）、`icon/`。仍可用 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖
+- **Compose 路径**在 yaml：`Compose.ScanPaths` 扫描项目；
 - 健康检查：`GET /healthz`（不鉴权；会 Ping Docker，不可达时返回 503）
 
 验证：

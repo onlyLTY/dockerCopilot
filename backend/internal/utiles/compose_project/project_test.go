@@ -47,3 +47,33 @@ func TestContainerPortsIncludesHostBindingWithoutNetworkSettings(t *testing.T) {
 		t.Fatalf("expected host binding fallback, got %#v", ports)
 	}
 }
+
+func TestSameComposeRootUsesPathMapping(t *testing.T) {
+	mapping := composePathMapping{source: "/data/docker-data", destination: "/compose"}
+	labels := map[string]string{"com.docker.compose.project.working_dir": "/data/docker-data/dockercopilot"}
+	if !sameComposeRoot(labels, "/compose/dockercopilot", []composePathMapping{mapping}) {
+		t.Fatal("expected host and container compose roots to match")
+	}
+}
+
+func TestSameComposeRootDoesNotMatchSiblingPath(t *testing.T) {
+	mapping := composePathMapping{source: "/data/docker-data", destination: "/compose"}
+	labels := map[string]string{"com.docker.compose.project.working_dir": "/data/docker-database/dockercopilot"}
+	if sameComposeRoot(labels, "/compose/dockercopilot", []composePathMapping{mapping}) {
+		t.Fatal("expected unrelated host root not to match")
+	}
+}
+
+func TestSameComposeRootNormalizesWindowsSeparators(t *testing.T) {
+	mapping := composePathMapping{source: `E:\\compose`, destination: "/compose"}
+	labels := map[string]string{"com.docker.compose.project.working_dir": `E:\\compose\\dockercopilot`}
+	if !sameComposeRoot(labels, "/compose/dockercopilot", []composePathMapping{mapping}) {
+		t.Fatal("expected Windows host root to match mapped container root")
+	}
+}
+
+func TestSameComposeRootRequiresWorkingDirectory(t *testing.T) {
+	if sameComposeRoot(map[string]string{}, "/compose/dockercopilot", nil) {
+		t.Fatal("expected missing working directory not to match")
+	}
+}

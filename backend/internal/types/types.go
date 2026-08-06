@@ -124,6 +124,11 @@ type ProxySettingsData struct {
 	NoProxy     string `json:"NO_PROXY"`
 }
 
+type RemoveContainerReq struct {
+	IdReq
+	Force bool `form:"force,default=false"`
+}
+
 type RemoveImageReq struct {
 	IdReq
 	Force bool `form:"force,default=false"`

@@ -101,7 +101,11 @@
             }
           </div>
           <div class="code-editor-wrap" [class.is-loading]="fileLoading()">
-            <div class="code-gutter" aria-hidden="true" [innerHTML]="lineNumbers()"></div>
+            <div class="code-gutter" aria-hidden="true">
+              @for (n of lineNumbers(); track n) {
+                <span>{{ n }}</span>
+              }
+            </div>
             <textarea
               class="code-editor fs-14"
               [ngModel]="content()"
@@ -160,7 +164,11 @@
             />
           </div>
           <div class="mt-12 code-editor-wrap" [class.is-loading]="creating()">
-            <div class="code-gutter" aria-hidden="true" [innerHTML]="createLineNumbers()"></div>
+            <div class="code-gutter" aria-hidden="true">
+              @for (n of createLineNumbers(); track n) {
+                <span>{{ n }}</span>
+              }
+            </div>
             <textarea
               class="code-editor fs-14"
               [ngModel]="projectContent()"
