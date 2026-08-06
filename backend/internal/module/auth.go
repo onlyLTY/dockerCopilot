@@ -121,13 +121,29 @@ func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) 
 	if authResponse, err = client.Do(r); err != nil {
 		return "", fmt.Errorf("请求令牌服务失败：%w", err)
 	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logx.Error("关闭认证响应 body 失败：" + err.Error())
+		}
+	}(authResponse.Body)
 
-	body, _ := io.ReadAll(authResponse.Body)
-	tokenResponse := &types.TokenResponse{}
+	if authResponse.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("认证令牌响应状态码错误：%d", authResponse.StatusCode)
+	}
 
-	err = json.Unmarshal(body, tokenResponse)
+	body, err := io.ReadAll(authResponse.Body)
 	if err != nil {
-		return "", fmt.Errorf("解析令牌响应失败：%w", err)
+		return "", fmt.Errorf("读取认证响应失败：%w", err)
+	}
+
+	tokenResponse := &types.TokenResponse{}
+	if err = json.Unmarshal(body, tokenResponse); err != nil {
+		return "", fmt.Errorf("解析认证响应失败：%w", err)
+	}
+
+	if tokenResponse.Token == "" {
+		return "", fmt.Errorf("认证令牌为空")
 	}
 
 	return fmt.Sprintf("Bearer %s", tokenResponse.Token), nil

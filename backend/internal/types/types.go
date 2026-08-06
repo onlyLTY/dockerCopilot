@@ -20,7 +20,7 @@ type ComposeDeployPreviewReq struct {
 }
 
 type ComposeDeployReq struct {
-	ProjectID       string `json:"projectId" validate:"required"`
+	ProjectID       string `path:"id" validate:"required"`
 	Filename        string `json:"filename" validate:"required"`
 	ConfirmToken    string `json:"confirmToken,optional"`
 	ConfirmWarnings bool   `json:"confirmWarnings,optional"`

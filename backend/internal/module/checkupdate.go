@@ -98,10 +98,12 @@ func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 	}
 	needUpdate := false
 	for _, localRepoDigests := range image.RepoDigests {
-		localDigest := strings.Split(localRepoDigests, "@")[1]
+		_, localDigest, found := strings.Cut(localRepoDigests, "@")
+		if !found {
+			continue
+		}
 		if remoteDigest != localDigest {
 			if remoteDigest == "" || localDigest == "" {
-				logx.Error("Digest为空" + image.ImageName + ":" + image.ImageTag)
 				continue
 			}
 			logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
@@ -109,7 +111,6 @@ func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 			needUpdate = true
 		} else {
 			logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
-			needUpdate = false
 		}
 	}
 	i.Set(image.ID, ImageCheckList{NeedUpdate: needUpdate})

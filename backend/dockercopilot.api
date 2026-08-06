@@ -79,7 +79,7 @@ type ComposeProjectFileUpdateReq {
 }
 
 type ComposeDeployReq {
-	ProjectID       string `json:"projectId" validate:"required"`
+	ProjectID       string `path:"id" validate:"required"`
 	Filename        string `json:"filename" validate:"required"`
 	ConfirmToken    string `json:"confirmToken,optional"`
 	ConfirmWarnings bool   `json:"confirmWarnings,optional"`
@@ -87,13 +87,13 @@ type ComposeDeployReq {
 }
 
 type ComposeProjectValidateReq {
-	ProjectID string `json:"projectId" validate:"required"`
+	ProjectID string `json:"projectId" validate:"optional"`
 	Filename  string `json:"filename" validate:"required"`
 	Content   string `json:"content" validate:"required"`
 }
 
 type ComposeDeployPreviewReq {
-	ProjectID string `json:"projectId" validate:"required"`
+	ProjectID string `path:"id" validate:"required"`
 	Filename  string `json:"filename" validate:"required"`
 }
 
