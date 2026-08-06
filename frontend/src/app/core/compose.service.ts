@@ -152,7 +152,7 @@ export class ComposeService {
   ): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http.post<ApiResponse<Record<string, unknown>>>(
       '/api/compose/projects/' + projectId + '/deploy/preview',
-      { projectId, filename },
+      { filename },
     );
   }
   // 部署是异步任务：提交仅返回 taskID，真正完成后由 TaskService 轮询到 isDone 时联动刷新缓存
@@ -165,7 +165,7 @@ export class ComposeService {
   ): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http.post<ApiResponse<Record<string, unknown>>>(
       '/api/compose/projects/' + projectId + '/deploy',
-      { projectId, filename, confirmToken, confirmWarnings, pullImages },
+      { filename, confirmToken, confirmWarnings, pullImages },
     );
   }
   cleanupPreview(projectId: string): Observable<ApiResponse<Record<string, unknown>>> {

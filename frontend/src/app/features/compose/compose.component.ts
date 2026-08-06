@@ -367,32 +367,28 @@ export class ComposeComponent {
     });
   }
   private createAndPreview(projectId: string) {
-    this.service.projects().subscribe({
-      next: projects => {
-        const project = projects.data?.projects?.find(item => item.id === projectId);
-        if (!project) {
-          this.setCreateError('项目已创建，但读取项目详情失败', 'error');
+    const filename = 'compose.yaml';
+    this.service.deployPreview(projectId, filename).subscribe({
+      next: preview => {
+        if (preview.code !== 200) {
+          this.setCreateError(this.formatComposeError(preview.msg || '部署预览失败'), 'error');
           return;
         }
-        const file = project.files.find(item => item.name === 'compose.yaml') || project.files[0];
-        if (!file) {
-          this.setCreateError('项目已创建，但没有找到 Compose 文件', 'error');
-          return;
-        }
-        this.service.deployPreview(project.id, file.name).subscribe({
-          next: preview => {
-            if (preview.code !== 200) {
-              this.setCreateError(this.formatComposeError(preview.msg || '部署预览失败'), 'error');
-              return;
-            }
-            this.closeCreate();
-            this.askDeployment(project, file.name, preview.data);
-          },
-          error: e =>
-            this.setCreateError(this.formatComposeError(e.error?.msg || '部署预览失败'), 'error'),
-        });
+        this.closeCreate();
+        const project: ComposeProject = {
+          id: projectId,
+          name: String(preview.data?.['projectId'] ?? projectId),
+          image: '',
+          root: '',
+          files: [{ name: filename, size: 0, modifiedAt: '', valid: true }],
+          containers: [],
+          ports: [],
+          status: 'unused',
+        };
+        this.askDeployment(project, filename, preview.data);
       },
-      error: () => this.setCreateError('项目已创建，但读取项目详情失败', 'error'),
+      error: e =>
+        this.setCreateError(this.formatComposeError(e.error?.msg || '部署预览失败'), 'error'),
     });
   }
 

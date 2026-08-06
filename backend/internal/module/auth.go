@@ -200,33 +200,45 @@ func GetRegistryAddress(imageRef string) (string, error) {
 	address := ref.Domain(normalizedRef)
 
 	if address == DefaultRegistryDomain {
-		// 官方 Hub：先试 index.docker.io，不通再按用户可配的 hubUrls（默认内置加速列表）依次探测。
-		if checkHost(DefaultRegistryHost) {
-			address = DefaultRegistryHost
-		} else {
-			for _, host := range settingstore.GetHubURLs() {
-				if checkHost(host) {
-					address = host
-					break
-				}
-			}
-		}
-		if address == DefaultRegistryDomain {
-			address = DefaultRegistryHost
-		}
+		// 官方 Hub：并发探测所有候选 host（官方 + 加速源），取最快响应的可用 host。
+		// 避免在 index.docker.io 不可达时串行等待每个 host 超时。
+		address = quickestHost(DefaultRegistryHost, settingstore.GetHubURLs()...)
 	}
 	return address, nil
+}
+
+// quickestHost 并发探测多个 host，返回第一个可用的；全部不可用时返回 fallback。
+func quickestHost(fallback string, hosts ...string) string {
+	type result struct {
+		host string
+		ok   bool
+	}
+	results := make(chan result, len(hosts)+1)
+	all := append([]string{fallback}, hosts...)
+	for _, host := range all {
+		host := host
+		go func() {
+			results <- result{host: host, ok: checkHost(host)}
+		}()
+	}
+	for range all {
+		if r := <-results; r.ok {
+			return r.host
+		}
+	}
+	return fallback
 }
 
 // checkHost 用短超时 GET /v2/ 探测 registry 是否可达；200/401 均视为通（未鉴权也正常）。
 func checkHost(host string) bool {
 	URL := "https://" + host + "/v2/"
 	client := http.Client{
-		Timeout: 5 * time.Second,
+		Timeout: 2 * time.Second,
 	}
 	resp, err := client.Get(URL)
 	if err != nil {
-		logx.Errorf("Failed to connect to %s: %s", URL, err)
+		// 连接失败是预期行为（网络隔离/防火墙等），降为 Info 避免刷 Error 日志。
+		logx.Infof("registry 不可达 %s: %s", URL, err)
 		return false
 	}
 	defer func(Body io.ReadCloser) {
@@ -241,6 +253,6 @@ func checkHost(host string) bool {
 		return true
 	}
 
-	logx.Errorf("Failed to connect to %s: %s", URL, resp.Status)
+	logx.Infof("registry 返回非预期状态码 %s: %s", URL, resp.Status)
 	return false
 }
