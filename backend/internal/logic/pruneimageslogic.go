@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
@@ -38,6 +39,13 @@ func (l *PruneImagesLogic) PruneImages(req *types.ImagePruneReq) (resp *types.Re
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
+	before, err := l.svcCtx.DockerClient.ImageList(l.ctx, image.ListOptions{})
+	if err != nil {
+		l.Errorf("获取清理前镜像列表失败 kind=%s: %v", req.Kind, err)
+		resp.Code = 500
+		resp.Msg = "清理镜像失败"
+		return resp, nil
+	}
 	pruneFilters := filters.NewArgs()
 	if req.Kind == "untagged" {
 		pruneFilters.Add("dangling", "true")
@@ -51,13 +59,34 @@ func (l *PruneImagesLogic) PruneImages(req *types.ImagePruneReq) (resp *types.Re
 		resp.Msg = "清理镜像失败"
 		return resp, nil
 	}
+	after, err := l.svcCtx.DockerClient.ImageList(l.ctx, image.ListOptions{})
+	if err != nil {
+		l.Errorf("获取清理后镜像列表失败 kind=%s: %v", req.Kind, err)
+		resp.Code = 500
+		resp.Msg = "清理镜像失败"
+		return resp, nil
+	}
 	resp.Code = 200
 	resp.Msg = "success"
 	resp.Data = map[string]interface{}{
-		"deleted":        len(report.ImagesDeleted),
+		"deleted":        countRemovedImages(before, after),
 		"skipped":        0,
 		"errors":         []string{},
 		"spaceReclaimed": report.SpaceReclaimed,
 	}
 	return resp, nil
+}
+
+func countRemovedImages(before, after []image.Summary) int {
+	afterIDs := make(map[string]struct{}, len(after))
+	for _, item := range after {
+		afterIDs[item.ID] = struct{}{}
+	}
+	removed := 0
+	for _, item := range before {
+		if _, exists := afterIDs[item.ID]; !exists {
+			removed++
+		}
+	}
+	return removed
 }
