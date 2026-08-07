@@ -67,7 +67,7 @@
             <span class="flex-none">{{ image.size }}</span>
           </span>
           @if (image.createTime) {
-            <span class="d-block">发布于 {{ image.createTime }}</span>
+            <span class="d-block" [matTooltip]="image.id">发布于 {{ image.createTime }}</span>
           }
         </div>
         <div resource-card-actions>
