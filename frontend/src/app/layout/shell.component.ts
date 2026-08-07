@@ -7,11 +7,12 @@ import { VersionService } from '../core/version.service';
 import { UiStateService } from '../core/ui-state.service';
 import { TaskService } from '../core/task.service';
 import { IconComponent } from '../shared/icon/icon.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'dc-shell',
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, MatTooltipModule],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
