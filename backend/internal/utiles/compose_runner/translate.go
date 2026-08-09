@@ -2,6 +2,7 @@ package compose_runner
 
 import (
 	"fmt"
+	pathpkg "path"
 	"sort"
 	"strings"
 	"time"
@@ -37,7 +38,7 @@ type translated struct {
 
 // translateService 将 compose ServiceConfig 转为 Docker Engine API 结构。
 // root 为项目工作目录（写入 compose label）；服务未声明网络时挂到 defaultNetwork。
-func translateService(projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string) (translated, error) {
+func translateService(projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string, mappings ...PathMapping) (translated, error) {
 	name := svc.ContainerName
 	if name == "" {
 		name = projectName + "-" + serviceName + "-1"
@@ -52,7 +53,7 @@ func translateService(projectName, root, serviceName string, svc composeTypes.Se
 		OpenStdin:  svc.StdinOpen,
 		WorkingDir: svc.WorkingDir,
 		StopSignal: svc.StopSignal,
-		Labels:     buildLabels(projectName, root, serviceName, svc),
+		Labels:     buildLabels(projectName, root, serviceName, svc, mappings...),
 	}
 	if len(svc.Command) > 0 {
 		cfg.Cmd = []string(svc.Command)
@@ -115,7 +116,7 @@ func translateService(projectName, root, serviceName string, svc composeTypes.Se
 		}
 	}
 
-	binds, mounts, err := translateVolumes(svc.Volumes, volumeNames)
+	binds, mounts, err := translateVolumes(svc.Volumes, volumeNames, mappings...)
 	if err != nil {
 		return translated{}, err
 	}
@@ -131,7 +132,7 @@ func translateService(projectName, root, serviceName string, svc composeTypes.Se
 	return translated{name: name, config: cfg, hostConfig: hostCfg, network: netCfg}, nil
 }
 
-func buildLabels(projectName, root, serviceName string, svc composeTypes.ServiceConfig) map[string]string {
+func buildLabels(projectName, root, serviceName string, svc composeTypes.ServiceConfig, mappings ...PathMapping) map[string]string {
 	labels := map[string]string{}
 	for k, v := range svc.Labels {
 		labels[k] = v
@@ -141,7 +142,7 @@ func buildLabels(projectName, root, serviceName string, svc composeTypes.Service
 	labels[labelWorkingDir] = root
 	labels[labelOneoff] = "False"
 	labels[labelContainerNumber] = "1"
-	labels[labelConfigHash] = serviceConfigHash(svc)
+	labels[labelConfigHash] = serviceConfigHash(svc, mappings...)
 	return labels
 }
 
@@ -275,7 +276,7 @@ func translatePorts(ports []composeTypes.ServicePortConfig) (nat.PortSet, nat.Po
 
 // translateVolumes 将 compose volumes 拆成旧式 bind 字符串与类型化 Mounts。
 // bind 走 Binds（与现有备份/恢复路径一致）；命名卷与 tmpfs 走 Mounts。
-func translateVolumes(volumes []composeTypes.ServiceVolumeConfig, volumeNames map[string]string) ([]string, []mount.Mount, error) {
+func translateVolumes(volumes []composeTypes.ServiceVolumeConfig, volumeNames map[string]string, mappings ...PathMapping) ([]string, []mount.Mount, error) {
 	var binds []string
 	var mounts []mount.Mount
 	for _, v := range volumes {
@@ -284,7 +285,8 @@ func translateVolumes(volumes []composeTypes.ServiceVolumeConfig, volumeNames ma
 			if v.Source == "" || v.Target == "" {
 				return nil, nil, fmt.Errorf("bind 挂载缺少 source 或 target")
 			}
-			bind := v.Source + ":" + v.Target
+			source := mapBindSource(v.Source, mappings)
+			bind := source + ":" + v.Target
 			if v.ReadOnly {
 				bind += ":ro"
 			}
@@ -310,6 +312,30 @@ func translateVolumes(volumes []composeTypes.ServiceVolumeConfig, volumeNames ma
 		}
 	}
 	return binds, mounts, nil
+}
+
+func mapBindSource(source string, mappings []PathMapping) string {
+	value := normalizePath(source)
+	best := ""
+	mapped := source
+	for _, mapping := range mappings {
+		containerPath := normalizePath(mapping.ContainerPath)
+		hostPath := normalizePath(mapping.HostPath)
+		if containerPath == "" || hostPath == "" || !pathWithin(containerPath, value) || len(containerPath) <= len(best) {
+			continue
+		}
+		mapped = hostPath + strings.TrimPrefix(value, containerPath)
+		best = containerPath
+	}
+	return mapped
+}
+
+func normalizePath(value string) string {
+	return pathpkg.Clean(strings.ReplaceAll(strings.TrimSpace(value), "\\", "/"))
+}
+
+func pathWithin(parent, child string) bool {
+	return child == parent || parent == "/" || strings.HasPrefix(child, parent+"/")
 }
 
 // translateNetworks 构建 NetworkingConfig。

@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"sort"
 	"strings"
 	"time"
@@ -15,12 +14,10 @@ import (
 	composeTypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	dockerMsg "github.com/docker/docker/pkg/jsonmessage"
-	"github.com/onlyLTY/dockerCopilot/internal/module"
+	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,7 +25,18 @@ type Result struct {
 	Output string `json:"output"`
 }
 
-type ProgressReporter func(message string)
+type ProgressEvent struct {
+	Message        string
+	StepPercentage int
+	IsPull         bool
+}
+
+type ProgressReporter func(event ProgressEvent)
+
+type PathMapping struct {
+	HostPath      string
+	ContainerPath string
+}
 
 // Available 通过注入的 API 客户端探测 Docker 守护进程是否可用。
 // 不检查 PATH，也不依赖 Docker CLI / Compose 插件二进制。
@@ -64,14 +72,14 @@ func Config(ctx context.Context, dockerClient client.APIClient, projectDir strin
 // depends_on 多服务排序、命名网络与数据卷。
 // 不支持：build:（镜像须已存在或可拉取）、secrets、configs、profiles、swarm 多副本编排。
 func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool) (Result, error) {
-	return up(ctx, dockerClient, projectDir, files, timeout, pullImages, nil)
+	return up(ctx, dockerClient, projectDir, files, timeout, pullImages, nil, nil)
 }
 
-func UpWithProgress(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool, report ProgressReporter) (Result, error) {
-	return up(ctx, dockerClient, projectDir, files, timeout, pullImages, report)
+func UpWithProgress(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool, report ProgressReporter, mappings ...PathMapping) (Result, error) {
+	return up(ctx, dockerClient, projectDir, files, timeout, pullImages, report, mappings)
 }
 
-func up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool, report ProgressReporter) (Result, error) {
+func up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool, report ProgressReporter, mappings []PathMapping) (Result, error) {
 	if projectDir == "" || len(files) == 0 {
 		return Result{}, fmt.Errorf("Compose 执行参数不完整")
 	}
@@ -95,9 +103,10 @@ func up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 	logf := func(format string, args ...interface{}) {
 		message := fmt.Sprintf(format, args...)
 		fmt.Fprintf(out, "%s\n", message)
-		if report != nil {
-			report(message)
+		if report != nil && !strings.HasPrefix(message, "拉取镜像 ") {
+			report(ProgressEvent{Message: message})
 		}
+
 	}
 
 	// 提前拒绝仅 build 的服务：无 image 无法继续，且构建明确不在本实现范围内（会引入 buildkit）。
@@ -124,7 +133,8 @@ func up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 	}
 	for _, serviceName := range order {
 		svc := project.Services[serviceName]
-		if err := deployService(runCtx, dockerClient, project.Name, projectDir, serviceName, svc, defaultNetwork, networkNames, volumeNames, pullImages, logf); err != nil {
+		if err := deployService(runCtx, dockerClient, project.Name, projectDir, serviceName, svc, defaultNetwork, networkNames, volumeNames, mappings, pullImages, logf, report); err != nil {
+
 			return Result{Output: sanitizeOutput(out.String())}, err
 		}
 	}
@@ -226,8 +236,8 @@ func ensureVolumes(ctx context.Context, cli client.APIClient, project *composeTy
 }
 
 // deployService 按需拉镜像、转换配置，并在配置哈希变化时重建后启动容器。
-func deployService(ctx context.Context, cli client.APIClient, projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string, pullImages bool, logf func(string, ...interface{})) error {
-	t, err := translateService(projectName, root, serviceName, svc, defaultNetwork, networkNames, volumeNames)
+func deployService(ctx context.Context, cli client.APIClient, projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string, mappings []PathMapping, pullImages bool, logf func(string, ...interface{}), report ProgressReporter) error {
+	t, err := translateService(projectName, root, serviceName, svc, defaultNetwork, networkNames, volumeNames, mappings...)
 	if err != nil {
 		return fmt.Errorf("服务 %s 配置转换失败: %w", serviceName, err)
 	}
@@ -238,7 +248,14 @@ func deployService(ctx context.Context, cli client.APIClient, projectName, root,
 	}
 	if pullImages || !present || strings.EqualFold(svc.PullPolicy, "always") {
 		logf("拉取镜像 %s", svc.Image)
-		if err := pullImage(ctx, cli, svc.Image); err != nil {
+		if _, err := utiles.PullImageWithProgress(ctx, cli, svc.Image, func(progress utiles.PullProgress) {
+
+			if report != nil {
+				report(ProgressEvent{Message: utiles.FormatPullProgress(progress), StepPercentage: progress.Percentage, IsPull: true})
+
+			}
+		}); err != nil {
+
 			return fmt.Errorf("服务 %s 拉取镜像失败: %w", serviceName, err)
 		}
 	}
@@ -281,52 +298,6 @@ func imageExists(ctx context.Context, cli client.APIClient, ref string) (bool, e
 	}
 	// 其它错误也当「本地没有」，走 pull；真正坏掉的客户端会在 pull 路径暴露。
 	return false, nil
-}
-
-func pullImage(ctx context.Context, cli client.APIClient, imageRef string) error {
-	candidates, localName, err := module.ResolvePullCandidates(imageRef)
-	if err != nil {
-		return err
-	}
-	var errs []string
-	for _, candidate := range candidates {
-		reader, pullErr := cli.ImagePull(ctx, candidate, image.PullOptions{})
-		if pullErr != nil {
-			errs = append(errs, fmt.Sprintf("%s: %v", candidate, pullErr))
-			continue
-		}
-		drainErr := drainComposePull(reader)
-		_ = reader.Close()
-		if drainErr != nil {
-			errs = append(errs, fmt.Sprintf("%s: %v", candidate, drainErr))
-			continue
-		}
-		// 加速源拉下的镜像 tag 回原名，容器 Config.Image 保持 compose 中的引用。
-		if candidate != localName {
-			_ = cli.ImageTag(ctx, candidate, localName)
-		}
-		return nil
-	}
-	if len(errs) == 0 {
-		return fmt.Errorf("拉取镜像失败：无可用源")
-	}
-	return fmt.Errorf("拉取镜像失败：%s", strings.Join(errs, "；"))
-}
-
-func drainComposePull(reader io.Reader) error {
-	decoder := json.NewDecoder(reader)
-	for {
-		var msg dockerMsg.JSONMessage
-		if err := decoder.Decode(&msg); err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			return err
-		}
-		if msg.Error != nil {
-			return fmt.Errorf(msg.Error.Message)
-		}
-	}
 }
 
 func findContainerByName(ctx context.Context, cli client.APIClient, name string) (*containerSummary, error) {
@@ -408,8 +379,18 @@ func topoSort(services composeTypes.Services) ([]string, error) {
 }
 
 // serviceConfigHash 对服务定义做稳定哈希，重复部署时仅在配置漂移时重建。
-func serviceConfigHash(svc composeTypes.ServiceConfig) string {
-	data, err := json.Marshal(svc)
+func serviceConfigHash(svc composeTypes.ServiceConfig, mappings ...PathMapping) string {
+	sortedMappings := append([]PathMapping(nil), mappings...)
+	sort.Slice(sortedMappings, func(i, j int) bool {
+		if sortedMappings[i].ContainerPath == sortedMappings[j].ContainerPath {
+			return sortedMappings[i].HostPath < sortedMappings[j].HostPath
+		}
+		return sortedMappings[i].ContainerPath < sortedMappings[j].ContainerPath
+	})
+	data, err := json.Marshal(struct {
+		Service  composeTypes.ServiceConfig
+		Mappings []PathMapping
+	}{Service: svc, Mappings: sortedMappings})
 	if err != nil {
 		return ""
 	}

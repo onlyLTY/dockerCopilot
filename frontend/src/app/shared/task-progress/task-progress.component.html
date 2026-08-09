@@ -9,17 +9,9 @@
       <dc-modal-heading [title]="t.title" [subtitle]="t.message" (closed)="tasks.closeView()" />
       <div class="modal-body">
         <div class="mt-20">
-          <div class="h-10 bg-line overflow-hidden rounded-6">
-            <span
-              class="d-block h-full bg-blue transition-width"
-              [class.bg-green]="t.isDone && !t.failed"
-              [class.bg-red]="t.failed"
-              [style.width.%]="t.percentage"
-            ></span>
-          </div>
-          <div class="d-flex justify-between gap-12 mt-10 fs-12 text-black">
+          <div class="d-flex justify-between gap-12 fs-12 text-black">
             <span [class.text-red]="t.failed">
-              {{ t.failed ? '失败' : t.isDone ? '已完成' : '进行中' }} · {{ t.percentage }}%
+              {{ t.failed ? '失败' : t.isDone ? '已完成' : '进行中' }}
             </span>
             @if (!t.isDone) {
               <span class="text-muted">后台执行中，可关闭此窗口</span>
@@ -39,11 +31,27 @@
                     <div class="d-flex justify-between gap-8">
                       <span class="text-black break-word">{{ step.message }}</span>
                       @if (step.endedAt) {
-                        <span class="text-muted flex-none">{{ duration(step.durationMs ?? 0) }}</span>
+                        <span class="text-muted flex-none">{{ stepDuration(step) }}</span>
+                      } @else {
+                        <span class="text-blue flex-none">{{ stepDuration(step) }}</span>
                       }
                     </div>
                     @if (step.detailMsg && step.detailMsg !== step.message) {
                       <div class="text-muted mt-2 break-word">{{ step.detailMsg }}</div>
+                    }
+                    @if (step.stepPercentage !== undefined) {
+                      <div class="task-step-progress-wrap mt-6 d-flex items-center gap-6">
+                        <div class="task-step-progress flex-1 h-6 bg-line overflow-hidden rounded-6">
+                          <span
+                            class="d-block h-full bg-blue transition-width"
+                            [class.task-step-progress-indeterminate]="step.stepPercentage === 0 && !step.isDone"
+                            [class.bg-green]="step.isDone && !step.failed"
+                            [class.bg-red]="step.failed"
+                            [style.width.%]="step.stepPercentage"
+                          ></span>
+                        </div>
+                        <span class="text-muted fs-11 flex-none">{{ step.stepPercentage }}%</span>
+                      </div>
                     }
                   </div>
                 </div>

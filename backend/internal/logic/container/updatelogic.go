@@ -28,46 +28,64 @@ func NewUpdateLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateLogi
 
 func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	taskID := uuid.New().String()
-	name := req.ContainerName
-	if name == "" {
-		name = req.Id
-	}
-	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "任务已提交", DetailMsg: "", IsDone: false})
 	if err := l.svcCtx.RequireDocker(); err != nil {
 		return fail(resp, err, 503, "Docker 服务不可用")
 	}
-	if !l.svcCtx.TryStartContainerUpdate(req.Id, taskID) {
+
+	taskID := uuid.New().String()
+	containerID := req.Id
+	name := req.ContainerName
+	if name == "" {
+		name = containerID
+	}
+	if !l.svcCtx.TryStartContainerUpdate(containerID, taskID) {
 		resp.Code = 409
 		resp.Msg = "该容器正在更新"
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
+
+	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{
+		TaskID:     taskID,
+		ResourceID: containerID,
+		Name:       "更新 " + name,
+		Message:    "任务已提交",
+		IsDone:     false,
+	})
+	imageNameAndTag := req.ImageNameAndTag
+	delOldContainer := os.Getenv("DelOldContainer") != "false"
 	go func() {
-		defer l.svcCtx.FinishContainerUpdate(req.Id, taskID)
+		defer l.svcCtx.FinishContainerUpdate(containerID, taskID)
 		defer func() {
 			if r := recover(); r != nil {
 				message := fmt.Sprintf("更新容器异常: %v", r)
-				l.Errorf("task=%s container=%s %s", taskID, req.Id, message)
-				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "更新失败", DetailMsg: message, IsDone: true})
+				l.Errorf("task=%s container=%s %s", taskID, containerID, message)
+				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, ResourceID: containerID, Name: "更新 " + name, Message: "更新失败", DetailMsg: message, IsDone: true})
 			}
 		}()
-		imageNameAndTag := req.ImageNameAndTag
-		if imageNameAndTag == "" {
-			inspected, inspectErr := utiles.GetContainerInspect(l.svcCtx, req.Id)
+
+		l.svcCtx.AcquireContainerUpdateSlot()
+		defer l.svcCtx.ReleaseContainerUpdateSlot()
+		queued, _ := l.svcCtx.GetProgress(taskID)
+		queued.Message = "开始执行更新"
+		queued.DetailMsg = "已获得 Docker 执行槽位"
+		l.svcCtx.UpdateProgress(taskID, queued)
+
+		currentImage := imageNameAndTag
+		if currentImage == "" {
+			inspected, inspectErr := utiles.GetContainerInspect(l.svcCtx, containerID)
 			if inspectErr != nil || inspected.Config == nil || inspected.Config.Image == "" {
 				message := "无法从容器获取镜像名称"
 				if inspectErr != nil {
 					message = inspectErr.Error()
 				}
-				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: "更新 " + name, Message: "更新失败", DetailMsg: message, IsDone: true})
+				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, ResourceID: containerID, Name: "更新 " + name, Message: "更新失败", DetailMsg: message, IsDone: true})
 				return
 			}
-			imageNameAndTag = inspected.Config.Image
+			currentImage = inspected.Config.Image
 		}
-		err := utiles.UpdateContainer(l.svcCtx, req.Id, name, imageNameAndTag, os.Getenv("DelOldContainer") != "false", taskID)
-		if err != nil {
-			l.Errorf("update container failed task=%s container=%s: %v", taskID, req.Id, err)
+		if err := utiles.UpdateContainer(l.svcCtx, containerID, name, currentImage, delOldContainer, taskID); err != nil {
+			l.Errorf("update container failed task=%s container=%s: %v", taskID, containerID, err)
 		}
 	}()
 	resp.Code = 200

@@ -55,6 +55,11 @@ type composePathMapping struct {
 	destination string
 }
 
+type DeploymentPathMapping struct {
+	HostPath      string
+	ContainerPath string
+}
+
 var containerIDPattern = regexp.MustCompile(`(?i)[0-9a-f]{64}`)
 
 func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.ComposeProjectsResponse, error) {
@@ -329,6 +334,30 @@ func sameComposeRoot(labels map[string]string, root string, mappings []composePa
 
 func reverseComposePathMapping(mapping composePathMapping) composePathMapping {
 	return composePathMapping{source: mapping.destination, destination: mapping.source}
+}
+
+func DeploymentPathMappings(ctx context.Context, svcCtx *svc.ServiceContext) []DeploymentPathMapping {
+	if svcCtx == nil {
+		return nil
+	}
+	var containers []container.Summary
+	if svcCtx.DockerClient != nil {
+		if listed, err := svcCtx.DockerClient.ContainerList(ctx, container.ListOptions{All: true}); err == nil {
+			containers = listed
+		}
+	}
+	mappings := composePathMappings(svcCtx, containers)
+	result := make([]DeploymentPathMapping, 0, len(mappings))
+	for _, mapping := range mappings {
+		if mapping.source == "" || mapping.destination == "" {
+			continue
+		}
+		result = append(result, DeploymentPathMapping{
+			HostPath:      mapping.source,
+			ContainerPath: mapping.destination,
+		})
+	}
+	return result
 }
 
 func composePathMappings(svcCtx *svc.ServiceContext, containers []container.Summary) []composePathMapping {

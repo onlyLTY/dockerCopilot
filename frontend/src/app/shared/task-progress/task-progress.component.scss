@@ -4,6 +4,20 @@
   font-family: 'SFMono-Regular', Consolas, monospace;
 }
 
+.task-step-progress-indeterminate {
+  width: 35% !important;
+  animation: task-progress-slide 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes task-progress-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(185%);
+  }
+}
+
 .task-step-mark {
   width: 8px;
   height: 8px;

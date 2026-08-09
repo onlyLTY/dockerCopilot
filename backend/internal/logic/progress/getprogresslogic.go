@@ -49,13 +49,16 @@ func (l *GetProgressLogic) ListProgress() (resp *types.Resp, err error) {
 
 func progressData(progress svc.TaskProgress) map[string]interface{} {
 	return map[string]interface{}{
-		"taskID":     progress.TaskID,
-		"percentage": progress.Percentage,
-		"message":    progress.Message,
-		"name":       progress.Name,
-		"detailMsg":  progress.DetailMsg,
-		"steps":      progress.Steps,
-		"isDone":     progress.IsDone,
-		"updatedAt":  progress.UpdatedAt,
+		"taskID":         progress.TaskID,
+		"resourceID":     progress.ResourceID,
+		"percentage":     progress.Percentage,
+		"message":        progress.Message,
+		"name":           progress.Name,
+		"detailMsg":      progress.DetailMsg,
+		"stepPercentage": progress.StepPercentage,
+
+		"steps":     progress.Steps,
+		"isDone":    progress.IsDone,
+		"updatedAt": progress.UpdatedAt,
 	}
 }

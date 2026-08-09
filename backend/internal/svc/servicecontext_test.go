@@ -109,14 +109,72 @@ func TestPruneProgressByUpdatedAt(t *testing.T) {
 	}
 }
 
+func TestProgressStepPercentageKeepsZero(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+	ctx.UpdateProgress("pull", TaskProgress{TaskID: "pull", Message: "正在拉取新镜像", StepPercentage: 0})
+	progress, ok := ctx.GetProgress("pull")
+	if !ok || len(progress.Steps) != 1 || progress.Steps[0].StepPercentage != 0 {
+		t.Fatalf("expected zero step percentage to be retained: %+v", progress)
+	}
+}
+
 func TestProgressDebounceFlushesOnDone(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
 	ctx.UpdateProgress("a", TaskProgress{TaskID: "a", Percentage: 10, Message: "进行中"})
-	// 未 Flush 前文件可能尚不完整；完成后应立即可见
 	ctx.UpdateProgress("a", TaskProgress{TaskID: "a", Percentage: 100, Message: "完成", IsDone: true})
 	stored := loadProgressStore(path)
 	if !stored["a"].IsDone || stored["a"].Percentage != 100 {
 		t.Fatalf("done progress should be flushed immediately: %+v", stored["a"])
+	}
+}
+
+func TestProgressResourceIDIsInherited(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", ResourceID: "container-1", Message: "开始"})
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", Message: "执行中"})
+	progress, ok := ctx.GetProgress("task")
+	if !ok || progress.ResourceID != "container-1" {
+		t.Fatalf("resource ID was not inherited: %+v", progress)
+	}
+}
+
+func TestContainerUpdateSlotLimitsAndReleases(t *testing.T) {
+	ctx := &ServiceContext{updateSlots: make(chan struct{}, 2)}
+	ctx.AcquireContainerUpdateSlot()
+	ctx.AcquireContainerUpdateSlot()
+	acquired := make(chan struct{})
+	go func() {
+		ctx.AcquireContainerUpdateSlot()
+		close(acquired)
+	}()
+	select {
+	case <-acquired:
+		t.Fatal("third update acquired a full slot set")
+	case <-time.After(20 * time.Millisecond):
+	}
+	ctx.ReleaseContainerUpdateSlot()
+	select {
+	case <-acquired:
+	case <-time.After(time.Second):
+		t.Fatal("waiting update did not acquire a released slot")
+	}
+	ctx.ReleaseContainerUpdateSlot()
+	ctx.ReleaseContainerUpdateSlot()
+}
+
+func TestContainerUpdateLockIsExclusive(t *testing.T) {
+	ctx := &ServiceContext{}
+	if !ctx.TryStartContainerUpdate("container-1", "task-1") {
+		t.Fatal("first update was rejected")
+	}
+	if ctx.TryStartContainerUpdate("container-1", "task-2") {
+		t.Fatal("second update for the same container was accepted")
+	}
+	ctx.FinishContainerUpdate("container-1", "task-1")
+	if !ctx.TryStartContainerUpdate("container-1", "task-2") {
+		t.Fatal("container lock was not released")
 	}
 }

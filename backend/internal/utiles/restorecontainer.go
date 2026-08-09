@@ -93,7 +93,10 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 			continue
 		}
 		restorePullCtx, restorePullCancel := context.WithTimeout(context.Background(), restorePullTimeout)
-		if err := PullImageWithTask(restorePullCtx, ctx, containerInfo.Config.Image, taskID); err != nil {
+		pullStart := int(float64(i) / float64(total) * 100)
+		pullEnd := int(float64(i+1) / float64(total) * 100)
+		if err := PullImageWithTaskRange(restorePullCtx, ctx, containerInfo.Config.Image, taskID, pullStart, pullEnd); err != nil {
+
 			restorePullCancel()
 			logx.Errorf("Failed to pull image: %s", err)
 			backupList = append(backupList, linePrefix+" 拉取镜像失败")

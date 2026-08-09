@@ -89,8 +89,36 @@ func TestTranslatePortsDefaultProto(t *testing.T) {
 	}
 }
 
+func TestMapBindSourceUsesHostPathMapping(t *testing.T) {
+	mappings := []PathMapping{{HostPath: "/data/docker-data", ContainerPath: "/compose"}}
+	got := mapBindSource("/compose/submerge/data", mappings)
+	if got != "/data/docker-data/submerge/data" {
+		t.Fatalf("mapped source = %q, want /data/docker-data/submerge/data", got)
+	}
+}
+
+func TestMapBindSourceRequiresPathBoundary(t *testing.T) {
+	mappings := []PathMapping{{HostPath: "/data/docker-data", ContainerPath: "/compose"}}
+	got := mapBindSource("/compose2/data", mappings)
+	if got != "/compose2/data" {
+		t.Fatalf("sibling source = %q, want unchanged", got)
+	}
+}
+
+func TestMapBindSourceUsesMostSpecificMapping(t *testing.T) {
+	mappings := []PathMapping{
+		{HostPath: "/data/docker-data", ContainerPath: "/compose"},
+		{HostPath: "/data/docker-data/submerge", ContainerPath: "/compose/submerge"},
+	}
+	got := mapBindSource("/compose/submerge/data", mappings)
+	if got != "/data/docker-data/submerge/data" {
+		t.Fatalf("specific mapped source = %q, want /data/docker-data/submerge/data", got)
+	}
+}
+
 func TestTranslateVolumes(t *testing.T) {
 	vols := []composeTypes.ServiceVolumeConfig{
+
 		{Type: "bind", Source: "/host/data", Target: "/data"},
 		{Type: "bind", Source: "/host/ro", Target: "/ro", ReadOnly: true},
 		{Type: "volume", Source: "mydata", Target: "/var/lib"},
@@ -122,8 +150,21 @@ func TestTranslateVolumes(t *testing.T) {
 	}
 }
 
+func TestTranslateVolumesMapsBindSource(t *testing.T) {
+	volumes := []composeTypes.ServiceVolumeConfig{{Type: "bind", Source: "/compose/submerge/data", Target: "/app/data"}}
+	mappings := []PathMapping{{HostPath: "/data/docker-data", ContainerPath: "/compose"}}
+	binds, mounts, err := translateVolumes(volumes, nil, mappings...)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mounts) != 0 || len(binds) != 1 || binds[0] != "/data/docker-data/submerge/data:/app/data" {
+		t.Fatalf("translated mounts = %v, binds = %v", mounts, binds)
+	}
+}
+
 func TestTranslateVolumesBindMissingTarget(t *testing.T) {
 	_, _, err := translateVolumes([]composeTypes.ServiceVolumeConfig{{Type: "bind", Source: "/x"}}, nil)
+
 	if err == nil {
 		t.Error("expected error for bind mount missing target")
 	}
