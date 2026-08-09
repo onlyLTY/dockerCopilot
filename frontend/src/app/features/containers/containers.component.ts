@@ -2,7 +2,7 @@ import { Component, computed, DestroyRef, HostListener, inject, signal } from '@
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { from, forkJoin, Observable, of } from 'rxjs';
-import { catchError, map, mergeMap, toArray } from 'rxjs/operators';
+import { catchError, map, mergeMap, tap, toArray } from 'rxjs/operators';
 import { ContainerService, ContainerRow } from '../../core/container.service';
 import { IconService } from '../../core/icon.service';
 import { ToastService } from '../../core/toast.service';
@@ -106,18 +106,18 @@ export class ContainersComponent {
       this.filteredContainers().length > 0 &&
       this.filteredContainers().every(x => this.selected().has(x.id)),
   );
-  readonly hasActiveUpdates = computed(() => this.activeUpdateIds().size > 0);
+  readonly hasActiveUpdates = computed(
+    () => this.activeUpdateIds().size > 0 || this.tasks.activeResourceIDs().size > 0,
+  );
   readonly availableUpdateCount = computed(
-    () => this.containers().filter(x => x.haveUpdate && !this.activeUpdateIds().has(x.id)).length,
+    () => this.containers().filter(x => x.haveUpdate && !this.isContainerLocked(x.id)).length,
   );
   constructor() {
     this.service.ensureLoaded();
     this.icons.ensureLoaded();
     this.tasks.completed.pipe(takeUntilDestroyed()).subscribe(({ resourceID }) => {
       if (!resourceID) return;
-      const next = new Set(this.activeUpdateIds());
-      next.delete(resourceID);
-      this.activeUpdateIds.set(next);
+      this.markUpdateInactive(resourceID);
     });
     this.softRefresh = startSoftRefresh({
       intervalMs: 20_000,
@@ -178,7 +178,7 @@ export class ContainersComponent {
   renameDetail(): void {
     const x = this.detailContainer();
     const name = this.detailName().trim();
-    if (!x || this.renameBusy() || !name) {
+    if (!x || this.renameBusy() || this.isContainerLocked(x.id) || !name) {
       if (!name) this.toast.error('容器名称不能为空');
       return;
     }
@@ -200,12 +200,12 @@ export class ContainersComponent {
     const x = this.detailContainer();
     const name = this.detailName().trim();
     const image = this.detailImage().trim();
-    if (!x || this.detailUpdateBusy() || !name || !image) {
+    if (!x || this.detailUpdateBusy() || this.isContainerLocked(x.id) || !name || !image) {
       if (!name) this.toast.error('容器名称不能为空');
       else if (!image) this.toast.error('镜像名称和标签不能为空');
       return;
     }
-    if (this.activeUpdateIds().has(x.id)) return;
+    if (this.isContainerLocked(x.id)) return;
     runAction({
       request: this.service.update(x.id, image, name),
       onStart: () => {
@@ -343,6 +343,15 @@ export class ContainersComponent {
   isActionBusy(id: string): boolean {
     return this.actionBusy().has(id);
   }
+
+  isContainerLocked(id: string): boolean {
+    return (
+      this.activeUpdateIds().has(id) ||
+      this.tasks.activeResourceIDs().has(id) ||
+      this.actionBusy().has(id) ||
+      this.updateIgnoreBusyIds().has(id)
+    );
+  }
   actionBusyLabel(id: string): string | undefined {
     return this.actionBusy().get(id);
   }
@@ -352,7 +361,7 @@ export class ContainersComponent {
     label: string,
     async = false,
   ): Promise<boolean> {
-    if (this.actionBusy().has(x.id)) return Promise.resolve(false);
+    if (this.isContainerLocked(x.id)) return Promise.resolve(false);
     return runAction({
       request: fn(x.id),
       onStart: () => this.actionBusy.update(m => new Map(m).set(x.id, label)),
@@ -366,12 +375,15 @@ export class ContainersComponent {
     });
   }
   start(x: ContainerRow) {
+    if (this.isContainerLocked(x.id)) return;
     this.run(x, id => this.service.start(id), '启动');
   }
   stop(x: ContainerRow) {
+    if (this.isContainerLocked(x.id)) return;
     this.run(x, id => this.service.stop(id), '停止');
   }
   restart(x: ContainerRow) {
+    if (this.isContainerLocked(x.id)) return;
     this.run(x, id => this.service.restart(id), '重启');
   }
   async detailRemove(): Promise<void> {
@@ -381,7 +393,7 @@ export class ContainersComponent {
   }
 
   async remove(x: ContainerRow): Promise<boolean> {
-    if (this.actionBusy().has(x.id)) return false;
+    if (this.isContainerLocked(x.id)) return false;
     const running = this.isRunning(x);
     const label = running ? '强制删除' : '删除';
     if (
@@ -407,14 +419,17 @@ export class ContainersComponent {
   }
   // 更新是异步任务：拿到 taskID 后登记进度，弹窗展示进度
   update(x: ContainerRow) {
-    if (this.activeUpdateIds().has(x.id)) return;
+    if (this.isContainerLocked(x.id)) return;
     runAction({
       request: this.service.update(x.id, x.usingImage, x.name),
       onStart: () => this.markUpdateActive(x.id),
       onSuccess: (r: any) => {
         const taskID = r.data?.taskID;
         if (taskID) this.tasks.track(String(taskID), '更新 ' + x.name, true, x.id);
-        else this.toast.info(`${x.name} 更新任务已提交`);
+        else {
+          this.markUpdateInactive(x.id);
+          this.toast.error(`${x.name} 更新失败：服务未返回任务编号`);
+        }
       },
       onBizError: r => {
         this.markUpdateInactive(x.id);
@@ -434,7 +449,7 @@ export class ContainersComponent {
     this.setUpdateIgnored(x, false);
   }
   private setUpdateIgnored(x: ContainerRow, ignored: boolean): void {
-    if (this.updateIgnoreBusyIds().has(x.id)) return;
+    if (this.isContainerLocked(x.id)) return;
     const label = ignored ? '忽略更新' : '恢复检测';
     const request = ignored ? this.service.ignoreUpdate(x.id) : this.service.restoreUpdate(x.id);
     runAction({
@@ -451,7 +466,9 @@ export class ContainersComponent {
     });
   }
   private bulk(fn: (id: string) => any, label: string, async = false) {
-    const targets = this.filteredContainers().filter(x => this.selected().has(x.id));
+    const targets = this.filteredContainers().filter(
+      x => this.selected().has(x.id) && !this.isContainerLocked(x.id),
+    );
     if (!targets.length || this.busy()) return;
     this.busy.set(true);
     this.bulkAction.set(label);
@@ -498,7 +515,9 @@ export class ContainersComponent {
     this.bulk(id => this.service.stop(id), '停止');
   }
   async bulkRemove() {
-    const targets = this.filteredContainers().filter(x => this.selected().has(x.id));
+    const targets = this.filteredContainers().filter(
+      x => this.selected().has(x.id) && !this.isContainerLocked(x.id),
+    );
     if (!targets.length || this.busy()) return;
     const runningCount = targets.filter(x => this.isRunning(x)).length;
     if (
@@ -525,13 +544,13 @@ export class ContainersComponent {
   bulkUpdate() {
     this.submitUpdates(
       this.filteredContainers().filter(
-        x => this.selected().has(x.id) && !this.activeUpdateIds().has(x.id),
+        x => this.selected().has(x.id) && !this.isContainerLocked(x.id),
       ),
     );
   }
   async updateAll() {
     const targets = this.containers().filter(
-      x => x.haveUpdate && !this.activeUpdateIds().has(x.id),
+      x => x.haveUpdate && !this.isContainerLocked(x.id),
     );
     if (!targets.length || this.busy()) {
       if (!targets.length) this.toast.info('当前没有可更新的容器');
@@ -545,7 +564,9 @@ export class ContainersComponent {
       }))
     )
       return;
-    this.submitUpdates(targets);
+    this.submitUpdates(
+      this.containers().filter(x => x.haveUpdate && !this.isContainerLocked(x.id)),
+    );
   }
   private submitUpdates(targets: ContainerRow[]): void {
     if (!targets.length || this.busy()) return;
@@ -559,10 +580,13 @@ export class ContainersComponent {
             this.service.update(x.id, x.usingImage, x.name).pipe(
               map((r: any) => ({
                 container: x,
-                ok: r.code === 200,
+                ok: r.code === 200 && !!r.data?.taskID,
                 taskID: r.data?.taskID,
-                msg: r.msg,
+                msg: r.code === 200 && !r.data?.taskID ? '服务未返回任务编号' : r.msg,
               })),
+              tap((r: any) => {
+                if (r.ok) this.tasks.track(String(r.taskID), '更新 ' + x.name, true, x.id);
+              }),
               catchError((e: any) =>
                 of({
                   container: x,
@@ -580,9 +604,7 @@ export class ContainersComponent {
         this.busy.set(false);
         this.bulkAction.set(null);
         results.forEach(r => {
-          if (r.ok && r.taskID)
-            this.tasks.track(String(r.taskID), '更新 ' + r.container.name, true, r.container.id);
-          else this.markUpdateInactive(r.container.id);
+          if (!r.ok) this.markUpdateInactive(r.container.id);
         });
         const ok = results.filter(r => r.ok).length;
         const fail = results.length - ok;

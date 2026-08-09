@@ -33,6 +33,7 @@ type ServiceContext struct {
 	composeOps         map[string]string
 	updateMu           sync.Mutex
 	updatingContainers map[string]string
+	updateSlots        chan struct{}
 
 	// 定时任务：更新检查与自动备份各持有一个 cronTask，job 由 main 注入（避免 svc 反向依赖 utiles）
 	updateTask cronTask
@@ -60,6 +61,8 @@ const (
 	maxDoneProgress = 100
 	// maxDoneProgressAge 已完成任务最长保留时间；与前端 DONE_KEEP 同为 1 小时量级时可再调。
 	maxDoneProgressAge = 24 * time.Hour
+	// maxConcurrentContainerUpdates 限制实际 Docker 重建任务的并发数。
+	maxConcurrentContainerUpdates = 3
 )
 
 // cronTask 封装单个可动态重新调度的定时任务。
@@ -70,28 +73,42 @@ type cronTask struct {
 }
 
 type TaskProgress struct {
-	TaskID     string     `json:"taskID"`
-	Percentage int        `json:"percentage"`
-	Message    string     `json:"message"`
-	Name       string     `json:"name"`
-	DetailMsg  string     `json:"detailMsg"`
-	IsDone     bool       `json:"isDone"`
-	Steps      []TaskStep `json:"steps"`
+	TaskID         string     `json:"taskID"`
+	ResourceID     string     `json:"resourceID,omitempty"`
+	Percentage     int        `json:"percentage"`
+	Message        string     `json:"message"`
+	Name           string     `json:"name"`
+	DetailMsg      string     `json:"detailMsg"`
+	StepPercentage int        `json:"stepPercentage"`
+	ProgressType   string     `json:"progressType,omitempty"`
+	Indeterminate  bool       `json:"indeterminate,omitempty"`
+	Current        int64      `json:"current,omitempty"`
+	Total          int64      `json:"total,omitempty"`
+	IsDone         bool       `json:"isDone"`
+	Failed         bool       `json:"failed"`
+	Steps          []TaskStep `json:"steps"`
 	// UpdatedAt 最近一次进度变更时间（Unix 毫秒）。用于按时间淘汰与前端展示。
 	UpdatedAt int64 `json:"updatedAt"`
 }
 
 type TaskStep struct {
-	Message    string `json:"message"`
-	DetailMsg  string `json:"detailMsg,omitempty"`
-	StartedAt  int64  `json:"startedAt"`
-	EndedAt    int64  `json:"endedAt,omitempty"`
-	DurationMs int64  `json:"durationMs"`
-	IsDone     bool   `json:"isDone"`
-	Failed     bool   `json:"failed"`
+	Message        string `json:"message"`
+	DetailMsg      string `json:"detailMsg,omitempty"`
+	StepPercentage int    `json:"stepPercentage"`
+	ProgressType   string `json:"progressType,omitempty"`
+	Indeterminate  bool   `json:"indeterminate,omitempty"`
+	Current        int64  `json:"current,omitempty"`
+	Total          int64  `json:"total,omitempty"`
+	StartedAt      int64  `json:"startedAt"`
+	EndedAt        int64  `json:"endedAt,omitempty"`
+	DurationMs     int64  `json:"durationMs"`
+	IsDone         bool   `json:"isDone"`
+	Failed         bool   `json:"failed"`
 }
 
 type ProgressStoreType map[string]TaskProgress
+
+const ProgressTypeImagePull = "image-pull"
 
 type ComposeToken struct {
 	ProjectID string
@@ -121,6 +138,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 			progress.Message = "服务重启导致任务中断"
 			progress.DetailMsg = "后端服务在任务完成前重启，任务未继续执行"
 			progress.IsDone = true
+			progress.Failed = true
+			if len(progress.Steps) > 0 && progress.Steps[len(progress.Steps)-1].EndedAt == 0 {
+				closeTaskStep(&progress.Steps[len(progress.Steps)-1], nowMs)
+				progress.Steps[len(progress.Steps)-1].Failed = true
+			}
 			progress.UpdatedAt = nowMs
 			changed = true
 		}
@@ -138,6 +160,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		composeOps:         make(map[string]string),
 		DockerClient:       cli,
 		updatingContainers: make(map[string]string),
+		updateSlots:        make(chan struct{}, maxConcurrentContainerUpdates),
 	}
 	before := len(ctx.ProgressStore)
 	ctx.pruneProgressLocked()
@@ -235,6 +258,35 @@ func (ctx *ServiceContext) scheduleProgressPersistLocked() {
 	})
 }
 
+func progressFailed(progress TaskProgress) bool {
+	if !progress.IsDone {
+		return false
+	}
+	if progress.Failed || progress.Percentage < 100 {
+		return true
+	}
+	text := strings.ToLower(progress.Message + " " + progress.DetailMsg)
+	for _, keyword := range []string{"失败", "错误", "中断", "拒绝", "超时", "error", "fail", "timeout", "interrupted"} {
+		if strings.Contains(text, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+func stepFailed(progress TaskProgress) bool {
+	if progress.Failed {
+		return true
+	}
+	text := strings.ToLower(progress.Message + " " + progress.DetailMsg)
+	for _, keyword := range []string{"失败", "错误", "中断", "拒绝", "超时", "error", "fail", "timeout", "interrupted"} {
+		if strings.Contains(text, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
 func (ctx *ServiceContext) UpdateProgress(taskID string, progress TaskProgress) {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
@@ -243,17 +295,45 @@ func (ctx *ServiceContext) UpdateProgress(taskID string, progress TaskProgress) 
 		progress.UpdatedAt = now
 	}
 	previous := ctx.ProgressStore[taskID]
+	if progress.ResourceID == "" {
+		progress.ResourceID = previous.ResourceID
+	}
+	if progress.ProgressType != ProgressTypeImagePull {
+		progress.ProgressType = ""
+		progress.Indeterminate = false
+		progress.Current = 0
+		progress.Total = 0
+	}
+	if progress.IsDone {
+		progress.Failed = progressFailed(progress)
+	}
 	progress.Steps = append([]TaskStep(nil), previous.Steps...)
 	if progress.Message != "" {
-		failed := progress.IsDone && (progress.Percentage < 100 || strings.Contains(strings.ToLower(progress.Message), "失败") || strings.Contains(strings.ToLower(progress.Message), "error"))
+		failed := stepFailed(progress)
 		if len(progress.Steps) == 0 || progress.Steps[len(progress.Steps)-1].Message != progress.Message {
 			if len(progress.Steps) > 0 && progress.Steps[len(progress.Steps)-1].EndedAt == 0 {
 				closeTaskStep(&progress.Steps[len(progress.Steps)-1], now)
 			}
-			progress.Steps = append(progress.Steps, TaskStep{Message: progress.Message, DetailMsg: progress.DetailMsg, StartedAt: now, IsDone: progress.IsDone, Failed: failed})
+			progress.Steps = append(progress.Steps, TaskStep{
+				Message:        progress.Message,
+				DetailMsg:      progress.DetailMsg,
+				StepPercentage: progress.StepPercentage,
+				ProgressType:   progress.ProgressType,
+				Indeterminate:  progress.Indeterminate,
+				Current:        progress.Current,
+				Total:          progress.Total,
+				StartedAt:      now,
+				IsDone:         progress.IsDone,
+				Failed:         failed,
+			})
 		} else {
 			step := &progress.Steps[len(progress.Steps)-1]
 			step.DetailMsg = progress.DetailMsg
+			step.StepPercentage = progress.StepPercentage
+			step.ProgressType = progress.ProgressType
+			step.Indeterminate = progress.Indeterminate
+			step.Current = progress.Current
+			step.Total = progress.Total
 			step.IsDone = progress.IsDone
 			step.Failed = failed
 		}
@@ -356,11 +436,36 @@ func (ctx *ServiceContext) ClearProgress(doneOnly bool) {
 func (ctx *ServiceContext) TryStartContainerUpdate(containerID, taskID string) bool {
 	ctx.updateMu.Lock()
 	defer ctx.updateMu.Unlock()
+	if ctx.updatingContainers == nil {
+		ctx.updatingContainers = make(map[string]string)
+	}
 	if _, exists := ctx.updatingContainers[containerID]; exists {
 		return false
 	}
 	ctx.updatingContainers[containerID] = taskID
 	return true
+}
+
+// AcquireContainerUpdateSlot waits until an actual Docker update can run.
+func (ctx *ServiceContext) AcquireContainerUpdateSlot() {
+	if ctx.updateSlots == nil {
+		ctx.updateMu.Lock()
+		if ctx.updateSlots == nil {
+			ctx.updateSlots = make(chan struct{}, maxConcurrentContainerUpdates)
+		}
+		ctx.updateMu.Unlock()
+	}
+	ctx.updateSlots <- struct{}{}
+}
+
+func (ctx *ServiceContext) ReleaseContainerUpdateSlot() {
+	if ctx == nil || ctx.updateSlots == nil {
+		return
+	}
+	select {
+	case <-ctx.updateSlots:
+	default:
+	}
 }
 
 func (ctx *ServiceContext) FinishContainerUpdate(containerID, taskID string) {

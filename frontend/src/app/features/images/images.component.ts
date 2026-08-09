@@ -109,12 +109,21 @@ export class ImagesComponent {
   fallback(e: Event) {
     (e.target as HTMLImageElement).src = this.icons.defaultIcon();
   }
+  private deleteTarget(x: ImageRow): string {
+    const displayRef = `${x.name}:${x.tag}`;
+    const tags = (x.repoTags || []).filter(tag => !!tag.trim());
+    return tags.find(tag => tag === displayRef) ||
+      tags.find(tag => tag.endsWith(`/${displayRef}`)) ||
+      tags[0] ||
+      x.id;
+  }
   async remove(x: ImageRow, force: boolean) {
     const label = force ? '强制删除' : '删除';
+    const target = force ? x.id : this.deleteTarget(x);
     if (
       !(await this.confirm.open({
         title: `${label}镜像`,
-        message: `${label}镜像 ${x.name}:${x.tag}？`,
+        message: `${label}镜像 ${force ? `${x.name}:${x.tag}` : target}？`,
         confirmText: label,
         danger: true,
         critical: force,
@@ -122,7 +131,7 @@ export class ImagesComponent {
     )
       return;
     runAction({
-      request: this.service.remove(x.id, force),
+      request: this.service.remove(x.id, force, force ? undefined : target),
       onSuccess: () => this.toast.success(actionLabel(x.name, label, true)),
       onBizError: r => this.toast.error(actionLabel(x.name, label, false, r.msg || '未知错误')),
       onHttpError: e => this.toast.error(actionLabel(x.name, label, false, actionErrorMessage(e))),

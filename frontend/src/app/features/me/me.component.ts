@@ -238,7 +238,10 @@ export class MeComponent {
       })
       .subscribe({
         next: r => {
-          if (r.code === 200 && r.data?.hubUrls) this.hubUrlsDraft = [...r.data.hubUrls];
+          if (r.code === 200 && r.data) {
+            this.pullTimeoutDraft = r.data.pullTimeoutSec ?? pullTimeout;
+            if (r.data.hubUrls) this.hubUrlsDraft = [...r.data.hubUrls];
+          }
           this.finishSave(value, r.code !== 200, r.msg);
         },
         error: () => this.finishSave(value, true),

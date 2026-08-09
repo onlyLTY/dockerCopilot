@@ -10,6 +10,11 @@ import { ToastService } from './toast.service';
 export interface TaskStep {
   message: string;
   detailMsg: string;
+  stepPercentage?: number;
+  progressType?: string;
+  indeterminate?: boolean;
+  current?: number;
+  total?: number;
   startedAt: number;
   endedAt?: number;
   durationMs?: number;
@@ -24,7 +29,7 @@ export interface TaskItem {
   message: string; // 当前阶段信息
   detailMsg: string; // 详细信息
   isDone: boolean; // 是否结束（成功或失败）
-  failed: boolean; // 是否失败（isDone 且百分比未达成或消息含失败）
+  failed: boolean; // 是否失败（以后端明确状态为准）
   refresh: boolean; // 完成后是否需要联动刷新资源缓存
   createdAt: number; // 创建时间戳，用于排序/清理
   updatedAt: number; // 最近一次进度更新时间
@@ -39,8 +44,15 @@ interface ProgressData {
   message: string;
   name: string;
   detailMsg: string;
+  resourceID?: string;
+  stepPercentage?: number;
+  progressType?: string;
+  indeterminate?: boolean;
+  current?: number;
+  total?: number;
   steps?: TaskStep[];
   isDone: boolean;
+  failed?: boolean;
   /** Unix 毫秒；旧后端可能缺失 */
   updatedAt?: number;
 }
@@ -54,6 +66,7 @@ interface ProgressListResponse {
 const STORAGE_KEY = 'dc-tasks';
 const POLL_INTERVAL = 1500; // 批量轮询间隔（毫秒）
 const DONE_KEEP = 60 * 60 * 1000; // 已完成任务保留 1 小时后可被清理
+const UNKNOWN_RETRY_LIMIT = 200;
 
 /**
  * 任务服务：后端进度持久化在 taskProgress.json，前端 localStorage 保存展示元数据。
@@ -71,6 +84,14 @@ export class TaskService {
   readonly tasks = signal<TaskItem[]>(this.restore());
   readonly activeCount = computed(() => this.tasks().filter(t => !t.isDone).length);
   readonly hasActive = computed(() => this.activeCount() > 0);
+  readonly activeResourceIDs = computed(
+    () =>
+      new Set(
+        this.tasks()
+          .filter(task => !task.isDone && !!task.resourceID)
+          .map(task => task.resourceID as string),
+      ),
+  );
   /** 当前在弹窗中查看的任务 ID（空表示不显示进度弹窗） */
   readonly viewing = signal<string>('');
   private batchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -91,6 +112,12 @@ export class TaskService {
     const now = Date.now();
     const existing = this.tasks().find(t => t.taskID === taskID);
     if (existing) {
+      if (resourceID && !existing.resourceID) {
+        this.tasks.update(list =>
+          list.map(item => (item.taskID === taskID ? { ...item, resourceID, refresh: refresh || item.refresh } : item)),
+        );
+        this.persist();
+      }
       this.viewing.set(taskID);
       return;
     }
@@ -135,11 +162,13 @@ export class TaskService {
               percentage: progress.percentage,
               message: progress.message || existing.message,
               detailMsg: progress.detailMsg || existing.detailMsg,
+              resourceID: progress.resourceID || existing.resourceID,
               steps: progress.steps || existing.steps || [],
               isDone: progress.isDone,
-              failed:
+              failed: progress.failed ?? (
                 progress.isDone &&
-                (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
+                (progress.percentage < 100 || /失败|错误|中断|拒绝|超时|error|fail|timeout/i.test(progress.message || ''))
+              ),
               updatedAt: Math.max(existing.updatedAt || 0, serverUpdated),
             };
           }
@@ -149,12 +178,14 @@ export class TaskService {
             percentage: progress.percentage,
             message: progress.message || '任务已恢复',
             detailMsg: progress.detailMsg || '',
+            resourceID: progress.resourceID,
             steps: progress.steps || [],
             isDone: progress.isDone,
-            failed:
+            failed: progress.failed ?? (
               progress.isDone &&
-              (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
-            refresh: false,
+              (progress.percentage < 100 || /失败|错误|中断|拒绝|超时|error|fail|timeout/i.test(progress.message || ''))
+            ),
+            refresh: !!progress.resourceID,
             createdAt: serverUpdated,
             updatedAt: serverUpdated,
           };
@@ -178,30 +209,26 @@ export class TaskService {
     this.viewing.set('');
   }
 
-  /** 删除单个任务（停止其轮询） */
+  /** 删除单个任务；进行中的任务不能删除，避免把执行中的任务伪装成已取消。 */
   remove(taskID: string): void {
+    const item = this.tasks().find(t => t.taskID === taskID);
+    if (item && !item.isDone) {
+      this.toast.info('任务进行中，完成后才能删除');
+      return;
+    }
     this.unknownCounts.delete(taskID);
     this.tasks.update(list => list.filter(t => t.taskID !== taskID));
     if (this.viewing() === taskID) this.viewing.set('');
     this.persist();
     if (!this.tasks().some(t => !t.isDone)) this.stopBatch();
-    // 同步删除后端持久化记录，避免刷新后重新加载
     this.http.delete('/api/progress/' + encodeURIComponent(taskID)).subscribe({
       error: () => this.toast.error('删除任务失败', '无法删除后端记录，刷新后可能重新出现'),
     });
   }
 
-  /** 清空全部任务 */
+  /** 清空已完成任务，保留执行中的任务。 */
   clearAll(): void {
-    this.stopBatch();
-    this.unknownCounts.clear();
-    this.tasks.set([]);
-    this.viewing.set('');
-    this.persist();
-    // 同步清空后端持久化记录
-    this.http.delete('/api/progress/clear').subscribe({
-      error: () => this.toast.error('清空任务失败', '无法清空后端记录，刷新后可能重新出现'),
-    });
+    this.clearDone();
   }
 
   /** 清除已完成的任务，保留进行中的 */
@@ -257,14 +284,19 @@ export class TaskService {
       next: response => {
         if (response.code === 200 && Array.isArray(response.data)) {
           const byId = new Map(response.data.map(p => [p.taskID, p]));
+          const missing: string[] = [];
           for (const item of active) {
             const progress = byId.get(item.taskID);
             if (progress) {
               this.unknownCounts.delete(item.taskID);
               this.apply(item.taskID, progress);
             } else {
-              this.markUnknown(item.taskID, response.msg || '任务不存在或已过期');
+              missing.push(item.taskID);
             }
+          }
+          if (missing.length) {
+            this.pollActiveIndividually(missing, finish);
+            return;
           }
         } else {
           // list 失败时退化为逐个拉取（最多 3 个并发感，串行即可保持简单）
@@ -307,7 +339,10 @@ export class TaskService {
             }
             step();
           },
-          error: () => step(),
+          error: e => {
+            this.markUnknown(taskID, e?.error?.msg || e?.message || '任务进度查询失败');
+            step();
+          },
         });
     }
   }
@@ -322,7 +357,8 @@ export class TaskService {
       list.map(t => {
         if (t.taskID !== taskID || t.isDone) return t;
         const failed =
-          d.isDone && (d.percentage < 100 || /失败|错误|error|fail/i.test(d.message || ''));
+          d.failed ??
+          (d.isDone && (d.percentage < 100 || /失败|错误|中断|拒绝|超时|error|fail|timeout/i.test(d.message || '')));
         if (d.isDone) {
           doneNow = true;
           refreshNeeded = t.refresh;
@@ -360,7 +396,7 @@ export class TaskService {
   private markUnknown(taskID: string, msg: string): void {
     const attempts = (this.unknownCounts.get(taskID) || 0) + 1;
     this.unknownCounts.set(taskID, attempts);
-    if (attempts < 4) return;
+    if (attempts < UNKNOWN_RETRY_LIMIT) return;
     let changed = false;
     this.tasks.update(list =>
       list.map(t => {

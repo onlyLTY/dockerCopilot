@@ -50,6 +50,7 @@ export interface RuntimeSettings {
   backupInterval: string;
   logLevel: string;
   retention: number;
+  pullTimeoutSec: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -60,6 +61,7 @@ export class SettingsService {
     backupInterval: '',
     logLevel: 'info',
     retention: 10,
+    pullTimeoutSec: 0,
   });
   private loaded = false;
 
@@ -183,6 +185,7 @@ export class SettingsService {
       backupInterval: data.autoBackup?.interval ?? '',
       logLevel: data.logLevel?.level ?? 'info',
       retention: data.retention ?? 10,
+      pullTimeoutSec: data.pullTimeoutSec ?? 0,
     });
   }
 }

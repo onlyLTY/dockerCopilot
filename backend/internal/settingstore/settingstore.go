@@ -137,6 +137,9 @@ func load() Settings {
 	if stored.Retention >= minRetention && stored.Retention <= maxRetention {
 		s.Retention = stored.Retention
 	}
+	if ValidPullTimeoutSec(stored.PullTimeoutSec) {
+		s.PullTimeoutSec = stored.PullTimeoutSec
+	}
 	s.IgnoredContainerUpdates = normalizeIgnoredContainers(stored.IgnoredContainerUpdates)
 	if stored.HubURLsConfigured {
 		s.HubURLs = normalizeHubURLs(stored.HubURLs)

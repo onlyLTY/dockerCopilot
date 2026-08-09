@@ -146,7 +146,7 @@
           @if (isRunning(item)) {
             <button
               class="btn text-red border-1 py-8 px-7 fs-12"
-              [disabled]="isActionBusy(item.id)"
+              [disabled]="isContainerLocked(item.id)"
               (click)="stop(item)"
             >
               <dc-icon name="stop"></dc-icon
@@ -155,7 +155,7 @@
           } @else {
             <button
               class="btn text-green border-1 py-8 px-7 fs-12"
-              [disabled]="isActionBusy(item.id)"
+              [disabled]="isContainerLocked(item.id)"
               (click)="start(item)"
             >
               <dc-icon name="start"></dc-icon
@@ -164,7 +164,7 @@
           }
           <button
             class="btn text-blue border-1 py-8 px-7 fs-12"
-            [disabled]="isActionBusy(item.id)"
+            [disabled]="isContainerLocked(item.id)"
             (click)="restart(item)"
           >
             <dc-icon name="restart"></dc-icon
@@ -172,7 +172,7 @@
           </button>
           <button
             class="btn text-red border-1 py-8 px-7 fs-12"
-            [disabled]="isActionBusy(item.id)"
+            [disabled]="isContainerLocked(item.id)"
             (click)="remove(item)"
           >
             <dc-icon name="delete"></dc-icon
@@ -185,7 +185,7 @@
           <button
             class="btn text-purple border-1 py-8 px-7 fs-12"
             [class.has-update]="item.haveUpdate"
-            [disabled]="activeUpdateIds().has(item.id) || isActionBusy(item.id)"
+            [disabled]="isContainerLocked(item.id)"
             (click)="update(item)"
           >
             <dc-icon name="update"></dc-icon
@@ -194,7 +194,7 @@
           @if (item.updateIgnored) {
             <button
               class="btn text-blue border-1 py-8 px-7 fs-12"
-              [disabled]="updateIgnoreBusyIds().has(item.id) || isActionBusy(item.id)"
+              [disabled]="isContainerLocked(item.id)"
               (click)="restoreUpdate(item)"
             >
               <dc-icon name="update"></dc-icon
@@ -203,7 +203,7 @@
           } @else {
             <button
               class="btn text-muted border-1 py-8 px-7 fs-12"
-              [disabled]="updateIgnoreBusyIds().has(item.id) || isActionBusy(item.id)"
+              [disabled]="isContainerLocked(item.id)"
               (click)="ignoreUpdate(item)"
             >
               <dc-icon name="close"></dc-icon
@@ -282,7 +282,7 @@
             />
             <button
               class="btn text-secondary-text bg-secondary-bg text-nowrap"
-              [disabled]="detailUpdateBusy() || activeUpdateIds().has(item.id) || !detailImage().trim()"
+              [disabled]="isContainerLocked(item.id)"
               (click)="updateDetail()"
             >
               {{ detailUpdateBusy() ? '提交中…' : '更换镜像' }}
@@ -298,14 +298,14 @@
         <div class="d-flex items-center gap-8">
           <button
             class="btn bg-red text-white"
-            [disabled]="isActionBusy(item.id)"
+            [disabled]="isContainerLocked(item.id)"
             (click)="detailRemove()"
           >
             <dc-icon name="delete"></dc-icon>删除
           </button>
           <button
             class="btn bg-blue text-white"
-            [disabled]="isActionBusy(item.id)"
+            [disabled]="isContainerLocked(item.id)"
             (click)="detailRestart()"
           >
             <dc-icon name="restart"></dc-icon>重启
@@ -314,7 +314,7 @@
             class="btn text-white"
             [class.bg-green]="!isRunning(item)"
             [class.bg-red]="isRunning(item)"
-            [disabled]="isActionBusy(item.id)"
+            [disabled]="isContainerLocked(item.id)"
             (click)="detailStartStop()"
           >
             <dc-icon [name]="isRunning(item) ? 'stop' : 'start'"></dc-icon>{{
@@ -323,7 +323,7 @@
           </button>
           <button
             class="btn bg-purple text-white"
-            [disabled]="detailUpdateBusy() || activeUpdateIds().has(item.id) || !detailName().trim() || !detailImage().trim()"
+            [disabled]="isContainerLocked(item.id) || !detailName().trim() || !detailImage().trim()"
             (click)="updateDetail()"
           >
             <dc-icon name="update"></dc-icon>{{ detailUpdateBusy() ? '更新中…' : '更新' }}

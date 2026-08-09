@@ -2,7 +2,7 @@
   <div class="min-w-0">
     <h2 class="m-0 text-black lh-125">{{ title() }}</h2>
     @if (subtitle()) {
-      <span class="d-block mt-8 fs-12 text-muted lh-15">{{ subtitle() }}</span>
+      <span class="d-block mt-8 fs-12 lh-15 {{ subtitleClass || 'text-muted' }}">{{ subtitle() }}</span>
     }
   </div>
   <button

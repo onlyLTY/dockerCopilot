@@ -2,9 +2,11 @@ package logic
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/onlyLTY/dockerCopilot/internal/errorx"
+	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
@@ -19,12 +21,13 @@ type ImagesListLogic struct {
 }
 
 type imageListItem struct {
-	Id         string `json:"id"`
-	Name       string `json:"name"`
-	Tag        string `json:"tag"`
-	Size       string `json:"size"`
-	InUsed     bool   `json:"inUsed"`
-	CreateTime string `json:"createTime"`
+	Id         string   `json:"id"`
+	Name       string   `json:"name"`
+	Tag        string   `json:"tag"`
+	RepoTags   []string `json:"repoTags"`
+	Size       string   `json:"size"`
+	InUsed     bool     `json:"inUsed"`
+	CreateTime string   `json:"createTime"`
 }
 
 func NewImagesListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ImagesListLogic {
@@ -33,6 +36,20 @@ func NewImagesListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Images
 		ctx:    ctx,
 		svcCtx: svcCtx,
 	}
+}
+
+func imageNameForDisplay(imageName string, hubURLs []string) string {
+	for _, hubURL := range hubURLs {
+		host := strings.Trim(strings.TrimSpace(hubURL), "/")
+		if host == "" {
+			continue
+		}
+		prefix := host + "/"
+		if len(imageName) >= len(prefix) && strings.EqualFold(imageName[:len(prefix)], prefix) {
+			return imageName[len(prefix):]
+		}
+	}
+	return imageName
 }
 
 func (l *ImagesListLogic) ImagesList() (resp *types.Resp, err error) {
@@ -52,17 +69,20 @@ func (l *ImagesListLogic) ImagesList() (resp *types.Resp, err error) {
 	}
 	resp.Code = 200
 	resp.Msg = "success"
+	hubURLs := settingstore.GetHubURLs()
 	imageInfoList := make([]imageListItem, 0, len(list))
 	for _, v := range list {
 		imageInfoList = append(imageInfoList, imageListItem{
 			Id:         v.ID,
-			Name:       v.ImageName,
+			Name:       imageNameForDisplay(v.ImageName, hubURLs),
 			Tag:        v.ImageTag,
+			RepoTags:   v.RepoTags,
 			Size:       v.SizeFormat,
 			InUsed:     v.InUsed,
 			CreateTime: time.Unix(v.Created, 0).Format("2006-01-02 15:04:05"),
 		})
 	}
+
 	resp.Data = imageInfoList
 	return resp, nil
 }
