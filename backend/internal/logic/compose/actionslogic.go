@@ -12,6 +12,8 @@ import (
 
 	composeTypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/google/uuid"
+	"github.com/onlyLTY/dockerCopilot/internal/config"
+	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	composeProject "github.com/onlyLTY/dockerCopilot/internal/utiles/compose_project"
@@ -112,10 +114,17 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 		})
 	}
 	timeout := time.Duration(l.svcCtx.Config.Compose.CommandTimeoutSec) * time.Second
-
 	if timeout <= 0 {
 		timeout = 5 * time.Minute
 	}
+	pullTimeoutSec := settingstore.GetPullTimeoutSec()
+	if pullTimeoutSec <= 0 {
+		pullTimeoutSec = int(l.svcCtx.Config.PullTimeoutSec)
+	}
+	if pullTimeoutSec <= 0 {
+		pullTimeoutSec = int(config.DefaultPullTimeoutSec)
+	}
+	pullTimeout := time.Duration(pullTimeoutSec) * time.Second
 
 	taskID := uuid.New().String()
 	name := "部署 " + req.ProjectID
@@ -149,21 +158,25 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 		}
 		logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=config success", projectID, filename, taskID)
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "正在部署（compose up）", DetailMsg: "", IsDone: false})
-		result, err := composeRunner.UpWithProgress(bg, svcCtx.DockerClient, root, files, timeout, pullImages, func(event composeRunner.ProgressEvent) {
+		result, err := composeRunner.UpWithProgressAndPullTimeout(bg, svcCtx.DockerClient, root, files, timeout, pullTimeout, pullImages, func(event composeRunner.ProgressEvent) {
 			message := event.Message
-			percentage := 50
-			if event.IsPull {
-				message = "正在拉取新镜像"
-				percentage = 0
+			percentage := event.Percentage
+			if percentage == 0 {
+				percentage = 50
 			}
 			svcCtx.UpdateProgress(taskID, svc.TaskProgress{
-				TaskID: taskID, Name: name, Percentage: percentage, Message: message, DetailMsg: event.Message, StepPercentage: event.StepPercentage, IsDone: false,
+				TaskID: taskID, Name: name, Percentage: percentage, Message: message, DetailMsg: event.DetailMsg,
+				StepPercentage: event.StepPercentage, ProgressType: event.ProgressType, Indeterminate: event.Indeterminate,
+				Current: event.Current, Total: event.Total, Failed: event.Failed, IsDone: false,
 			})
 		}, deploymentMappings...)
 
 		if err != nil {
 			logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=up failed=%v output=%q", projectID, filename, taskID, err, result.Output)
-			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "部署失败", DetailMsg: composeErrMsg("Compose 部署失败", err, result.Output), IsDone: true})
+			svcCtx.UpdateProgress(taskID, svc.TaskProgress{
+				TaskID: taskID, Name: name, Percentage: 50, Message: "部署失败",
+				DetailMsg: composeErrMsg("Compose 部署失败", err, result.Output), Failed: true, IsDone: true,
+			})
 			return
 		}
 		logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=up success", projectID, filename, taskID)

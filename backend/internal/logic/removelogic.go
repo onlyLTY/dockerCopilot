@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"strings"
 
 	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
@@ -27,9 +28,13 @@ func NewRemoveLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RemoveLogi
 
 func (l *RemoveLogic) Remove(req *types.RemoveImageReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	err = utiles.RemoveImage(l.svcCtx, req.Id, req.Force)
+	target := strings.TrimSpace(req.Id)
+	if !req.Force && strings.TrimSpace(req.RepoTag) != "" {
+		target = strings.TrimSpace(req.RepoTag)
+	}
+	err = utiles.RemoveImage(l.svcCtx, target, req.Force)
 	if err != nil {
-		l.Errorf("删除镜像失败 id=%s: %v", req.Id, err)
+		l.Errorf("删除镜像失败 target=%s force=%t: %v", target, req.Force, err)
 		if errorx.IsDockerUnavailable(err) {
 			resp.Code = errorx.CodeDockerUnavailable
 			resp.Msg = "Docker 服务不可用"

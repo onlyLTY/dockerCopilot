@@ -46,6 +46,32 @@ func TestSettingsUseOneFileAndPreserveFields(t *testing.T) {
 	}
 }
 
+func TestPullTimeoutPersistenceAndValidation(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("APP_SETTINGS_PATH", filepath.Join(dir, "appSettings.json"))
+
+	if _, err := SetPullTimeoutSec(42); err != nil {
+		t.Fatal(err)
+	}
+	if got := GetPullTimeoutSec(); got != 42 {
+		t.Fatalf("pull timeout after save = %d, want 42", got)
+	}
+
+	if _, err := SetPullTimeoutSec(3601); err == nil {
+		t.Fatal("invalid pull timeout accepted")
+	}
+	if got := GetPullTimeoutSec(); got != 42 {
+		t.Fatalf("invalid update changed pull timeout to %d", got)
+	}
+
+	if _, err := SetPullTimeoutSec(0); err != nil {
+		t.Fatal(err)
+	}
+	if got := GetPullTimeoutSec(); got != 0 {
+		t.Fatalf("zero pull timeout = %d, want 0", got)
+	}
+}
+
 func TestContainerUpdateIgnorePersistence(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("APP_SETTINGS_PATH", filepath.Join(dir, "appSettings.json"))

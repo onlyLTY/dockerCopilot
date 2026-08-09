@@ -25,8 +25,7 @@ type Config struct {
 	CorsOrigins []string
 	Compose     ComposeConfig
 	// PullTimeoutSec 拉取镜像超时（秒），默认 300（5 分钟）。
-	// 适用于单容器更新/恢复时的镜像拉取，不适用于 Compose 部署（走 CommandTimeoutSec）。
-	// 零或负值使用默认值。
+	// 适用于单容器更新、恢复和 Compose 部署中的镜像拉取；零或负值使用默认值。
 	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
 	PullTimeoutSec int64 `json:",optional"`
 }

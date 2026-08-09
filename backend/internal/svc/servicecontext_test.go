@@ -59,6 +59,52 @@ func TestNewServiceContextMarksInterruptedTasks(t *testing.T) {
 	}
 }
 
+func TestProgressFailureClosesFailedStep(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", Percentage: 60, Message: "正在启动容器"})
+	ctx.UpdateProgress("task", TaskProgress{
+		TaskID: "task", Percentage: 90, Message: "启动容器失败（web）",
+		DetailMsg: "daemon refused the request", Failed: true, IsDone: true,
+	})
+	progress, ok := ctx.GetProgress("task")
+	if !ok || !progress.Failed || len(progress.Steps) != 2 {
+		t.Fatalf("expected failed task with two steps: %+v", progress)
+	}
+	last := progress.Steps[len(progress.Steps)-1]
+	if !last.IsDone || !last.Failed || last.EndedAt == 0 || last.DurationMs < 0 {
+		t.Fatalf("failed step was not closed: %+v", last)
+	}
+}
+
+func TestNewServiceContextClosesInterruptedStep(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	t.Setenv("TASK_PROGRESS_PATH", path)
+	initial := ProgressStoreType{
+		"active": {
+			TaskID: "active", Percentage: 40, Message: "正在下载镜像",
+			Steps: []TaskStep{{Message: "正在下载镜像", StartedAt: time.Now().UnixMilli() - 1000}},
+		},
+	}
+	content, err := json.Marshal(initial)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, content, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := NewServiceContext(config.Config{})
+	progress, ok := ctx.GetProgress("active")
+	if !ok || !progress.Failed || len(progress.Steps) != 1 {
+		t.Fatalf("expected interrupted task failure: %+v", progress)
+	}
+	step := progress.Steps[0]
+	if !step.IsDone || !step.Failed || step.EndedAt == 0 || step.DurationMs <= 0 {
+		t.Fatalf("interrupted step was not closed: %+v", step)
+	}
+}
+
 func TestProgressStoreConcurrentUpdates(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
@@ -112,13 +158,82 @@ func TestPruneProgressByUpdatedAt(t *testing.T) {
 func TestProgressStepPercentageKeepsZero(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
-	ctx.UpdateProgress("pull", TaskProgress{TaskID: "pull", Message: "正在拉取新镜像", StepPercentage: 0})
+	ctx.UpdateProgress("pull", TaskProgress{TaskID: "pull", Message: "正在拉取新镜像", ProgressType: ProgressTypeImagePull, Current: 25, Total: 100, StepPercentage: 0})
 	progress, ok := ctx.GetProgress("pull")
 	if !ok || len(progress.Steps) != 1 || progress.Steps[0].StepPercentage != 0 {
 		t.Fatalf("expected zero step percentage to be retained: %+v", progress)
 	}
+	if progress.Steps[0].ProgressType != ProgressTypeImagePull || progress.Steps[0].Current != 25 || progress.Steps[0].Total != 100 {
+		t.Fatalf("expected pull metadata to be retained: %+v", progress.Steps[0])
+	}
 }
 
+func TestProgressStepWithoutPullTypeHasNoVisualProgress(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", Message: "正在停止容器", StepPercentage: 0})
+	progress, ok := ctx.GetProgress("task")
+	if !ok || len(progress.Steps) != 1 || progress.Steps[0].ProgressType != "" {
+		t.Fatalf("expected regular step without visual progress type: %+v", progress)
+	}
+}
+
+func TestProgressPullUpdatesSingleStep(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+	ctx.UpdateProgress("pull", TaskProgress{TaskID: "pull", Message: "正在拉取新镜像", ProgressType: ProgressTypeImagePull, Current: 10, Total: 100, StepPercentage: 10})
+	ctx.UpdateProgress("pull", TaskProgress{TaskID: "pull", Message: "正在拉取新镜像", ProgressType: ProgressTypeImagePull, Current: 80, Total: 100, StepPercentage: 80})
+	progress, ok := ctx.GetProgress("pull")
+	if !ok || len(progress.Steps) != 1 || progress.Steps[0].Current != 80 || progress.Steps[0].StepPercentage != 80 {
+		t.Fatalf("expected pull updates to replace one step: %+v", progress)
+	}
+}
+
+func TestProgressStagesOnlyPullUsesOneStep(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+	stages := []TaskProgress{
+		{TaskID: "pull", Message: "正在连接镜像源"},
+		{TaskID: "pull", Message: "等待镜像层"},
+		{TaskID: "pull", Message: "正在拉取镜像", ProgressType: ProgressTypeImagePull, Current: 40, Total: 100, StepPercentage: 40},
+		{TaskID: "pull", Message: "正在拉取镜像", DetailMsg: "正在解压镜像", ProgressType: ProgressTypeImagePull, Indeterminate: true, StepPercentage: 100},
+	}
+	for _, stage := range stages {
+		ctx.UpdateProgress("pull", stage)
+	}
+	progress, ok := ctx.GetProgress("pull")
+	if !ok || len(progress.Steps) != 3 {
+		t.Fatalf("expected three stages with one pull step: %+v", progress)
+	}
+	pullStep := progress.Steps[2]
+	if pullStep.Message != "正在拉取镜像" || !pullStep.Indeterminate || pullStep.StepPercentage != 100 {
+		t.Fatalf("pull step was not updated for extraction: %+v", pullStep)
+	}
+}
+
+func TestProgressStagesOnlyDownloadHasProgress(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+	stages := []TaskProgress{
+		{TaskID: "pull", Message: "正在连接镜像源"},
+		{TaskID: "pull", Message: "等待镜像层"},
+		{TaskID: "pull", Message: "正在拉取镜像", ProgressType: ProgressTypeImagePull, Current: 40, Total: 100, StepPercentage: 40},
+		{TaskID: "pull", Message: "正在拉取镜像", DetailMsg: "正在解压镜像", ProgressType: ProgressTypeImagePull, Indeterminate: true, StepPercentage: 100},
+	}
+	for _, stage := range stages {
+		ctx.UpdateProgress("pull", stage)
+	}
+	progress, ok := ctx.GetProgress("pull")
+	if !ok || len(progress.Steps) != 3 {
+		t.Fatalf("expected three pull stages: %+v", progress)
+	}
+	if progress.Steps[2].ProgressType != ProgressTypeImagePull || progress.Steps[2].Current != 0 || progress.Steps[2].Total != 0 || !progress.Steps[2].Indeterminate {
+		t.Fatalf("pull stage should represent extraction processing: %+v", progress.Steps[2])
+	}
+	if progress.Steps[2].DetailMsg != "正在解压镜像" {
+		t.Fatalf("pull stage should retain extraction detail: %+v", progress.Steps[2])
+	}
+}
 func TestProgressDebounceFlushesOnDone(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}

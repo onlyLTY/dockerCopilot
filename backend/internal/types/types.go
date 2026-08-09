@@ -139,7 +139,8 @@ type RemoveContainerReq struct {
 
 type RemoveImageReq struct {
 	IdReq
-	Force bool `form:"force,default=false"`
+	RepoTag string `form:"repoTag,optional"`
+	Force   bool   `form:"force,default=false"`
 }
 
 type Resp struct {

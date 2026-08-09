@@ -57,13 +57,6 @@ go run dockercopilot.go -f etc/dockerCopilot.yaml
 - **Compose 路径**在 yaml：`Compose.ScanPaths` 扫描项目；
 - 健康检查：`GET /healthz`（不鉴权；会 Ping Docker，不可达时返回 503）
 
-验证：
-
-```bash
-cd backend
-go test ./...
-go build ./...
-```
 
 #### 前端
 

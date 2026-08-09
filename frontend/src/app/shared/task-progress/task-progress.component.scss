@@ -1,4 +1,20 @@
-// 任务详情：等宽字体（工具类不好表达 font-family 组合）
+.task-summary {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--secondary-bg);
+}
+
+.task-summary-failed {
+  border-color: var(--red);
+}
+
+.task-summary-detail {
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
 
 .task-detail {
   font-family: 'SFMono-Regular', Consolas, monospace;

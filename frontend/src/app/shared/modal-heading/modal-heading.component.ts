@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, Input, input, output } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -11,5 +11,6 @@ import { IconComponent } from '../icon/icon.component';
 export class ModalHeadingComponent {
   readonly title = input.required<string>();
   readonly subtitle = input('');
+  @Input() subtitleClass = '';
   readonly closed = output<void>();
 }

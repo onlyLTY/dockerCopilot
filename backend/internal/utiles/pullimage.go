@@ -15,14 +15,23 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
+const (
+	pullStageConnecting  = "正在连接镜像源"
+	pullStageWaiting     = "等待镜像层"
+	pullStageDownloading = "正在下载镜像"
+	pullStageExtracting  = "正在解压镜像"
+)
+
 // PullProgress describes the latest status and aggregate progress of an image pull.
 type PullProgress struct {
-	Candidate  string
-	Status     string
-	LayerID    string
-	Current    int64
-	Total      int64
-	Percentage int
+	Candidate     string
+	Detail        string
+	Status        string
+	LayerID       string
+	Current       int64
+	Total         int64
+	Percentage    int
+	Indeterminate bool
 }
 
 // PullImage 按 hubUrls 对官方 Docker Hub 镜像尝试加速拉取，并在成功后把本地镜像
@@ -40,6 +49,58 @@ func PullImage(ctx context.Context, cli client.APIClient, imageRef string, onPro
 		}
 		onProgress(fmt.Sprintf("%s：%s", message, progress.Candidate))
 	})
+}
+
+func reportPullFailure(onProgress func(PullProgress), reason string) {
+	if onProgress == nil {
+		return
+	}
+	onProgress(PullProgress{
+		Status: "镜像源失败",
+		Detail: reason,
+	})
+}
+
+func reportPullSwitch(onProgress func(PullProgress), attempt, total int, candidate string) {
+	if onProgress == nil {
+		return
+	}
+	onProgress(PullProgress{
+		Status:    "切换镜像源",
+		Candidate: fmt.Sprintf("[%d/%d] %s", attempt, total, candidate),
+	})
+}
+
+func summarizePullError(err error) string {
+	if err == nil {
+		return "未知错误"
+	}
+	text := strings.TrimSpace(err.Error())
+	lower := strings.ToLower(text)
+	switch {
+	case strings.Contains(lower, "eof"):
+		return "连接中断（EOF）"
+	case strings.Contains(lower, "timeout"), strings.Contains(lower, "deadline exceeded"):
+		return "请求超时"
+	case strings.Contains(lower, "unauthorized"), strings.Contains(lower, "denied"):
+		return "访问被拒绝"
+	case strings.Contains(lower, "not found"), strings.Contains(lower, "notfound"):
+		return "镜像或 layer 不存在"
+	default:
+		const maxLength = 160
+		if len([]rune(text)) > maxLength {
+			return string([]rune(text)[:maxLength]) + "…"
+		}
+		return text
+	}
+}
+
+func pullFailureReason(operation string, err error) string {
+	return fmt.Sprintf("%s：%s", operation, summarizePullError(err))
+}
+
+func pullFailureDetail(attempt, total int, operation string, err error) string {
+	return fmt.Sprintf("第 %d/%d 个源失败：%s", attempt, total, pullFailureReason(operation, err))
 }
 
 func pullImageWithProgress(ctx context.Context, cli client.APIClient, imageRef string, onProgress func(PullProgress)) (pulledRef string, err error) {
@@ -62,11 +123,10 @@ func pullImageWithProgress(ctx context.Context, cli client.APIClient, imageRef s
 		if err := ctx.Err(); err != nil {
 			return "", err
 		}
-		if len(candidates) > 1 {
-			onProgress(PullProgress{Candidate: fmt.Sprintf("[%d/%d] %s", i+1, len(candidates), candidate), Status: "正在连接镜像源"})
-		} else {
-			onProgress(PullProgress{Candidate: candidate, Status: "正在连接镜像源"})
+		if len(candidates) > 1 && i > 0 {
+			reportPullSwitch(onProgress, i+1, len(candidates), candidate)
 		}
+		onProgress(PullProgress{Candidate: candidate, Status: pullStageConnecting})
 		logx.Infof("ImagePull try %s (local %s)", candidate, localName)
 
 		reader, pullErr := cli.ImagePull(ctx, candidate, image.PullOptions{})
@@ -74,7 +134,9 @@ func pullImageWithProgress(ctx context.Context, cli client.APIClient, imageRef s
 			if err := ctx.Err(); err != nil {
 				return "", err
 			}
-			errs = append(errs, fmt.Sprintf("%s: %v", candidate, pullErr))
+			reason := pullFailureReason("拉取启动失败", pullErr)
+			reportPullFailure(onProgress, reason)
+			errs = append(errs, fmt.Sprintf("%s: %s", candidate, pullFailureDetail(i+1, len(candidates), "拉取启动失败", pullErr)))
 			logx.Infof("ImagePull start failed %s: %v", candidate, pullErr)
 			continue
 		}
@@ -84,7 +146,9 @@ func pullImageWithProgress(ctx context.Context, cli client.APIClient, imageRef s
 			if err := ctx.Err(); err != nil {
 				return "", err
 			}
-			errs = append(errs, fmt.Sprintf("%s: %v", candidate, drainErr))
+			reason := pullFailureReason("拉取流失败", drainErr)
+			reportPullFailure(onProgress, reason)
+			errs = append(errs, fmt.Sprintf("%s: %s", candidate, pullFailureDetail(i+1, len(candidates), "拉取流失败", drainErr)))
 			logx.Infof("ImagePull stream failed %s: %v", candidate, drainErr)
 			continue
 		}
@@ -96,13 +160,20 @@ func pullImageWithProgress(ctx context.Context, cli client.APIClient, imageRef s
 				if err := ctx.Err(); err != nil {
 					return "", err
 				}
-				errs = append(errs, fmt.Sprintf("%s: 为 %s 创建本地标签失败: %v", candidate, localName, tagErr))
+				reason := pullFailureReason("创建本地标签失败", tagErr)
+				reportPullFailure(onProgress, reason)
+				errs = append(errs, fmt.Sprintf("%s: %s", candidate, pullFailureDetail(i+1, len(candidates), "创建本地标签失败", tagErr)))
 				logx.Errorf("ImageTag %s -> %s failed: %v", candidate, localName, tagErr)
 				continue
 			}
 			logx.Infof("ImageTag %s -> %s ok", candidate, localName)
+			if _, removeErr := cli.ImageRemove(ctx, candidate, image.RemoveOptions{}); removeErr != nil {
+				logx.Infof("ImageRemove temporary tag %s failed: %v", candidate, removeErr)
+			} else {
+				logx.Infof("ImageRemove temporary tag %s ok", candidate)
+			}
 		}
-		onProgress(PullProgress{Candidate: candidate, Status: "拉取镜像成功", Percentage: 100})
+		onProgress(PullProgress{Candidate: candidate, Status: pullStageExtracting, Percentage: 100})
 		return localName, nil
 	}
 
@@ -128,10 +199,39 @@ func PullImageWithTaskRange(ctx context.Context, svcCtx *svc.ServiceContext, ima
 		if !ok {
 			progress = svc.TaskProgress{TaskID: taskID}
 		}
-		progress.Message = "正在拉取新镜像"
-		progress.DetailMsg = formatPullProgress(p)
-		progress.Percentage = progress.Percentage
-		progress.StepPercentage = p.Percentage
+		message := p.Status
+		progressType := ""
+		indeterminate := false
+		current := int64(0)
+		total := int64(0)
+		stepPercentage := 0
+		detail := formatPullProgress(p)
+		switch p.Status {
+		case pullStageDownloading:
+			message = "正在拉取镜像"
+			progressType = svc.ProgressTypeImagePull
+			indeterminate = p.Indeterminate
+			current = p.Current
+			total = p.Total
+			stepPercentage = p.Percentage
+		case pullStageExtracting:
+			message = "正在拉取镜像"
+			progressType = svc.ProgressTypeImagePull
+			indeterminate = true
+			stepPercentage = 100
+			if detail != "" {
+				detail = "正在解压镜像 · " + detail
+			} else {
+				detail = "正在解压镜像"
+			}
+		}
+		progress.Message = message
+		progress.DetailMsg = detail
+		progress.ProgressType = progressType
+		progress.Indeterminate = indeterminate
+		progress.Current = current
+		progress.Total = total
+		progress.StepPercentage = stepPercentage
 
 		svcCtx.UpdateProgress(taskID, progress)
 	})
@@ -145,21 +245,16 @@ func PullImageWithProgress(ctx context.Context, cli client.APIClient, imageRef s
 
 // FormatPullProgress 将拉取状态格式化为任务详情文案。
 func FormatPullProgress(progress PullProgress) string {
-	status := progress.Status
-	if status == "" {
-		status = "正在拉取镜像"
-	}
-	size := ""
-	if progress.Total > 0 {
-		size = fmt.Sprintf(" · %s/%s", formatPullBytes(progress.Current), formatPullBytes(progress.Total))
-	}
-	if progress.Candidate != "" && progress.Percentage > 0 {
-		return fmt.Sprintf("%s · %s · 拉取进度 %d%%%s", status, progress.Candidate, progress.Percentage, size)
+	if progress.Detail != "" {
+		if progress.Candidate != "" {
+			return fmt.Sprintf("%s · %s", progress.Detail, progress.Candidate)
+		}
+		return progress.Detail
 	}
 	if progress.Candidate != "" {
-		return fmt.Sprintf("%s · %s%s", status, progress.Candidate, size)
+		return progress.Candidate
 	}
-	return status + size
+	return progress.Status
 }
 
 func formatPullProgress(progress PullProgress) string {
@@ -200,6 +295,7 @@ func drainPullStream(reader io.Reader) error {
 func drainPullStreamWithProgress(reader io.Reader, candidate string, onProgress func(PullProgress)) error {
 	decoder := json.NewDecoder(reader)
 	layers := make(map[string]pullLayerProgress)
+	stage := pullStageWaiting
 	for {
 		var msg dockerMsgType.JSONMessage
 		if err := decoder.Decode(&msg); err != nil {
@@ -226,15 +322,32 @@ func drainPullStreamWithProgress(reader io.Reader, candidate string, onProgress 
 		if pullLayerDone(msg.Status) {
 			layer.Done = true
 		}
+		if strings.EqualFold(strings.TrimSpace(msg.Status), "download complete") && layer.Total > 0 {
+			layer.Current = layer.Total
+		}
 		layers[msg.ID] = layer
+		if pullLayerAlreadyExists(msg.Status) {
+			continue
+		}
 		current, total := aggregatePullBytes(layers)
+		if strings.EqualFold(strings.TrimSpace(msg.Status), "downloading") {
+			stage = pullStageDownloading
+		}
+		percentage := aggregatePullPercentage(layers)
+		indeterminate := stage == pullStageDownloading && (!pullProgressHasKnownTotal(layers) || total <= 0)
+		if indeterminate {
+			current = 0
+			total = 0
+			percentage = 0
+		}
 		onProgress(PullProgress{
-			Candidate:  candidate,
-			LayerID:    msg.ID,
-			Status:     pullStatus(msg.Status),
-			Current:    current,
-			Total:      total,
-			Percentage: aggregatePullPercentage(layers),
+			Candidate:     candidate,
+			LayerID:       msg.ID,
+			Status:        stage,
+			Current:       current,
+			Total:         total,
+			Percentage:    percentage,
+			Indeterminate: indeterminate,
 		})
 
 	}
@@ -247,13 +360,85 @@ type pullLayerProgress struct {
 	Done    bool
 }
 
+func pullStageRank(stage string) int {
+	switch stage {
+	case pullStageConnecting:
+		return 0
+	case pullStageWaiting:
+		return 1
+	case pullStageDownloading:
+		return 2
+	case pullStageExtracting:
+		return 3
+	default:
+		return 0
+	}
+}
+
+func pullStageForLayers(layers map[string]pullLayerProgress) string {
+	if len(layers) == 0 {
+		return pullStageWaiting
+	}
+	allDownloaded := true
+	hasDownloading := false
+	for _, layer := range layers {
+		status := strings.ToLower(strings.TrimSpace(layer.Status))
+		switch status {
+		case "downloading":
+			hasDownloading = true
+			allDownloaded = false
+		case "download complete", "extracting", "extract complete", "pull complete", "complete":
+		default:
+			if !layer.Done {
+				allDownloaded = false
+			}
+		}
+	}
+	if allDownloaded {
+		return pullStageExtracting
+	}
+	if hasDownloading {
+		return pullStageDownloading
+	}
+	return pullStageWaiting
+}
+
+func pullProgressHasKnownTotal(layers map[string]pullLayerProgress) bool {
+	for _, layer := range layers {
+		if !layer.Done && layer.Total <= 0 {
+			return false
+		}
+	}
+	return len(layers) > 0
+}
+
+func pullLayerAlreadyExists(status string) bool {
+	return strings.EqualFold(strings.TrimSpace(status), "already exists")
+}
+
 func pullLayerDone(status string) bool {
 	switch strings.ToLower(strings.TrimSpace(status)) {
-	case "already exists", "pull complete", "complete":
+	case "already exists", "download complete", "pull complete", "complete":
 		return true
 	default:
 		return false
 	}
+}
+
+func pullStatus(status string) string {
+	status = strings.TrimSpace(status)
+	switch strings.ToLower(status) {
+	case "waiting", "preparing":
+		return pullStageWaiting
+	case "downloading":
+		return pullStageDownloading
+	case "download complete", "extracting", "extract complete", "pull complete", "complete":
+		return pullStageExtracting
+	}
+	if status == "" {
+		return pullStageWaiting
+	}
+	return status
 }
 
 func aggregatePullBytes(layers map[string]pullLayerProgress) (current, total int64) {
@@ -271,40 +456,21 @@ func aggregatePullBytes(layers map[string]pullLayerProgress) (current, total int
 	return current, total
 }
 func aggregatePullPercentage(layers map[string]pullLayerProgress) int {
-	if len(layers) == 0 {
+	current, total := aggregatePullBytes(layers)
+	if total <= 0 {
 		return 0
 	}
-	var total float64
-	allDone := true
-	for _, layer := range layers {
-		ratio := 0.0
-		switch {
-		case layer.Done:
-			ratio = 1
-		case layer.Total > 0:
-			ratio = float64(layer.Current) / float64(layer.Total)
-			allDone = false
-		default:
-			allDone = false
+	percentage := int(float64(current)/float64(total)*100 + 0.5)
+	if percentage >= 100 {
+		for _, layer := range layers {
+			if !layer.Done {
+				return 99
+			}
 		}
-		if ratio < 0 {
-			ratio = 0
-		}
-		if ratio > 1 {
-			ratio = 1
-		}
-		total += ratio
+		return 100
 	}
-	percentage := int(total/float64(len(layers))*100 + 0.5)
-	if percentage >= 100 && !allDone {
-		return 99
+	if percentage < 0 {
+		return 0
 	}
 	return percentage
-}
-
-func pullStatus(status string) string {
-	if status == "" {
-		return "正在拉取镜像"
-	}
-	return status
 }

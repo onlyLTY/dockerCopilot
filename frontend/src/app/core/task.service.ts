@@ -11,6 +11,10 @@ export interface TaskStep {
   message: string;
   detailMsg: string;
   stepPercentage?: number;
+  progressType?: string;
+  indeterminate?: boolean;
+  current?: number;
+  total?: number;
   startedAt: number;
   endedAt?: number;
   durationMs?: number;
@@ -25,7 +29,7 @@ export interface TaskItem {
   message: string; // 当前阶段信息
   detailMsg: string; // 详细信息
   isDone: boolean; // 是否结束（成功或失败）
-  failed: boolean; // 是否失败（isDone 且百分比未达成或消息含失败）
+  failed: boolean; // 是否失败（以后端明确状态为准）
   refresh: boolean; // 完成后是否需要联动刷新资源缓存
   createdAt: number; // 创建时间戳，用于排序/清理
   updatedAt: number; // 最近一次进度更新时间
@@ -42,8 +46,13 @@ interface ProgressData {
   detailMsg: string;
   resourceID?: string;
   stepPercentage?: number;
+  progressType?: string;
+  indeterminate?: boolean;
+  current?: number;
+  total?: number;
   steps?: TaskStep[];
   isDone: boolean;
+  failed?: boolean;
   /** Unix 毫秒；旧后端可能缺失 */
   updatedAt?: number;
 }
@@ -156,9 +165,10 @@ export class TaskService {
               resourceID: progress.resourceID || existing.resourceID,
               steps: progress.steps || existing.steps || [],
               isDone: progress.isDone,
-              failed:
+              failed: progress.failed ?? (
                 progress.isDone &&
-                (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
+                (progress.percentage < 100 || /失败|错误|中断|拒绝|超时|error|fail|timeout/i.test(progress.message || ''))
+              ),
               updatedAt: Math.max(existing.updatedAt || 0, serverUpdated),
             };
           }
@@ -171,9 +181,10 @@ export class TaskService {
             resourceID: progress.resourceID,
             steps: progress.steps || [],
             isDone: progress.isDone,
-            failed:
+            failed: progress.failed ?? (
               progress.isDone &&
-              (progress.percentage < 100 || /失败|错误|error|fail/i.test(progress.message || '')),
+              (progress.percentage < 100 || /失败|错误|中断|拒绝|超时|error|fail|timeout/i.test(progress.message || ''))
+            ),
             refresh: !!progress.resourceID,
             createdAt: serverUpdated,
             updatedAt: serverUpdated,
@@ -346,7 +357,8 @@ export class TaskService {
       list.map(t => {
         if (t.taskID !== taskID || t.isDone) return t;
         const failed =
-          d.isDone && (d.percentage < 100 || /失败|错误|error|fail/i.test(d.message || ''));
+          d.failed ??
+          (d.isDone && (d.percentage < 100 || /失败|错误|中断|拒绝|超时|error|fail|timeout/i.test(d.message || '')));
         if (d.isDone) {
           doneNow = true;
           refreshNeeded = t.refresh;

@@ -21,12 +21,13 @@ type ImagesListLogic struct {
 }
 
 type imageListItem struct {
-	Id         string `json:"id"`
-	Name       string `json:"name"`
-	Tag        string `json:"tag"`
-	Size       string `json:"size"`
-	InUsed     bool   `json:"inUsed"`
-	CreateTime string `json:"createTime"`
+	Id         string   `json:"id"`
+	Name       string   `json:"name"`
+	Tag        string   `json:"tag"`
+	RepoTags   []string `json:"repoTags"`
+	Size       string   `json:"size"`
+	InUsed     bool     `json:"inUsed"`
+	CreateTime string   `json:"createTime"`
 }
 
 func NewImagesListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ImagesListLogic {
@@ -75,6 +76,7 @@ func (l *ImagesListLogic) ImagesList() (resp *types.Resp, err error) {
 			Id:         v.ID,
 			Name:       imageNameForDisplay(v.ImageName, hubURLs),
 			Tag:        v.ImageTag,
+			RepoTags:   v.RepoTags,
 			Size:       v.SizeFormat,
 			InUsed:     v.InUsed,
 			CreateTime: time.Unix(v.Created, 0).Format("2006-01-02 15:04:05"),

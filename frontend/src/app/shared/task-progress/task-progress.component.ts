@@ -40,6 +40,32 @@ export class TaskProgressComponent implements OnDestroy {
     return this.duration(elapsed);
   }
 
+  taskDuration(task: TaskItem): string {
+    const steps = task.steps || [];
+    if (steps.length) {
+      const startedAt = steps[0].startedAt;
+      const lastStep = steps[steps.length - 1];
+      const endedAt = task.isDone
+        ? lastStep.endedAt || task.updatedAt
+        : this.now();
+      return this.duration(Math.max(0, endedAt - startedAt));
+    }
+    const endedAt = task.isDone ? task.updatedAt : this.now();
+    return this.duration(Math.max(0, endedAt - task.createdAt));
+  }
+
+  formatBytes(bytes: number): string {
+    if (bytes < 0) bytes = 0;
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let unit = 0;
+    let value = bytes;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit++;
+    }
+    return unit === 0 ? `${Math.round(value)} ${units[unit]}` : `${value.toFixed(1)} ${units[unit]}`;
+  }
+
   close(e: Event) {
     if (e.target === e.currentTarget) this.tasks.closeView();
   }

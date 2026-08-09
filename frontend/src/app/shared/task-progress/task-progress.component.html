@@ -1,64 +1,66 @@
 @if (task(); as t) {
   <div class="modal-backdrop d-grid place-items-center" (click)="close($event)">
     <section
-      class="modal min-w-0 d-grid modal-m modal-progress"
+      class="modal min-w-0 d-grid modal-l modal-progress"
       role="dialog"
       aria-modal="true"
       (click)="$event.stopPropagation()"
     >
-      <dc-modal-heading [title]="t.title" [subtitle]="t.message" (closed)="tasks.closeView()" />
+      <dc-modal-heading
+        [title]="t.title"
+        [subtitle]="(t.failed ? '失败' : t.isDone ? '已完成' : '进行中') + '·' + t.percentage + '%'+ '| 总耗时·'+taskDuration(t)"
+        [subtitleClass]="t.failed ? 'text-red' : t.isDone ? 'text-green' : 'text-blue'"
+        (closed)="tasks.closeView()"
+      />
       <div class="modal-body">
-        <div class="mt-20">
-          <div class="d-flex justify-between gap-12 fs-12 text-black">
-            <span [class.text-red]="t.failed">
-              {{ t.failed ? '失败' : t.isDone ? '已完成' : '进行中' }}
-            </span>
-            @if (!t.isDone) {
-              <span class="text-muted">后台执行中，可关闭此窗口</span>
-            }
-          </div>
-          @if ((t.steps || []).length) {
-            <div class="task-steps mt-16 d-flex flex-col gap-8">
-              @for (step of (t.steps || []); track step.startedAt + step.message) {
-                <div class="task-step d-flex items-start gap-8 fs-12">
-                  <span
-                    class="task-step-mark flex-none"
-                    [class.bg-green]="step.isDone && !step.failed"
-                    [class.bg-red]="step.failed"
-                    [class.bg-blue]="!step.isDone"
-                  ></span>
-                  <div class="min-w-0 flex-1">
-                    <div class="d-flex justify-between gap-8">
-                      <span class="text-black break-word">{{ step.message }}</span>
-                      @if (step.endedAt) {
-                        <span class="text-muted flex-none">{{ stepDuration(step) }}</span>
-                      } @else {
-                        <span class="text-blue flex-none">{{ stepDuration(step) }}</span>
-                      }
-                    </div>
-                    @if (step.detailMsg && step.detailMsg !== step.message) {
-                      <div class="text-muted mt-2 break-word">{{ step.detailMsg }}</div>
-                    }
-                    @if (step.stepPercentage !== undefined) {
-                      <div class="task-step-progress-wrap mt-6 d-flex items-center gap-6">
-                        <div class="task-step-progress flex-1 h-6 bg-line overflow-hidden rounded-6">
-                          <span
-                            class="d-block h-full bg-blue transition-width"
-                            [class.task-step-progress-indeterminate]="step.stepPercentage === 0 && !step.isDone"
-                            [class.bg-green]="step.isDone && !step.failed"
-                            [class.bg-red]="step.failed"
-                            [style.width.%]="step.stepPercentage"
-                          ></span>
-                        </div>
-                        <span class="text-muted fs-11 flex-none">{{ step.stepPercentage }}%</span>
-                      </div>
+        @if ((t.steps || []).length) {
+          <div class="task-steps mt-6 d-flex flex-col gap-8">
+            @for (step of (t.steps || []); track step.startedAt + step.message) {
+              <div class="task-step d-flex items-start gap-8 fs-12">
+                <span
+                  class="task-step-mark flex-none"
+                  [class.bg-green]="step.isDone && !step.failed"
+                  [class.bg-red]="step.failed"
+                  [class.bg-blue]="!step.isDone"
+                ></span>
+                <div class="min-w-0 flex-1">
+                  <div class="d-flex justify-between gap-8">
+                    <span class="text-black break-word">{{ step.message }}</span>
+                    @if (step.endedAt) {
+                      <span class="text-muted flex-none">{{ stepDuration(step) }}</span>
+                    } @else {
+                      <span class="text-blue flex-none">{{ stepDuration(step) }}</span>
                     }
                   </div>
+                  @if (step.detailMsg && step.detailMsg !== step.message) {
+                    <div class="text-muted mt-2 break-word">{{ step.detailMsg }}</div>
+                  }
+                  @if (step.progressType === 'image-pull') {
+                    <div class="task-step-progress-wrap mt-6 d-flex items-center gap-6">
+                      <div class="task-step-progress flex-1 h-6 bg-line overflow-hidden rounded-6">
+                        <span
+                          class="d-block h-full bg-blue transition-width"
+                          [class.task-step-progress-indeterminate]="step.indeterminate && !step.isDone"
+                          [class.bg-green]="step.isDone && !step.failed"
+                          [class.bg-red]="step.failed"
+                          [style.width.%]="step.stepPercentage || 0"
+                        ></span>
+                      </div>
+                      @if (step.indeterminate && !step.isDone) {
+                        <span class="text-muted fs-11 flex-none">处理中</span>
+                      } @else {
+                        <span class="text-muted fs-11 flex-none">{{ step.stepPercentage || 0 }}%</span>
+                      }
+                    </div>
+                    @if (step.total) {
+                      <div class="text-muted mt-2 fs-11">已拉取 {{ formatBytes(step.current || 0) }} / {{ formatBytes(step.total) }}</div>
+                    }
+                  }
                 </div>
-              }
-            </div>
-          }
-        </div>
+              </div>
+            }
+          </div>
+        }
       </div>
       <div class="modal-actions d-flex justify-end gap-8">
         <button class="btn text-red bg-secondary-bg gap-4" (click)="remove(t.taskID)">

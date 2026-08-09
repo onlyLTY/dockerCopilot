@@ -27,8 +27,15 @@ type Result struct {
 
 type ProgressEvent struct {
 	Message        string
+	DetailMsg      string
+	Percentage     int
 	StepPercentage int
+	ProgressType   string
+	Indeterminate  bool
+	Current        int64
+	Total          int64
 	IsPull         bool
+	Failed         bool
 }
 
 type ProgressReporter func(event ProgressEvent)
@@ -72,14 +79,19 @@ func Config(ctx context.Context, dockerClient client.APIClient, projectDir strin
 // depends_on 多服务排序、命名网络与数据卷。
 // 不支持：build:（镜像须已存在或可拉取）、secrets、configs、profiles、swarm 多副本编排。
 func Up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool) (Result, error) {
-	return up(ctx, dockerClient, projectDir, files, timeout, pullImages, nil, nil)
+	return up(ctx, dockerClient, projectDir, files, timeout, 0, pullImages, nil, nil)
 }
 
 func UpWithProgress(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool, report ProgressReporter, mappings ...PathMapping) (Result, error) {
-	return up(ctx, dockerClient, projectDir, files, timeout, pullImages, report, mappings)
+	return up(ctx, dockerClient, projectDir, files, timeout, 0, pullImages, report, mappings)
 }
 
-func up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout time.Duration, pullImages bool, report ProgressReporter, mappings []PathMapping) (Result, error) {
+// UpWithProgressAndPullTimeout 在保留 Compose 总超时的同时，为每个镜像拉取使用独立超时。
+func UpWithProgressAndPullTimeout(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout, pullTimeout time.Duration, pullImages bool, report ProgressReporter, mappings ...PathMapping) (Result, error) {
+	return up(ctx, dockerClient, projectDir, files, timeout, pullTimeout, pullImages, report, mappings)
+}
+
+func up(ctx context.Context, dockerClient client.APIClient, projectDir string, files []string, timeout, pullTimeout time.Duration, pullImages bool, report ProgressReporter, mappings []PathMapping) (Result, error) {
 	if projectDir == "" || len(files) == 0 {
 		return Result{}, fmt.Errorf("Compose 执行参数不完整")
 	}
@@ -104,7 +116,15 @@ func up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 		message := fmt.Sprintf(format, args...)
 		fmt.Fprintf(out, "%s\n", message)
 		if report != nil && !strings.HasPrefix(message, "拉取镜像 ") {
-			report(ProgressEvent{Message: message})
+			percentage := 60
+			if strings.Contains(message, "移除") || strings.Contains(message, "删除") {
+				percentage = 70
+			} else if strings.Contains(message, "创建") {
+				percentage = 80
+			} else if strings.Contains(message, "启动") {
+				percentage = 90
+			}
+			report(ProgressEvent{Message: message, Percentage: percentage})
 		}
 
 	}
@@ -133,7 +153,7 @@ func up(ctx context.Context, dockerClient client.APIClient, projectDir string, f
 	}
 	for _, serviceName := range order {
 		svc := project.Services[serviceName]
-		if err := deployService(runCtx, dockerClient, project.Name, projectDir, serviceName, svc, defaultNetwork, networkNames, volumeNames, mappings, pullImages, logf, report); err != nil {
+		if err := deployService(runCtx, dockerClient, project.Name, projectDir, serviceName, svc, defaultNetwork, networkNames, volumeNames, mappings, pullImages, pullTimeout, logf, report); err != nil {
 
 			return Result{Output: sanitizeOutput(out.String())}, err
 		}
@@ -236,7 +256,7 @@ func ensureVolumes(ctx context.Context, cli client.APIClient, project *composeTy
 }
 
 // deployService 按需拉镜像、转换配置，并在配置哈希变化时重建后启动容器。
-func deployService(ctx context.Context, cli client.APIClient, projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string, mappings []PathMapping, pullImages bool, logf func(string, ...interface{}), report ProgressReporter) error {
+func deployService(ctx context.Context, cli client.APIClient, projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string, mappings []PathMapping, pullImages bool, pullTimeout time.Duration, logf func(string, ...interface{}), report ProgressReporter) error {
 	t, err := translateService(projectName, root, serviceName, svc, defaultNetwork, networkNames, volumeNames, mappings...)
 	if err != nil {
 		return fmt.Errorf("服务 %s 配置转换失败: %w", serviceName, err)
@@ -248,20 +268,86 @@ func deployService(ctx context.Context, cli client.APIClient, projectName, root,
 	}
 	if pullImages || !present || strings.EqualFold(svc.PullPolicy, "always") {
 		logf("拉取镜像 %s", svc.Image)
-		if _, err := utiles.PullImageWithProgress(ctx, cli, svc.Image, func(progress utiles.PullProgress) {
+		pullCtx := ctx
+		cancelPull := func() {}
+		if pullTimeout > 0 {
+			pullCtx, cancelPull = context.WithTimeout(ctx, pullTimeout)
+		}
+		_, pullErr := utiles.PullImageWithProgress(pullCtx, cli, svc.Image, func(progress utiles.PullProgress) {
 
 			if report != nil {
-				report(ProgressEvent{Message: utiles.FormatPullProgress(progress), StepPercentage: progress.Percentage, IsPull: true})
-
+				message := progress.Status
+				progressType := ""
+				indeterminate := progress.Indeterminate
+				current := progress.Current
+				total := progress.Total
+				stepPercentage := progress.Percentage
+				detail := utiles.FormatPullProgress(progress)
+				switch progress.Status {
+				case "正在下载镜像":
+					message = "正在拉取镜像（" + serviceName + "）"
+					progressType = "image-pull"
+				case "正在解压镜像":
+					message = "正在拉取镜像（" + serviceName + "）"
+					progressType = "image-pull"
+					indeterminate = true
+					current = 0
+					total = 0
+					stepPercentage = 100
+					if detail != "" {
+						detail = "正在解压镜像 · " + detail
+					} else {
+						detail = "正在解压镜像"
+					}
+				default:
+					message += "（" + serviceName + "）"
+				}
+				report(ProgressEvent{
+					Message:        message,
+					DetailMsg:      detail,
+					StepPercentage: stepPercentage,
+					ProgressType:   progressType,
+					Indeterminate:  indeterminate,
+					Current:        current,
+					Total:          total,
+					IsPull:         true,
+				})
 			}
-		}); err != nil {
-
-			return fmt.Errorf("服务 %s 拉取镜像失败: %w", serviceName, err)
+		})
+		cancelPull()
+		if pullErr != nil {
+			if report != nil {
+				report(ProgressEvent{
+					Message:    "拉取镜像失败（" + serviceName + "）",
+					DetailMsg:  pullErr.Error(),
+					Percentage: 50,
+					Failed:     true,
+				})
+			}
+			return fmt.Errorf("服务 %s 拉取镜像失败: %w", serviceName, pullErr)
 		}
 	}
 
+	reportStage := func(message string, percentage int) {
+		if report != nil {
+			report(ProgressEvent{Message: message, Percentage: percentage})
+		}
+	}
+	reportFailure := func(message string, percentage int, err error) {
+		if report != nil {
+			report(ProgressEvent{
+				Message:    message,
+				DetailMsg:  err.Error(),
+				Percentage: percentage,
+				Failed:     true,
+			})
+		}
+	}
+
+	reportStage("正在检查容器（"+serviceName+"）", 60)
 	existing, err := findContainerByName(ctx, cli, t.name)
 	if err != nil {
+		reportFailure("检查容器失败（"+serviceName+"）", 60, err)
 		return err
 	}
 	newHash := t.config.Labels[labelConfigHash]
@@ -272,16 +358,22 @@ func deployService(ctx context.Context, cli client.APIClient, projectName, root,
 			return nil
 		}
 		logf("服务 %s 配置变化，重建容器", serviceName)
+		reportStage("正在移除旧容器（"+serviceName+"）", 70)
 		if err := removeContainer(ctx, cli, existing.ID); err != nil {
+			reportFailure("移除旧容器失败（"+serviceName+"）", 70, err)
 			return fmt.Errorf("服务 %s 移除旧容器失败: %w", serviceName, err)
 		}
 	}
 
+	reportStage("正在创建容器（"+serviceName+"）", 80)
 	created, err := cli.ContainerCreate(ctx, t.config, t.hostConfig, t.network, nil, t.name)
 	if err != nil {
+		reportFailure("创建容器失败（"+serviceName+"）", 80, err)
 		return fmt.Errorf("服务 %s 创建容器失败: %w", serviceName, err)
 	}
+	reportStage("正在启动容器（"+serviceName+"）", 90)
 	if err := cli.ContainerStart(ctx, created.ID, container.StartOptions{}); err != nil {
+		reportFailure("启动容器失败（"+serviceName+"）", 90, err)
 		return fmt.Errorf("服务 %s 启动容器失败: %w", serviceName, err)
 	}
 	logf("服务 %s 已启动 (%s)", serviceName, t.name)

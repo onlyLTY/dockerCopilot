@@ -9,6 +9,7 @@ export interface ImageRow {
   id: string;
   name: string;
   tag: string;
+  repoTags: string[];
   size: string;
   inUsed: boolean;
   createTime: string;
@@ -41,10 +42,12 @@ export class ImageService {
   list(): Observable<ApiResponse<ImageRow[]>> {
     return this.http.get<ApiResponse<ImageRow[]>>('/api/images');
   }
-  remove(id: string, force = false): Observable<ApiResponse<Record<string, unknown>>> {
+  remove(id: string, force = false, repoTag?: string): Observable<ApiResponse<Record<string, unknown>>> {
+    const params = new URLSearchParams({ force: String(force) });
+    if (!force && repoTag) params.set('repoTag', repoTag);
     return this.done(
       this.http.delete<ApiResponse<Record<string, unknown>>>(
-        `/api/image/${encodeURIComponent(id)}?force=${force}`,
+        `/api/image/${encodeURIComponent(id)}?${params.toString()}`,
       ),
     );
   }
