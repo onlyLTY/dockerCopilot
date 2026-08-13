@@ -249,32 +249,32 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		rest.WithPrefix("/api"),
 	)
 
-server.AddRoutes(
-			[]rest.Route{
-				{
-					Method:  http.MethodDelete,
-					Path:    "/progress/clear",
-					Handler: progress.ClearProgressHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodDelete,
-					Path:    "/progress/:taskid",
-					Handler: progress.DeleteProgressHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/progress/:taskid",
-					Handler: progress.GetProgressHandler(serverCtx),
-				},
-				{
-					Method:  http.MethodGet,
-					Path:    "/progress/list",
-					Handler: progress.ListProgressHandler(serverCtx),
-				},
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodDelete,
+				Path:    "/progress/clear",
+				Handler: progress.ClearProgressHandler(serverCtx),
 			},
-			rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-			rest.WithPrefix("/api"),
-		)
+			{
+				Method:  http.MethodDelete,
+				Path:    "/progress/:taskid",
+				Handler: progress.DeleteProgressHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/progress/:taskid",
+				Handler: progress.GetProgressHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/progress/list",
+				Handler: progress.ListProgressHandler(serverCtx),
+			},
+		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/api"),
+	)
 
 	server.AddRoutes(
 		[]rest.Route{
@@ -320,7 +320,28 @@ server.AddRoutes(
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/settings/update-check",
+				Path:    "/settings/proxy/daemon",
+				Handler: settings.GetDaemonProxyHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/settings/proxy/daemon",
+				Handler: settings.ApplyDaemonProxyHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/daemon/restart",
+				Handler: settings.RestartDaemonHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/daemon/restart/:taskid",
+				Handler: settings.DaemonOperationHandler(serverCtx),
+			},
+			{
+				Method: http.MethodGet,
+				Path:   "/settings/update-check",
+
 				Handler: settings.GetUpdateCheckSettingsHandler(serverCtx),
 			},
 			{

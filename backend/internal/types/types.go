@@ -91,6 +91,10 @@ type GetProgressReq struct {
 	TaskId string `path:"taskid" validate:"required"`
 }
 
+type DaemonOperationReq struct {
+	OperationID string `path:"taskid" validate:"required"`
+}
+
 type IconDeleteReq struct {
 	ImageName string `form:"imageName" validate:"required"`
 }
@@ -123,6 +127,19 @@ type LogLevelReq struct {
 
 type LoginReq struct {
 	SecretKey string `form:"secretKey" validate:"required"`
+}
+
+type DaemonProxyDraftData struct {
+	HTTPProxy  string `json:"httpProxy"`
+	HTTPSProxy string `json:"httpsProxy"`
+	NoProxy    string `json:"noProxy"`
+}
+
+type DaemonProxyApplyReq struct {
+	HTTPProxy  string `json:"httpProxy"`
+	HTTPSProxy string `json:"httpsProxy"`
+	NoProxy    string `json:"noProxy"`
+	Hash       string `json:"hash" validate:"required"`
 }
 
 type ProxySettingsData struct {

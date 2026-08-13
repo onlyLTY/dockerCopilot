@@ -84,26 +84,43 @@ func (l *UpdateAppSettingsLogic) UpdateAppSettings(body *types.UpdateAppSettings
 		}
 	}
 
+	if body.DaemonProxyDraft != nil {
+		draft := settingstore.DaemonProxyDraft{
+			HTTPProxy:  body.DaemonProxyDraft.HTTPProxy,
+			HTTPSProxy: body.DaemonProxyDraft.HTTPSProxy,
+			NoProxy:    body.DaemonProxyDraft.NoProxy,
+		}
+		if _, err := settingstore.SetDaemonProxyDraft(draft); err != nil {
+			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
+		}
+	}
+
 	msg := "success"
-	if body.Proxy != nil {
+	if body.Proxy != nil && body.DaemonProxyDraft != nil {
+		msg = "设置已保存；Copilot 代理需重启服务生效，daemon 代理草稿需单独确认覆写"
+	} else if body.Proxy != nil {
 		msg = "设置已保存，代理设置将在重启服务后生效"
+	} else if body.DaemonProxyDraft != nil {
+		msg = "daemon 代理草稿已保存，尚未覆写宿主机配置"
 	}
 	if len(warnings) > 0 {
 		msg = strings.Join(append([]string{msg}, warnings...), "；")
 	}
 
 	data := SnapshotAppSettings()
-if len(warnings) > 0 {
-			return logic.Biz(200, msg, map[string]interface{}{
-				"updateCheck":    data.UpdateCheck,
-				"autoBackup":     data.AutoBackup,
-				"logLevel":       data.LogLevel,
-				"retention":      data.Retention,
-				"pullTimeoutSec": data.PullTimeoutSec,
-				"hubUrls":        data.HubURLs,
-				"proxy":          data.Proxy,
-				"warnings":       warnings,
-			}), nil
-		}
+	if len(warnings) > 0 {
+		return logic.Biz(200, msg, map[string]interface{}{
+			"updateCheck":                data.UpdateCheck,
+			"autoBackup":                 data.AutoBackup,
+			"logLevel":                   data.LogLevel,
+			"retention":                  data.Retention,
+			"pullTimeoutSec":             data.PullTimeoutSec,
+			"hubUrls":                    data.HubURLs,
+			"proxy":                      data.Proxy,
+			"daemonProxyDraft":           data.DaemonProxyDraft,
+			"daemonProxyDraftConfigured": data.DaemonProxyDraftConfigured,
+			"warnings":                   warnings,
+		}), nil
+	}
 	return logic.Biz(200, msg, data), nil
 }

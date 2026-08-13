@@ -178,6 +178,28 @@ func TestProgressStepWithoutPullTypeHasNoVisualProgress(t *testing.T) {
 	}
 }
 
+func TestProgressPullToRegularStepClearsVisualProgress(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+	ctx.UpdateProgress("task", TaskProgress{
+		TaskID: "task", Message: "正在拉取镜像", ProgressType: ProgressTypeImagePull,
+		Indeterminate: true, Current: 80, Total: 100, StepPercentage: 80,
+	})
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", Message: "正在停止容器", StepPercentage: 30})
+
+	progress, ok := ctx.GetProgress("task")
+	if !ok || len(progress.Steps) != 2 {
+		t.Fatalf("expected pull and regular steps: %+v", progress)
+	}
+	pullStep, regularStep := progress.Steps[0], progress.Steps[1]
+	if pullStep.ProgressType != ProgressTypeImagePull || !pullStep.Indeterminate || pullStep.Current != 80 || pullStep.Total != 100 {
+		t.Fatalf("pull step metadata changed unexpectedly: %+v", pullStep)
+	}
+	if regularStep.ProgressType != "" || regularStep.Indeterminate || regularStep.Current != 0 || regularStep.Total != 0 {
+		t.Fatalf("regular step retained pull metadata: %+v", regularStep)
+	}
+}
+
 func TestProgressPullUpdatesSingleStep(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}

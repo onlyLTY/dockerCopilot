@@ -22,6 +22,28 @@ export interface ProxySettings {
   NO_PROXY: string;
 }
 
+export interface DaemonProxyDraft {
+  httpProxy: string;
+  httpsProxy: string;
+  noProxy: string;
+}
+
+export interface DaemonProxySettings {
+  helperEnabled: boolean;
+  fileExists: boolean;
+  writable: boolean;
+  hash: string;
+  fileProxy: DaemonProxyDraft;
+  effectiveProxy: DaemonProxyDraft;
+  restartRequired: boolean;
+  message?: string;
+}
+
+export interface DaemonRestartOperation {
+  operationID: string;
+  status: string;
+  message?: string;
+}
 export interface AppSettings {
   updateCheck: UpdateSettings;
   autoBackup: BackupSettings;
@@ -32,6 +54,8 @@ export interface AppSettings {
   hubUrls: string[];
   /** 后端内置默认加速源，供「恢复默认」 */
   defaultHubUrls?: string[];
+  daemonProxyDraft: DaemonProxyDraft;
+  daemonProxyDraftConfigured: boolean;
   proxy: ProxySettings;
 }
 
@@ -43,6 +67,7 @@ export interface AppSettingsUpdate {
   pullTimeoutSec?: number;
   hubUrls?: string[];
   proxy?: ProxySettings;
+  daemonProxyDraft?: DaemonProxyDraft;
 }
 
 export interface RuntimeSettings {
@@ -169,6 +194,31 @@ export class SettingsService {
     );
   }
 
+  getDaemonProxy(): Observable<ApiResponse<DaemonProxySettings>> {
+    return this.http.get<ApiResponse<DaemonProxySettings>>('/api/settings/proxy/daemon');
+  }
+
+  applyDaemonProxy(settings: {
+    httpProxy: string;
+    httpsProxy: string;
+    noProxy: string;
+    hash: string;
+  }): Observable<ApiResponse<{ status: DaemonProxySettings; backupCreated: boolean }>> {
+    return this.http.post<ApiResponse<{ status: DaemonProxySettings; backupCreated: boolean }>>(
+      '/api/settings/proxy/daemon',
+      settings,
+    );
+  }
+
+  restartDaemon(): Observable<ApiResponse<DaemonRestartOperation>> {
+    return this.http.post<ApiResponse<DaemonRestartOperation>>('/api/daemon/restart', {});
+  }
+
+  getDaemonOperation(operationID: string): Observable<ApiResponse<DaemonRestartOperation>> {
+    return this.http.get<ApiResponse<DaemonRestartOperation>>(
+      '/api/daemon/restart/' + encodeURIComponent(operationID),
+    );
+  }
   setProxySettings(settings: ProxySettings): Observable<ApiResponse<ProxySettings>> {
     return this.saveAll({ proxy: settings }).pipe(
       map(r => ({

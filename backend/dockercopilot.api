@@ -131,6 +131,23 @@ type ProxySettingsData {
 	NoProxy     string `json:"NO_PROXY"`
 }
 
+type DaemonProxyDraftData {
+	HTTPProxy  string `json:"httpProxy"`
+	HTTPSProxy string `json:"httpsProxy"`
+	NoProxy    string `json:"noProxy"`
+}
+
+type DaemonProxyApplyReq {
+	HTTPProxy  string `json:"httpProxy"`
+	HTTPSProxy string `json:"httpsProxy"`
+	NoProxy    string `json:"noProxy"`
+	Hash       string `json:"hash" validate:"required"`
+}
+
+type DaemonOperationReq {
+	OperationID string `path:"taskid" validate:"required"`
+}
+
 // 聚合写入契约占位；实际 partial 更新用 logic 内指针 DTO（handler 自定义 Decode）。
 type UpdateAppSettingsReq {
 	UpdateCheckInterval string            `json:"updateCheckInterval,optional"`
@@ -338,6 +355,18 @@ service dockerCopilot {
 
 	@handler updateAppSettings
 	put /settings (UpdateAppSettingsReq) returns (Resp)
+
+	@handler getDaemonProxy
+	get /settings/proxy/daemon returns (Resp)
+
+	@handler applyDaemonProxy
+	post /settings/proxy/daemon (DaemonProxyApplyReq) returns (Resp)
+
+	@handler restartDaemon
+	post /daemon/restart returns (Resp)
+
+	@handler daemonOperation
+	get /daemon/restart/:taskid (DaemonOperationReq) returns (Resp)
 
 	@handler getUpdateCheckSettings
 	get /settings/update-check returns (Resp)

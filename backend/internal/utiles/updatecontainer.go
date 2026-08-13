@@ -43,22 +43,23 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	timeout := 10
 	signal := "SIGINT"
 
-serviceContext.UpdateProgress(taskID, oldTaskProgress)
-		oldTaskProgress.Message = "正在拉取新镜像"
-		oldTaskProgress.Percentage = 10
-		oldTaskProgress.DetailMsg = "正在拉取新镜像"
-		serviceContext.UpdateProgress(taskID, oldTaskProgress)
-		pullTimeoutSec := settingstore.GetPullTimeoutSec()
-		if pullTimeoutSec <= 0 {
-			pullTimeoutSec = int(serviceContext.Config.PullTimeoutSec)
-		}
-		if pullTimeoutSec <= 0 {
-			pullTimeoutSec = int(config.DefaultPullTimeoutSec)
-		}
-		pullCtx, cancelPull := context.WithTimeout(context.Background(), time.Duration(pullTimeoutSec)*time.Second)
-		defer cancelPull()
-		if err := PullImageWithTask(pullCtx, serviceContext, imageNameAndTag, taskID); err != nil {
+	serviceContext.UpdateProgress(taskID, oldTaskProgress)
+	oldTaskProgress.Message = "正在拉取新镜像"
+	oldTaskProgress.Percentage = 10
+	oldTaskProgress.DetailMsg = "正在拉取新镜像"
+	serviceContext.UpdateProgress(taskID, oldTaskProgress)
+	pullTimeoutSec := settingstore.GetPullTimeoutSec()
+	if pullTimeoutSec <= 0 {
+		pullTimeoutSec = int(serviceContext.Config.PullTimeoutSec)
+	}
+	if pullTimeoutSec <= 0 {
+		pullTimeoutSec = int(config.DefaultPullTimeoutSec)
+	}
+	pullCtx, cancelPull := context.WithTimeout(context.Background(), time.Duration(pullTimeoutSec)*time.Second)
+	defer cancelPull()
+	if err := PullImageWithTask(pullCtx, serviceContext, imageNameAndTag, taskID); err != nil {
 		oldTaskProgress, _ = serviceContext.GetProgress(taskID)
+		clearPullProgress(&oldTaskProgress)
 		oldTaskProgress.Message = "拉取镜像失败"
 		oldTaskProgress.DetailMsg = err.Error()
 		oldTaskProgress.IsDone = true
@@ -76,8 +77,10 @@ serviceContext.UpdateProgress(taskID, oldTaskProgress)
 			IsDone:     false,
 		}
 	}
-	oldTaskProgress.Message = "拉取镜像成功"
-	oldTaskProgress.DetailMsg = "拉取镜像成功"
+		clearPullProgress(&oldTaskProgress)
+		oldTaskProgress.Message = "拉取镜像成功"
+		oldTaskProgress.DetailMsg = "拉取镜像成功"
+
 
 	oldTaskProgress.Percentage = 30
 	oldTaskProgress.Message = "正在停止容器"
@@ -179,4 +182,11 @@ serviceContext.UpdateProgress(taskID, oldTaskProgress)
 	oldTaskProgress.IsDone = true
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
 	return nil
+}
+
+func clearPullProgress(progress *svc.TaskProgress) {
+	progress.ProgressType = ""
+	progress.Indeterminate = false
+	progress.Current = 0
+	progress.Total = 0
 }

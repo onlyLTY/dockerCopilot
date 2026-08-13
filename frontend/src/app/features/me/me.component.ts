@@ -1,6 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SettingsService } from '../../core/settings.service';
+import { SettingsService, DaemonProxySettings, DaemonRestartOperation } from '../../core/settings.service';
 import { VersionService, VersionInfo } from '../../core/version.service';
 import { ToastService } from '../../core/toast.service';
 import { ApiResponse } from '../../core/compose.service';
@@ -14,6 +14,7 @@ import {
   FormSelectOption,
 } from '../../shared/form-select/form-select.component';
 import { FormExpansionComponent } from '../../shared/form-expansion/form-expansion.component';
+import { ConfirmService } from '../../core/confirm.service';
 
 interface LogEntry {
   timestamp: string;
@@ -41,9 +42,14 @@ export class MeComponent {
   private readonly versions = inject(VersionService);
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
+  private readonly confirm = inject(ConfirmService);
 
+  readonly daemonProxy = signal<DaemonProxySettings | null>(null);
+  readonly daemonProxyLoading = signal(false);
+  readonly daemonProxyBusy = signal(false);
   readonly runtime = this.settings.runtime;
   readonly version = signal<VersionInfo>({ version: '', buildDate: '' });
+  readonly daemonRestart = signal<DaemonRestartOperation | null>(null);
   readonly showSettings = signal(false);
   readonly showLogs = signal(false);
   readonly saving = signal(false);
@@ -119,6 +125,10 @@ export class MeComponent {
     'docker.amingg.com',
   ];
   proxyDraft = { githubProxy: '', HTTP_PROXY: '', HTTPS_PROXY: '', NO_PROXY: '' };
+  daemonProxyDraft = { httpProxy: '', httpsProxy: '', noProxy: '' };
+  daemonProxyErrors = { httpProxy: '', httpsProxy: '', noProxy: '' };
+  private daemonProxyDraftConfigured = false;
+  private daemonProxyHash = '';
 
   private readonly updateLabels: Record<string, string> = {
     off: '关闭（仅手动检查）',
@@ -183,10 +193,160 @@ export class MeComponent {
         if (data.defaultHubUrls?.length) this.defaultHubUrls = [...data.defaultHubUrls];
         this.hubUrlsDraft = [...(data.hubUrls ?? this.defaultHubUrls)];
         if (data.proxy) this.proxyDraft = { ...data.proxy };
+        if (data.daemonProxyDraftConfigured && data.daemonProxyDraft) {
+          this.daemonProxyDraftConfigured = true;
+          this.daemonProxyDraft = { ...this.daemonProxyDraft, ...data.daemonProxyDraft };
+        }
+        this.loadDaemonProxy();
       },
     });
   }
 
+  private loadDaemonProxy(): void {
+    this.daemonProxyLoading.set(true);
+    this.settings.getDaemonProxy().subscribe({
+      next: response => {
+        this.daemonProxyLoading.set(false);
+        if (response.code !== 200 || !response.data) {
+          this.toast.error(response.msg || '读取 Docker daemon 代理失败');
+          return;
+        }
+        const data = response.data;
+        this.daemonProxy.set(data);
+        this.daemonProxyHash = data.hash || '';
+        if (!this.daemonProxyDraftConfigured) {
+          const source = data.fileProxy || data.effectiveProxy;
+          this.daemonProxyDraft = { ...this.daemonProxyDraft, ...source };
+        }
+      },
+      error: error => {
+        this.daemonProxyLoading.set(false);
+        this.toast.error(error?.error?.msg || '读取 Docker daemon 代理失败');
+      },
+    });
+  }
+
+  private validateDaemonProxy(): boolean {
+    const errors = { httpProxy: '', httpsProxy: '', noProxy: '' };
+    for (const key of ['httpProxy', 'httpsProxy'] as const) {
+      const value = this.daemonProxyDraft[key];
+      if (!value) continue;
+      if (/\s|[\u0000-\u001f\u007f]/.test(value)) {
+        errors[key] = '不能包含空白或控制字符';
+        continue;
+      }
+      try {
+        const parsed = new URL(value);
+        if (!parsed.hostname) throw new Error();
+        if (!['http:', 'https:', 'socks5:', 'socks5h:'].includes(parsed.protocol)) throw new Error();
+        if (parsed.username || parsed.password) throw new Error();
+      } catch {
+        errors[key] = '请输入有效的 http、https、socks5 或 socks5h 代理 URL，且不能包含账号密码';
+      }
+    }
+    if (/[\u0000-\u001f\u007f]/.test(this.daemonProxyDraft.noProxy)) {
+      errors.noProxy = '不能包含控制字符或换行';
+    }
+    this.daemonProxyErrors = errors;
+    return !Object.values(errors).some(Boolean);
+  }
+
+  updateDaemonProxyDraft(key: 'httpProxy' | 'httpsProxy' | 'noProxy', value: string): void {
+    this.daemonProxyDraft = { ...this.daemonProxyDraft, [key]: value };
+    this.validateDaemonProxy();
+  }
+  private daemonProxyDraftValue(): { httpProxy: string; httpsProxy: string; noProxy: string } {
+    return {
+      httpProxy: this.daemonProxyDraft.httpProxy.trim(),
+      httpsProxy: this.daemonProxyDraft.httpsProxy.trim(),
+      noProxy: this.daemonProxyDraft.noProxy.trim(),
+    };
+  }
+
+  async applyDaemonProxy(): Promise<void> {
+    if (!this.validateDaemonProxy()) {
+      this.toast.error('daemon 代理配置有误，请先修正标红字段');
+      return;
+    }
+    const confirmed = await this.confirm.open({
+      title: '覆写 Docker daemon 代理配置',
+      message: '这会修改宿主机全局 Docker daemon 配置，影响所有容器后续的镜像拉取和构建。配置写入后需要重启 Docker daemon 才会生效。确认继续吗？',
+      confirmText: '确认覆写',
+      danger: true,
+      critical: true,
+    });
+    if (!confirmed || this.daemonProxyBusy() || !this.daemonProxy()?.helperEnabled || !this.daemonProxy()?.writable) return;
+    this.daemonProxyBusy.set(true);
+    this.settings.applyDaemonProxy({ ...this.daemonProxyDraftValue(), hash: this.daemonProxyHash }).subscribe({
+      next: response => {
+        this.daemonProxyBusy.set(false);
+        if (response.code !== 200 || !response.data) {
+          this.toast.error(response.msg || '覆写 Docker daemon 代理失败');
+          return;
+        }
+        this.toast.success('daemon.json 已覆写；当前 Docker daemon 尚未更新，请按需重启使配置生效');
+        this.loadDaemonProxy();
+      },
+      error: error => {
+        this.daemonProxyBusy.set(false);
+        this.toast.error(error?.error?.msg || '覆写 Docker daemon 代理失败');
+      },
+    });
+  }
+
+  async restartDaemon(): Promise<void> {
+    const confirmed = await this.confirm.open({
+      title: '重启 Docker daemon',
+      message: '这会短暂中断宿主机上所有容器的 Docker 管理操作，Docker Copilot 也可能暂时失联。确认重启吗？',
+      confirmText: '确认重启',
+      danger: true,
+      critical: true,
+    });
+    if (!confirmed || this.daemonProxyBusy()) return;
+    this.daemonProxyBusy.set(true);
+    this.settings.restartDaemon().subscribe({
+      next: response => {
+        if (response.code !== 202 || !response.data) {
+          this.daemonProxyBusy.set(false);
+          this.toast.error(response.msg || '启动 Docker daemon 重启失败');
+          return;
+        }
+        this.daemonRestart.set(response.data);
+        this.pollDaemonRestart(response.data.operationID);
+      },
+      error: error => {
+        this.daemonProxyBusy.set(false);
+        this.toast.error(error?.error?.msg || '启动 Docker daemon 重启失败');
+      },
+    });
+  }
+
+  private pollDaemonRestart(operationID: string): void {
+    this.settings.getDaemonOperation(operationID).subscribe({
+      next: response => {
+        if (response.code !== 200 || !response.data) {
+          this.daemonProxyBusy.set(false);
+          this.toast.error(response.msg || '读取 Docker daemon 重启状态失败');
+          return;
+        }
+        this.daemonRestart.set(response.data);
+        if (response.data.status === 'restarting') {
+          setTimeout(() => this.pollDaemonRestart(operationID), 1500);
+          return;
+        }
+        this.daemonProxyBusy.set(false);
+        if (response.data.status === 'succeeded') {
+          this.toast.success('Docker daemon 已重启并恢复');
+          this.loadDaemonProxy();
+        } else {
+          this.toast.error(response.data.message || 'Docker daemon 重启失败');
+        }
+      },
+      error: error => {
+        setTimeout(() => this.pollDaemonRestart(operationID), 2000);
+      },
+    });
+  }
   addHubUrl() {
     if (this.hubUrlsDraft.length >= 20) {
       this.toast.error('最多 20 个加速源');
@@ -214,6 +374,10 @@ export class MeComponent {
   }
 
   saveSettings() {
+    if (!this.validateDaemonProxy()) {
+      this.toast.error('daemon 代理配置有误，请先修正标红字段');
+      return;
+    }
     const value = Number(this.retentionDraft);
     if (!Number.isInteger(value) || value < 1 || value > 100) {
       this.toast.error('保留数量必须是 1-100 的整数');
@@ -235,12 +399,14 @@ export class MeComponent {
         pullTimeoutSec: pullTimeout,
         hubUrls,
         proxy: this.proxyDraft,
+        daemonProxyDraft: this.daemonProxyDraftValue(),
       })
       .subscribe({
         next: r => {
           if (r.code === 200 && r.data) {
             this.pullTimeoutDraft = r.data.pullTimeoutSec ?? pullTimeout;
             if (r.data.hubUrls) this.hubUrlsDraft = [...r.data.hubUrls];
+            if (r.data.daemonProxyDraftConfigured) this.daemonProxyDraftConfigured = true;
           }
           this.finishSave(value, r.code !== 200, r.msg);
         },

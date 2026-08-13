@@ -1,0 +1,18 @@
+[Unit]
+Description=Docker Copilot daemon configuration helper
+After=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/dockercopilot-helper
+Restart=on-failure
+User=root
+Group=dockercopilot
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/etc/docker /var/lib/dockercopilot /run
+
+[Install]
+WantedBy=multi-user.target

@@ -7,15 +7,17 @@ import (
 
 // AppSettingsData 聚合设置快照。
 type AppSettingsData struct {
-	UpdateCheck    IntervalSettings           `json:"updateCheck"`
-	AutoBackup     IntervalSettings           `json:"autoBackup"`
-	LogLevel       LevelSettings              `json:"logLevel"`
-	Retention      int                        `json:"retention"`
+	UpdateCheck IntervalSettings `json:"updateCheck"`
+	AutoBackup  IntervalSettings `json:"autoBackup"`
+	LogLevel    LevelSettings    `json:"logLevel"`
+	Retention   int              `json:"retention"`
 	// PullTimeoutSec 拉取镜像超时（秒），0 表示未配置。
-	PullTimeoutSec int                        `json:"pullTimeoutSec"`
-	HubURLs        []string                   `json:"hubUrls"`
-	DefaultHubURLs []string                   `json:"defaultHubUrls"`
-	Proxy          settingstore.ProxySettings `json:"proxy"`
+	PullTimeoutSec             int                           `json:"pullTimeoutSec"`
+	HubURLs                    []string                      `json:"hubUrls"`
+	DefaultHubURLs             []string                      `json:"defaultHubUrls"`
+	Proxy                      settingstore.ProxySettings    `json:"proxy"`
+	DaemonProxyDraft           settingstore.DaemonProxyDraft `json:"daemonProxyDraft"`
+	DaemonProxyDraftConfigured bool                          `json:"daemonProxyDraftConfigured"`
 }
 
 type IntervalSettings struct {
@@ -29,6 +31,7 @@ type LevelSettings struct {
 }
 
 func SnapshotAppSettings() AppSettingsData {
+	daemonDraft, daemonDraftConfigured := settingstore.GetDaemonProxyDraft()
 	return AppSettingsData{
 		UpdateCheck: IntervalSettings{
 			Interval: settingstore.GetUpdateCheckInterval(),
@@ -42,11 +45,13 @@ func SnapshotAppSettings() AppSettingsData {
 			Level:   settingstore.GetLogLevel(),
 			Options: settingstore.LogLevelOptions(),
 		},
-		Retention:      settingstore.GetRetention(),
-		PullTimeoutSec: settingstore.GetPullTimeoutSec(),
-		HubURLs:        settingstore.GetHubURLs(),
-		DefaultHubURLs: settingstore.DefaultHubURLList(),
-		Proxy:          settingstore.GetProxySettings(),
+		Retention:                  settingstore.GetRetention(),
+		PullTimeoutSec:             settingstore.GetPullTimeoutSec(),
+		HubURLs:                    settingstore.GetHubURLs(),
+		DefaultHubURLs:             settingstore.DefaultHubURLList(),
+		Proxy:                      settingstore.GetProxySettings(),
+		DaemonProxyDraft:           daemonDraft,
+		DaemonProxyDraftConfigured: daemonDraftConfigured,
 	}
 }
 

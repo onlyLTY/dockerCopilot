@@ -131,7 +131,20 @@ docker compose -f docker/docker-compose.yml down
 | `githubProxy` | 应用拼接 GitHub 版本/更新下载地址时的前缀代理 |
 | `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` | 标准 HTTP 客户端代理（**不影响** Docker daemon 拉镜像代理） |
 
-代理也可在管理台「关于 → 设置」中填写，保存后需**重启** Docker Copilot 生效。
+代理也可在管理台「关于 → 设置」中填写，保存后需重启 Docker Copilot 服务生效。
+
+#### Docker daemon 代理 helper（Linux 高级功能）
+
+管理台中的 GitHub 地址前缀代理只影响 Docker Copilot 自身。Docker 镜像拉取使用 Docker daemon 的代理。若要从管理台读取并修改 daemon 代理，可在 **Linux 本机 Docker Engine** 上安装 `helper/README.md` 中的受控 helper，然后显式启用覆盖文件：
+
+```bash
+docker compose \
+  -f docker/docker-compose.yml \
+  -f docker/docker-compose.daemon-helper.yml \
+  up -d
+```
+
+默认部署不会挂载 helper socket，也不会提供修改宿主机 daemon 配置或重启 Docker 的按钮。启用 helper 后，页面会显示 daemon 当前生效代理和 `daemon.json` 待生效配置；“覆写 daemon 代理”和“重启 Docker daemon”均需要危险确认。重启会短暂影响宿主机上的所有 Docker 容器操作。该功能不支持 Docker Desktop、Windows、远程 daemon 或 rootless Docker。
 
 **示例：自定义端口与挂载目录**
 

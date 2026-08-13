@@ -78,13 +78,15 @@ type Settings struct {
 	IgnoredContainerUpdates []string `json:"ignoredContainerUpdates,omitempty"`
 	// HubURLs 官方 Docker Hub（docker.io）镜像检查更新时的加速源列表（仅 host，有序）。
 	// 未配置时 GetHubURLs 返回 DefaultHubURLs；用户保存后（含空列表）以持久化值为准。
-	HubURLs                 []string `json:"hubUrls,omitempty"`
-	HubURLsConfigured       bool     `json:"hubUrlsConfigured,omitempty"`
-	GithubProxy             string   `json:"githubProxy,omitempty"`
-	HTTPProxy               string   `json:"HTTP_PROXY,omitempty"`
-	HTTPSProxy              string   `json:"HTTPS_PROXY,omitempty"`
-	NoProxy                 string   `json:"NO_PROXY,omitempty"`
-	ProxySettingsConfigured bool     `json:"proxySettingsConfigured,omitempty"`
+	HubURLs                 []string         `json:"hubUrls,omitempty"`
+	HubURLsConfigured       bool             `json:"hubUrlsConfigured,omitempty"`
+	GithubProxy             string           `json:"githubProxy,omitempty"`
+	HTTPProxy               string           `json:"HTTP_PROXY,omitempty"`
+	HTTPSProxy              string           `json:"HTTPS_PROXY,omitempty"`
+	NoProxy                 string           `json:"NO_PROXY,omitempty"`
+	ProxySettingsConfigured bool             `json:"proxySettingsConfigured,omitempty"`
+	DaemonProxyDraft        DaemonProxyDraft `json:"daemonProxyDraft,omitempty"`
+	DaemonProxyConfigured   bool             `json:"daemonProxyConfigured,omitempty"`
 	// PullTimeoutSec 拉取镜像超时（秒）。0 表示未配置，运行时回退到配置文件/默认值。
 	PullTimeoutSec int `json:"pullTimeoutSec,omitempty"`
 }
@@ -121,6 +123,9 @@ func load() Settings {
 		_, hasNoProxy := fields["NO_PROXY"]
 		_, hasProxyMarker := fields["proxySettingsConfigured"]
 		stored.ProxySettingsConfigured = stored.ProxySettingsConfigured || hasGithubProxy || hasHTTPProxy || hasHTTPSProxy || hasNoProxy || hasProxyMarker
+		_, hasDaemonHTTPProxy := fields["daemonProxyDraft"]
+		_, hasDaemonProxyMarker := fields["daemonProxyConfigured"]
+		stored.DaemonProxyConfigured = stored.DaemonProxyConfigured || hasDaemonHTTPProxy || hasDaemonProxyMarker
 		_, hasHubURLs := fields["hubUrls"]
 		_, hasHubURLsMarker := fields["hubUrlsConfigured"]
 		stored.HubURLsConfigured = stored.HubURLsConfigured || hasHubURLs || hasHubURLsMarker
@@ -150,6 +155,8 @@ func load() Settings {
 	s.HTTPSProxy = stored.HTTPSProxy
 	s.NoProxy = stored.NoProxy
 	s.ProxySettingsConfigured = stored.ProxySettingsConfigured
+	s.DaemonProxyDraft = stored.DaemonProxyDraft
+	s.DaemonProxyConfigured = stored.DaemonProxyConfigured
 	return s
 }
 
@@ -514,6 +521,12 @@ type ProxySettings struct {
 	NoProxy     string `json:"NO_PROXY"`
 }
 
+type DaemonProxyDraft struct {
+	HTTPProxy  string `json:"httpProxy"`
+	HTTPSProxy string `json:"httpsProxy"`
+	NoProxy    string `json:"noProxy"`
+}
+
 func GetProxySettings() ProxySettings {
 	s := load()
 	return ProxySettings{
@@ -522,6 +535,34 @@ func GetProxySettings() ProxySettings {
 		HTTPSProxy:  s.HTTPSProxy,
 		NoProxy:     s.NoProxy,
 	}
+}
+
+func GetDaemonProxyDraft() (DaemonProxyDraft, bool) {
+	s := load()
+	return s.DaemonProxyDraft, s.DaemonProxyConfigured
+}
+
+func SetDaemonProxyDraft(value DaemonProxyDraft) (DaemonProxyDraft, error) {
+	if err := validProxyURL(value.HTTPProxy, "httpProxy"); err != nil {
+		return DaemonProxyDraft{}, err
+	}
+	if err := validProxyURL(value.HTTPSProxy, "httpsProxy"); err != nil {
+		return DaemonProxyDraft{}, err
+	}
+	if err := validNoProxy(value.NoProxy); err != nil {
+		return DaemonProxyDraft{}, err
+	}
+	value.HTTPProxy = strings.TrimSpace(value.HTTPProxy)
+	value.HTTPSProxy = strings.TrimSpace(value.HTTPSProxy)
+	value.NoProxy = strings.TrimSpace(value.NoProxy)
+	if err := update(func(s *Settings) error {
+		s.DaemonProxyDraft = value
+		s.DaemonProxyConfigured = true
+		return nil
+	}); err != nil {
+		return DaemonProxyDraft{}, err
+	}
+	return value, nil
 }
 
 func validProxyURL(value string, name string) error {
