@@ -138,7 +138,7 @@ export class TaskService {
         ),
       );
       this.persist();
-      this.viewing.set(taskID);
+      this.toast.info(`任务「${title}」已创建，可前往任务页面查看详情`);
       return;
     }
     const item: TaskItem = {
@@ -159,7 +159,7 @@ export class TaskService {
     };
     this.tasks.update((list) => [item, ...list]);
     this.persist();
-    this.viewing.set(taskID);
+    this.toast.info(`任务「${title}」已创建，可前往任务页面查看详情`);
     this.scheduleBatch(true);
   }
 

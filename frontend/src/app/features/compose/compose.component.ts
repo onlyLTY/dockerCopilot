@@ -608,7 +608,6 @@ export class ComposeComponent {
         }
         this.pendingComposeTasks.add(String(taskID));
         this.tasks.track(String(taskID), "批量备份 Compose 项目", true);
-        this.toast.success("批量备份任务已提交，可在任务页查看详细结果");
       },
       error: (error) => {
         this.backupBusy.set(false);
@@ -761,7 +760,6 @@ export class ComposeComponent {
           this.exitSelection();
           this.pendingComposeTasks.add(String(taskID));
           this.tasks.track(String(taskID), "批量删除 Compose 项目", true);
-          this.toast.info(`已提交 ${projects.length} 个项目的删除任务`);
         },
         error: (error) => {
           this.cleanupBusy.set(false);

@@ -71,10 +71,17 @@ func (l *PruneImagesLogic) SubmitPrune(req *types.ImagePruneReq) (*types.Resp, e
 			l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "清理失败", DetailMsg: "清理镜像失败：" + err.Error(), Failed: true, IsDone: true})
 			return
 		}
-		l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "清理完成", DetailMsg: fmt.Sprintf("删除 %d 个镜像，回收 %d 字节", result.deleted, result.spaceReclaimed), IsDone: true})
+		l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "清理完成", DetailMsg: fmt.Sprintf("删除 %d 个镜像，回收 %s", result.deleted, formatReclaimedSize(result.spaceReclaimed)), IsDone: true})
 	}()
 	resp.Code, resp.Msg, resp.Data = 200, "success", map[string]interface{}{"taskID": taskID}
 	return resp, nil
+}
+
+func formatReclaimedSize(bytes uint64) string {
+	if bytes >= 1024*1024*1024 {
+		return fmt.Sprintf("%d Gb", bytes/(1024*1024*1024))
+	}
+	return fmt.Sprintf("%d Mb", bytes/(1024*1024))
 }
 
 type pruneResult struct {

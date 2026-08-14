@@ -278,7 +278,7 @@ export class ContainersComponent {
         } else {
           this.detailUpdateBusy.set(false);
           this.markUpdateInactive(x.id);
-          this.toast.info(`${name} 更新任务已提交`);
+          this.toast.error(`${name} 更新失败：服务未返回任务编号`);
         }
       },
       onBizError: (r) => {
@@ -430,8 +430,9 @@ export class ContainersComponent {
       onStart: () => this.actionBusy.update((m) => new Map(m).set(x.id, label)),
       onFinally: () => this.clearActionBusy(x.id),
       onSuccess: () => {
-        if (async) this.toast.info(`${x.name} ${label}任务已提交`);
-        else this.toast.success(actionLabel(x.name, label, true));
+        if (async) {
+          return;
+        } else this.toast.success(actionLabel(x.name, label, true));
       },
       onBizError: (r) =>
         this.toast.error(
@@ -591,15 +592,13 @@ export class ContainersComponent {
       const ok = results.filter((r) => r.ok).length;
       const fail = results.length - ok;
       const skipped = locked.length;
-      if (fail === 0)
-        async
-          ? this.toast.info(
-              `已提交 ${ok} 个容器的${label}任务${skipped ? `，跳过 ${skipped} 个` : ""}`,
-            )
-          : this.toast.success(
-              `已${label} ${ok} 个容器${skipped ? `，跳过 ${skipped} 个` : ""}`,
-            );
-      else {
+      if (fail === 0) {
+        // 异步任务的创建提示由 TaskService.track 统一处理。
+        if (!async)
+          this.toast.success(
+            `已${label} ${ok} 个容器${skipped ? `，跳过 ${skipped} 个` : ""}`,
+          );
+      } else {
         const first = results.find((r) => !r.ok);
         this.toast.error(
           `${label}完成 ${ok} 个，失败 ${fail} 个${skipped ? `，跳过 ${skipped} 个` : ""}${first ? "：" + first.msg : ""}`,
@@ -658,7 +657,6 @@ export class ContainersComponent {
           return;
         }
         this.selected.set(new Set());
-        this.toast.info(`已提交 ${targets.length} 个容器的删除任务`);
       },
       onBizError: (r) =>
         this.toast.error(`批量删除失败：${r.msg || "未知错误"}`),
@@ -750,8 +748,7 @@ export class ContainersComponent {
         });
         const ok = results.filter((r) => r.ok).length;
         const fail = results.length - ok;
-        if (fail === 0) this.toast.info(`已提交 ${ok} 个容器的更新任务`);
-        else {
+        if (fail > 0) {
           const first = results.find((r) => !r.ok);
           this.toast.error(
             `更新提交 ${ok} 个，失败 ${fail} 个${first ? "：" + first.msg : ""}`,
