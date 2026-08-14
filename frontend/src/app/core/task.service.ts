@@ -568,7 +568,7 @@ export class TaskService {
         );
       else if (failedNow)
         this.toast.error(failureTitle || "任务失败", failureMessage);
-      else this.toast.success("任务完成", failureTitle || "异步任务已完成");
+      else this.toast.success("任务完成", this.summaryMessage(failureMessage, failureTitle));
       if (refreshNeeded)
         this.bus.refresh([
           "containers",
@@ -584,6 +584,14 @@ export class TaskService {
       });
     }
     this.persist();
+  }
+
+  private summaryMessage(detail: string, fallback: string): string {
+    const firstLine = detail
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.length);
+    return firstLine || fallback || "异步任务已完成";
   }
 
   private markUnknown(taskID: string, msg: string): void {

@@ -28,6 +28,36 @@ func TestCountRemovedImages(t *testing.T) {
 	}
 }
 
+func TestRemovedImagesIncludesReferenceAndSize(t *testing.T) {
+	before := []image.Summary{
+		{ID: "sha256:tagged", RepoTags: []string{"example/app:latest"}, Size: 2048},
+		{ID: "sha256:untagged-long-id", RepoTags: []string{"<none>:<none>"}, Size: 512},
+	}
+	removed := removedImages(before, nil)
+	if len(removed) != 2 {
+		t.Fatalf("removedImages() returned %d items, want 2", len(removed))
+	}
+	if removed[0].reference != "example/app:latest" || removed[0].size != 2048 {
+		t.Fatalf("tagged image = %#v, want reference and size", removed[0])
+	}
+	if removed[1].reference != "untagged-lon" || removed[1].size != 512 {
+		t.Fatalf("untagged image = %#v, want short ID and size", removed[1])
+	}
+}
+
+func TestFormatReclaimedSize(t *testing.T) {
+	cases := map[uint64]string{
+		0:           "0 B",
+		1024:        "1.0 KB",
+		1024 * 1024: "1.0 MB",
+	}
+	for bytes, want := range cases {
+		if got := formatReclaimedSize(bytes); got != want {
+			t.Errorf("formatReclaimedSize(%d) = %q, want %q", bytes, got, want)
+		}
+	}
+}
+
 func TestPruneImagesCountsImageDiff(t *testing.T) {
 	requests := make([]*http.Request, 0, 3)
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {

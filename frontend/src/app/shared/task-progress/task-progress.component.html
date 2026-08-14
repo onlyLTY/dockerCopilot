@@ -13,6 +13,12 @@
         (closed)="tasks.closeView()"
       />
       <div class="modal-body">
+        @if (t.isDone && t.detailMsg) {
+          <div class="task-summary mb-10" [class.task-summary-failed]="t.failed">
+            <div class="fs-12 fw-500 mb-4">执行结果</div>
+            <div class="task-summary-detail fs-12 text-muted">{{ t.detailMsg }}</div>
+          </div>
+        }
         @if ((t.steps || []).length) {
           <div class="task-steps mt-6 d-flex flex-col gap-8">
             @for (step of (t.steps || []); track step.startedAt + step.message) {

@@ -13,9 +13,14 @@ func Backup2Compose(ctx *svc.ServiceContext) (err error) {
 }
 
 func Backup2ComposeWithContext(taskCtx context.Context, ctx *svc.ServiceContext) (err error) {
+	_, err = Backup2ComposeWithContextResult(taskCtx, ctx)
+	return err
+}
+
+func Backup2ComposeWithContextResult(taskCtx context.Context, ctx *svc.ServiceContext) (int, error) {
 	containerList, err := GetContainerListWithContext(taskCtx, ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	var containerJSONs []dockerTypes.ContainerJSON
 	for _, v := range containerList {
@@ -23,14 +28,14 @@ func Backup2ComposeWithContext(taskCtx context.Context, ctx *svc.ServiceContext)
 		inspectedContainer, err := GetContainerInspectWithContext(taskCtx, ctx, containerID)
 		if err != nil {
 			logx.Error("获取容器信息失败" + err.Error())
-			return err
+			return 0, err
 		}
 		containerJSONs = append(containerJSONs, inspectedContainer)
 	}
 	err = backupCompose.DockerConfig2ComposeYaml(containerJSONs)
 	if err != nil {
 		logx.Error("备份失败" + err.Error())
-		return err
+		return 0, err
 	}
-	return nil
+	return len(containerJSONs), nil
 }

@@ -16,24 +16,29 @@ func BackupContainer(ctx *svc.ServiceContext) error {
 }
 
 func BackupContainerWithContext(taskCtx context.Context, ctx *svc.ServiceContext) error {
+	_, err := BackupContainerWithContextResult(taskCtx, ctx)
+	return err
+}
+
+func BackupContainerWithContextResult(taskCtx context.Context, ctx *svc.ServiceContext) (int, error) {
 	if err := requireDocker(ctx); err != nil {
-		return err
+		return 0, err
 	}
 	containerList, err := GetContainerListWithContext(taskCtx, ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	var backupList []dockerBackend.ContainerCreateConfig
 	for i, v := range containerList {
 		containerID := containerList[i].ID
 		if err := taskCtx.Err(); err != nil {
-			return err
+			return 0, err
 		}
 		ctx.DockerClient.NegotiateAPIVersion(taskCtx)
 		inspectedContainer, err := ctx.DockerClient.ContainerInspect(taskCtx, containerID)
 		if err != nil {
 			logx.Error("获取容器信息失败" + err.Error())
-			return err
+			return 0, err
 		}
 		var containerName string
 		if len(v.Names) > 0 {
@@ -50,31 +55,29 @@ func BackupContainerWithContext(taskCtx context.Context, ctx *svc.ServiceContext
 		if inspectedContainer.NetworkSettings != nil {
 			endpoints = inspectedContainer.NetworkSettings.Networks
 		}
-		networkingConfig := &network.NetworkingConfig{
-			EndpointsConfig: endpoints,
-		}
+		networkingConfig := &network.NetworkingConfig{EndpointsConfig: endpoints}
 		createConfig := dockerBackend.ContainerCreateConfig{Config: config, HostConfig: hostConfig, NetworkingConfig: networkingConfig, Name: containerName}
 		backupList = append(backupList, createConfig)
 	}
 	jsonData, err := json.MarshalIndent(backupList, "", "  ")
 	if err != nil {
 		logx.Error("Error marshalling data:", err)
-		return err
+		return 0, err
 	}
 	backupDir := backupstore.Directory()
 	fileName, err := backupstore.CreateBackupFile(backupDir, ".json", jsonData, 0644)
 	if err != nil {
 		logx.Error("Error writing backup file:", err)
-		return err
+		return 0, err
 	}
 	fullPath := filepath.Join(backupDir, fileName)
 	retention, err := backupstore.GetRetention()
 	if err != nil {
 		logx.Errorf("Error reading backup retention after writing %s: %v", fullPath, err)
-		return nil
+		return len(backupList), nil
 	}
 	if err := backupstore.Retain(retention); err != nil {
 		logx.Errorf("Error applying backup retention after writing %s: %v", fullPath, err)
 	}
-	return nil
+	return len(backupList), nil
 }

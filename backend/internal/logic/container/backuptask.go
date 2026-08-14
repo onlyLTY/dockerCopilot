@@ -9,15 +9,20 @@ import (
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 )
 
-func (l *BackupLogic) submitBackupTask(name string, work func(context.Context) error) (*types.Resp, error) {
+type backupResult struct {
+	containerCount int
+	detail         string
+}
+
+func (l *BackupLogic) submitBackupTask(name string, work func(context.Context) (backupResult, error)) (*types.Resp, error) {
 	return submitBackupTask(l.svcCtx, name, work)
 }
 
-func (l *Backup2composeLogic) submitBackupTask(name string, work func(context.Context) error) (*types.Resp, error) {
+func (l *Backup2composeLogic) submitBackupTask(name string, work func(context.Context) (backupResult, error)) (*types.Resp, error) {
 	return submitBackupTask(l.svcCtx, name, work)
 }
 
-func submitBackupTask(svcCtx *svc.ServiceContext, name string, work func(context.Context) error) (*types.Resp, error) {
+func submitBackupTask(svcCtx *svc.ServiceContext, name string, work func(context.Context) (backupResult, error)) (*types.Resp, error) {
 	resp := &types.Resp{}
 	taskID := uuid.NewString()
 	svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Refresh: true, Name: name, Message: "任务已提交"})
@@ -29,7 +34,8 @@ func submitBackupTask(svcCtx *svc.ServiceContext, name string, work func(context
 				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "任务失败", DetailMsg: fmt.Sprintf("备份任务异常：%v", recovered), Failed: true, IsDone: true})
 			}
 		}()
-		if err := work(taskCtx); err != nil {
+		result, err := work(taskCtx)
+		if err != nil {
 			if taskCtx.Err() != nil {
 				svcCtx.MarkTaskCanceled(taskID, "任务已停止；已生成的备份文件不会自动回滚")
 				return
@@ -40,9 +46,13 @@ func submitBackupTask(svcCtx *svc.ServiceContext, name string, work func(context
 			})
 			return
 		}
+		detail := result.detail
+		if detail == "" {
+			detail = "备份已完成"
+		}
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{
 			TaskID: taskID, Name: name, Percentage: 100,
-			Message: "任务完成", DetailMsg: "备份已完成", IsDone: true,
+			Message: "任务完成", DetailMsg: detail, IsDone: true,
 		})
 	}()
 	resp.Code, resp.Msg, resp.Data = 200, "success", map[string]interface{}{"taskID": taskID}

@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"fmt"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
@@ -25,7 +26,8 @@ func NewBackupLogic(ctx context.Context, svcCtx *svc.ServiceContext) *BackupLogi
 }
 
 func (l *BackupLogic) Backup() (resp *types.Resp, err error) {
-	return l.submitBackupTask("创建 JSON 容器备份", func(taskCtx context.Context) error {
-		return utiles.BackupContainerWithContext(taskCtx, l.svcCtx)
+	return l.submitBackupTask("创建 JSON 容器备份", func(taskCtx context.Context) (backupResult, error) {
+		count, err := utiles.BackupContainerWithContextResult(taskCtx, l.svcCtx)
+		return backupResult{containerCount: count, detail: fmt.Sprintf("备份完成：创建 1 个 JSON 文件，包含 %d 个容器", count)}, err
 	})
 }

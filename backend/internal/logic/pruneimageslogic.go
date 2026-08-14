@@ -3,6 +3,7 @@ package logic
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
@@ -71,22 +72,44 @@ func (l *PruneImagesLogic) SubmitPrune(req *types.ImagePruneReq) (*types.Resp, e
 			l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "清理失败", DetailMsg: "清理镜像失败：" + err.Error(), Failed: true, IsDone: true})
 			return
 		}
-		l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "清理完成", DetailMsg: fmt.Sprintf("删除 %d 个镜像，回收 %s", result.deleted, formatReclaimedSize(result.spaceReclaimed)), IsDone: true})
+		l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "清理完成", DetailMsg: formatPruneDetail(result), IsDone: true})
 	}()
 	resp.Code, resp.Msg, resp.Data = 200, "success", map[string]interface{}{"taskID": taskID}
 	return resp, nil
 }
 
 func formatReclaimedSize(bytes uint64) string {
-	if bytes >= 1024*1024*1024 {
-		return fmt.Sprintf("%d Gb", bytes/(1024*1024*1024))
+	units := []string{"B", "KB", "MB", "GB", "TB"}
+	value := float64(bytes)
+	unit := 0
+	for value >= 1024 && unit < len(units)-1 {
+		value /= 1024
+		unit++
 	}
-	return fmt.Sprintf("%d Mb", bytes/(1024*1024))
+	if unit == 0 {
+		return fmt.Sprintf("%d %s", bytes, units[unit])
+	}
+	return fmt.Sprintf("%.1f %s", value, units[unit])
 }
 
 type pruneResult struct {
 	deleted        int
 	spaceReclaimed uint64
+	images         []prunedImage
+}
+
+type prunedImage struct {
+	reference string
+	id        string
+	size      uint64
+}
+
+func formatPruneDetail(result pruneResult) string {
+	lines := []string{fmt.Sprintf("删除 %d 个镜像，实际回收 %s", result.deleted, formatReclaimedSize(result.spaceReclaimed))}
+	for _, item := range result.images {
+		lines = append(lines, fmt.Sprintf("- %s（镜像大小 %s）", item.reference, formatReclaimedSize(item.size)))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (l *PruneImagesLogic) prune(kind string) (*types.Resp, error) {
@@ -136,19 +159,56 @@ func pruneImagesWithContext(ctx context.Context, svcCtx *svc.ServiceContext, kin
 	if err != nil {
 		return pruneResult{}, err
 	}
-	return pruneResult{deleted: countRemovedImages(before, after), spaceReclaimed: report.SpaceReclaimed}, nil
+	removed := removedImages(before, after)
+	return pruneResult{deleted: len(removed), spaceReclaimed: report.SpaceReclaimed, images: removed}, nil
 }
 
 func countRemovedImages(before, after []image.Summary) int {
+	return len(removedImages(before, after))
+}
+
+func removedImages(before, after []image.Summary) []prunedImage {
 	afterIDs := make(map[string]struct{}, len(after))
 	for _, item := range after {
 		afterIDs[item.ID] = struct{}{}
 	}
-	removed := 0
+	removed := make([]prunedImage, 0)
 	for _, item := range before {
 		if _, exists := afterIDs[item.ID]; !exists {
-			removed++
+			removed = append(removed, prunedImage{
+				reference: imageReference(item),
+				id:        item.ID,
+				size:      uint64(maxInt64(item.Size)),
+			})
 		}
 	}
 	return removed
+}
+
+func imageReference(item image.Summary) string {
+	for _, tag := range item.RepoTags {
+		if tag != "" && tag != "<none>:<none>" {
+			return tag
+		}
+	}
+	for _, digest := range item.RepoDigests {
+		if digest != "" {
+			return digest
+		}
+	}
+	id := item.ID
+	if strings.HasPrefix(id, "sha256:") {
+		id = strings.TrimPrefix(id, "sha256:")
+	}
+	if len(id) > 12 {
+		id = id[:12]
+	}
+	return id
+}
+
+func maxInt64(value int64) int64 {
+	if value < 0 {
+		return 0
+	}
+	return value
 }
