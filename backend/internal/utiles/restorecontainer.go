@@ -18,6 +18,10 @@ import (
 )
 
 func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) error {
+	return RestoreContainerWithContext(context.Background(), ctx, filename, taskID)
+}
+
+func RestoreContainerWithContext(taskCtx context.Context, ctx *svc.ServiceContext, filename string, taskID string) error {
 	if err := requireDocker(ctx); err != nil {
 		return err
 	}
@@ -57,6 +61,16 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		return err
 	}
 	total := len(configList)
+	if total == 0 {
+		err := fmt.Errorf("备份文件不包含容器配置")
+		oldProgress.Percentage = 100
+		oldProgress.Message = "恢复失败"
+		oldProgress.DetailMsg = err.Error()
+		oldProgress.Failed = true
+		oldProgress.IsDone = true
+		ctx.UpdateProgress(taskID, oldProgress)
+		return err
+	}
 	// 拉取镜像超时：优先使用前端设置，其次配置文件，最后默认 5 分钟
 	restorePullTimeoutSec := settingstore.GetPullTimeoutSec()
 	if restorePullTimeoutSec <= 0 {
@@ -66,6 +80,7 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		restorePullTimeoutSec = int(config.DefaultPullTimeoutSec)
 	}
 	restorePullTimeout := time.Duration(restorePullTimeoutSec) * time.Second
+	failed := false
 	for i, containerInfo := range configList {
 		name := containerInfo.Name
 		if name == "" {
@@ -78,43 +93,63 @@ func RestoreContainer(ctx *svc.ServiceContext, filename string, taskID string) e
 		// 进行中：已完成行 + 当前行，每容器一行便于阅读
 		oldProgress.DetailMsg = joinRestoreLines(backupList, linePrefix+" …")
 		ctx.UpdateProgress(taskID, oldProgress)
-		ctx.DockerClient.NegotiateAPIVersion(context.TODO())
+		if err := taskCtx.Err(); err != nil {
+			return err
+		}
+		ctx.DockerClient.NegotiateAPIVersion(taskCtx)
 
 		// 与 Compose 部署门禁对齐：极高危默认拒绝；高风险（host 网络/PID、devices、cap_add 等）
 		// 亦默认拒绝。仅当服务端 AllowHighRisk=true 时放行（对齐部署侧无 confirm 时的硬拦策略）。
 		if blockErr := validateRestoreHostConfig(name, containerInfo.HostConfig, ctx.Config.Compose.AllowHighRisk); blockErr != nil {
 			logx.Errorf("拒绝高危恢复配置 name=%s: %v", name, blockErr)
+			failed = true
 			backupList = append(backupList, linePrefix+" 恢复被拒绝（高危配置）")
 			continue
 		}
 
 		if containerInfo.Config == nil || containerInfo.Config.Image == "" {
+			failed = true
 			backupList = append(backupList, linePrefix+" 恢复失败：备份缺少镜像信息")
 			continue
 		}
-		restorePullCtx, restorePullCancel := context.WithTimeout(context.Background(), restorePullTimeout)
+		restorePullCtx, restorePullCancel := context.WithTimeout(taskCtx, restorePullTimeout)
 		pullStart := int(float64(i) / float64(total) * 100)
 		pullEnd := int(float64(i+1) / float64(total) * 100)
 		if err := PullImageWithTaskRange(restorePullCtx, ctx, containerInfo.Config.Image, taskID, pullStart, pullEnd); err != nil {
 
 			restorePullCancel()
+			if taskCtx.Err() != nil {
+				return taskCtx.Err()
+			}
+			failed = true
 			logx.Errorf("Failed to pull image: %s", err)
-			backupList = append(backupList, linePrefix+" 拉取镜像失败")
+			backupList = append(backupList, linePrefix+" 拉取镜像失败："+err.Error())
 			continue
 		}
 		restorePullCancel()
-		_, err = ctx.DockerClient.ContainerCreate(context.TODO(), containerInfo.Config, containerInfo.HostConfig, containerInfo.NetworkingConfig, nil, containerInfo.Name)
+		_, err = ctx.DockerClient.ContainerCreate(taskCtx, containerInfo.Config, containerInfo.HostConfig, containerInfo.NetworkingConfig, nil, containerInfo.Name)
 		if err != nil {
+			if taskCtx.Err() != nil {
+				return taskCtx.Err()
+			}
+			failed = true
 			logx.Errorf("Failed to create container: %s", err)
-			backupList = append(backupList, linePrefix+" 恢复失败")
+			backupList = append(backupList, linePrefix+" 恢复失败："+err.Error())
 			continue
 		}
 		backupList = append(backupList, linePrefix+" 恢复成功")
 	}
+	if err := taskCtx.Err(); err != nil {
+		return err
+	}
 	oldProgress.Percentage = 100
 	oldProgress.DetailMsg = joinRestoreLines(backupList)
 	oldProgress.Message = "恢复完成"
+	oldProgress.Failed = failed
 	oldProgress.IsDone = true
+	if failed {
+		oldProgress.Message = "恢复完成但存在失败"
+	}
 	ctx.UpdateProgress(taskID, oldProgress)
 	return nil
 }

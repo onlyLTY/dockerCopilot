@@ -14,6 +14,12 @@ type ComposeCleanupReq struct {
 	Confirm      bool   `json:"confirm,optional"`
 }
 
+type ComposeCleanupBatchReq struct {
+	ProjectIDs []string `json:"projectIds" validate:"required,min=1"`
+	DeleteDir  bool     `json:"deleteDir,optional"`
+	Confirm    bool     `json:"confirm"`
+}
+
 type ComposeDeployPreviewReq struct {
 	ProjectID string `path:"id" validate:"required"`
 	Filename  string `json:"filename" validate:"required"`
@@ -26,7 +32,9 @@ type ComposeDeployReq struct {
 	ConfirmWarnings bool   `json:"confirmWarnings,optional"`
 	PullImages      bool   `json:"pullImages,optional"`
 }
-
+type ComposeProjectBackupBatchReq struct {
+	ProjectIDs []string `json:"projectIds" validate:"required,min=1"`
+}
 type ComposeProjectCreateReq struct {
 	ProjectName string `json:"projectName" validate:"required"`
 	Filename    string `json:"filename" validate:"required"`
@@ -91,6 +99,10 @@ type GetProgressReq struct {
 	TaskId string `path:"taskid" validate:"required"`
 }
 
+type CancelProgressReq struct {
+	TaskId string `path:"taskid" validate:"required"`
+}
+
 type DaemonOperationReq struct {
 	OperationID string `path:"taskid" validate:"required"`
 }
@@ -152,6 +164,11 @@ type ProxySettingsData struct {
 type RemoveContainerReq struct {
 	IdReq
 	Force bool `form:"force,default=false"`
+}
+
+type BatchRemoveContainersReq struct {
+	ContainerIDs []string `json:"containerIds" validate:"required,min=1"`
+	Confirm      bool     `json:"confirm"`
 }
 
 type RemoveImageReq struct {

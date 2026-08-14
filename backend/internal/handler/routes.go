@@ -75,6 +75,17 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodPost,
+				Path:    "/compose/projects/backup",
+				Handler: compose.ComposeProjectBackupBatchHandler(serverCtx),
+			},
+			{
+				Method: http.MethodPost,
+				Path:   "/compose/projects/:id/backup",
+
+				Handler: compose.ComposeProjectBackupHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
 				Path:    "/compose/projects/:id/deploy",
 				Handler: compose.ComposeDeployHandler(serverCtx),
 			},
@@ -102,6 +113,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/compose/projects/cleanup",
 				Handler: compose.ComposeCleanupHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/compose/projects/cleanup/batch",
+				Handler: compose.ComposeCleanupBatchHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
@@ -207,6 +223,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodPost,
+				Path:    "/containers/remove/batch",
+				Handler: container.RemoveBatchHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
 				Path:    "/containers/check-update",
 				Handler: container.CheckUpdateHandler(serverCtx),
 			},
@@ -260,6 +281,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodDelete,
 				Path:    "/progress/:taskid",
 				Handler: progress.DeleteProgressHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/progress/:taskid/cancel",
+				Handler: progress.CancelProgressHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,

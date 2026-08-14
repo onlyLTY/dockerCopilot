@@ -67,7 +67,7 @@ func isAllDigits(s string) bool {
 type ComposeConfig struct {
 	ScanPaths []string
 	// BackupDir 可省略：空时使用 {DataDir}/backups/compose-projects（或 BACKUP_DIR/compose-projects）。
-	// 仅 Compose 文件版本/清理备份；容器备份页走 {DataDir}/backups。
+	// 仅手动备份 Compose 项目文件；容器备份页走 {DataDir}/backups。
 	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
 	BackupDir string `json:",optional"`
 	//lint:ignore SA5008 go-zero uses optional as a configuration tag.

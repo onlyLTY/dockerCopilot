@@ -9,10 +9,11 @@
     </button>
     <button
       class="btn text-secondary-text bg-secondary-bg"
-      [disabled]="!list().length"
-      (click)="clearAll()"
+      title="请求停止全部进行中任务；不会删除任务记录，也不会回滚已执行的 Docker 操作"
+      [disabled]="!activeCount()"
+      (click)="stopAll()"
     >
-      <dc-icon name="delete"></dc-icon>清空全部
+      <dc-icon name="stop"></dc-icon>停止全部
     </button>
   </div>
 </dc-page-heading>
@@ -31,9 +32,9 @@
         <div resource-card-title>
           <span
             class="d-inline-block flex-none rounded py-3 px-8 fs-12 fw-500 text-white lh-12"
-            [class.bg-green]="t.isDone && !t.failed"
-            [class.bg-amber]="!t.isDone"
-            [class.bg-red]="t.failed"
+            [class.bg-green]="t.isDone && !t.failed && !t.canceled && !t.timedOut"
+            [class.bg-amber]="!t.isDone || t.canceled || t.timedOut"
+            [class.bg-red]="t.failed && !t.canceled && !t.timedOut"
           >
             {{ statusText(t) }}
           </span>
@@ -55,8 +56,8 @@
             >
             <b
               class="ml-8"
-              [class.text-red]="t.failed"
-              [class.text-green]="t.isDone && !t.failed"
+              [class.text-red]="t.failed && !t.canceled && !t.timedOut"
+              [class.text-green]="t.isDone && !t.failed && !t.canceled && !t.timedOut"
               [class.text-blue]="!t.isDone"
               >{{ t.percentage }}%</b
             >
@@ -74,9 +75,20 @@
           <button class="btn text-blue bg-secondary-bg" (click)="view(t.taskID)">
             <dc-icon name="about"></dc-icon>详情
           </button>
-          <button class="btn text-red bg-secondary-bg" (click)="remove(t.taskID)">
-            <dc-icon name="delete"></dc-icon>删除
-          </button>
+          @if (!t.isDone) {
+            <button
+              class="btn text-red bg-secondary-bg"
+              [disabled]="tasks.canceling().has(t.taskID)"
+              (click)="cancel(t.taskID)"
+            >
+              <dc-icon name="stop"></dc-icon>{{ tasks.canceling().has(t.taskID) ? '停止中…' : '停止任务' }}
+            </button>
+          }
+          @if (t.isDone) {
+            <button class="btn text-red bg-secondary-bg" (click)="remove(t.taskID)">
+              <dc-icon name="delete"></dc-icon>删除
+            </button>
+          }
         </div>
       </dc-resource-card>
     }

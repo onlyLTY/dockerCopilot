@@ -1,11 +1,12 @@
 import { Component, HostListener, inject } from '@angular/core';
 import { ConfirmService } from '../../core/confirm.service';
 import { ModalHeadingComponent } from '../modal-heading/modal-heading.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'dc-confirm-dialog',
   standalone: true,
-  imports: [ModalHeadingComponent],
+  imports: [ModalHeadingComponent, MatTooltipModule],
   templateUrl: './confirm-dialog.component.html',
 })
 export class ConfirmDialogComponent {

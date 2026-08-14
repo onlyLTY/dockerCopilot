@@ -102,12 +102,18 @@ type ComposeCleanupPreviewReq {
 	ProjectID string `json:"projectId" validate:"required"`
 }
 
-type ComposeCleanupReq {
-	ProjectID    string `json:"projectId" validate:"required"`
-	PreviewToken string `json:"previewToken,optional"`
-	DeleteDir    bool   `json:"deleteDir,optional"`
-	Confirm      bool   `json:"confirm,optional"`
-}
+	type ComposeCleanupReq {
+		ProjectID    string `json:"projectId" validate:"required"`
+		PreviewToken string `json:"previewToken,optional"`
+		DeleteDir    bool   `json:"deleteDir,optional"`
+		Confirm      bool   `json:"confirm,optional"`
+	}
+
+	type ComposeCleanupBatchReq {
+		ProjectIDs []string `json:"projectIds" validate:"required,min=1"`
+		DeleteDir  bool     `json:"deleteDir,optional"`
+		Confirm    bool     `json:"confirm"`
+	}
 
 type VersionReq {
 	Type string `form:"type,optional"`
@@ -200,6 +206,9 @@ service dockerCopilot {
 
 	@handler GetProgress
 	get /progress/:taskid (GetProgressReq) returns (Resp)
+
+	@handler CancelProgress
+	post /progress/:taskid/cancel (CancelProgressReq) returns (Resp)
 }
 
 @server (
@@ -222,6 +231,9 @@ service dockerCopilot {
 
 	@handler remove
 	delete /container/:id (RemoveContainerReq) returns (Resp)
+
+	@handler removeContainersBatch
+	post /containers/remove/batch (BatchRemoveContainersReq) returns (Resp)
 
 	@handler rename
 	post /container/:id/rename (ContainerRenameReq) returns (Resp)
@@ -281,6 +293,12 @@ service dockerCopilot {
 	@handler composeProjectFileUpdate
 	put /compose/projects/:id/files/:filename (ComposeProjectFileUpdateReq) returns (Resp)
 
+	@handler composeProjectBackup
+	post /compose/projects/:id/backup (ComposeProjectIdReq) returns (Resp)
+
+	@handler composeProjectBackupBatch
+	post /compose/projects/backup (ComposeProjectBackupBatchReq) returns (Resp)
+
 	@handler composeDeployPreview
 	post /compose/projects/:id/deploy/preview (ComposeDeployPreviewReq) returns (Resp)
 
@@ -292,6 +310,9 @@ service dockerCopilot {
 
 	@handler composeCleanup
 	post /compose/projects/cleanup (ComposeCleanupReq) returns (Resp)
+
+	@handler composeCleanupBatch
+	post /compose/projects/cleanup/batch (ComposeCleanupBatchReq) returns (Resp)
 
 	@handler composeValidate
 	post /compose/validate (ComposeProjectValidateReq) returns (Resp)

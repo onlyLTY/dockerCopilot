@@ -76,6 +76,8 @@ func progressData(progress svc.TaskProgress) map[string]interface{} {
 		"steps":     progress.Steps,
 		"isDone":    progress.IsDone,
 		"failed":    progress.Failed,
+		"canceled":  progress.Canceled,
+		"timedOut":  progress.TimedOut,
 		"updatedAt": progress.UpdatedAt,
 	}
 }

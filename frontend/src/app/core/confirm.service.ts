@@ -7,6 +7,7 @@ export interface ConfirmOptions {
   cancelText?: string;
   danger?: boolean;
   critical?: boolean;
+  messageTooltip?: string;
 }
 
 interface PendingConfirm {

@@ -10,10 +10,14 @@ import (
 )
 
 func GetContainerList(ctx *svc.ServiceContext) ([]MyType.Container, error) {
+	return GetContainerListWithContext(context.Background(), ctx)
+}
+
+func GetContainerListWithContext(taskCtx context.Context, ctx *svc.ServiceContext) ([]MyType.Container, error) {
 	if err := requireDocker(ctx); err != nil {
 		return nil, err
 	}
-	dockerContainerList, err := ctx.DockerClient.ContainerList(context.Background(), container.ListOptions{
+	dockerContainerList, err := ctx.DockerClient.ContainerList(taskCtx, container.ListOptions{
 		All: true,
 	})
 	if err != nil {

@@ -1,8 +1,8 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
-import { CacheStore, CacheView } from './cache-store';
-import { CacheBus } from './cache-bus';
+import { Injectable, inject } from "@angular/core";
+import { HttpClient } from "@angular/common/http";
+import { Observable, tap } from "rxjs";
+import { CacheStore, CacheView } from "./cache-store";
+import { CacheBus } from "./cache-bus";
 
 export interface ApiResponse<T> {
   code: number;
@@ -36,7 +36,7 @@ export interface ComposeProject {
   image?: string;
   root: string;
   files: ComposeFile[];
-  status: 'using' | 'stopped' | 'unused' | 'unknown';
+  status: "using" | "stopped" | "unused" | "unknown";
   containers: ComposeContainer[];
   ports: ComposePort[];
   warnings?: string[];
@@ -66,15 +66,18 @@ export interface PortUsage {
   conflictKey?: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class ComposeService {
   private readonly http = inject(HttpClient);
   private readonly bus = inject(CacheBus);
-  private readonly store = new CacheStore<ProjectsData>(() => this.projects(), '读取项目失败');
+  private readonly store = new CacheStore<ProjectsData>(
+    () => this.projects(),
+    "读取项目失败",
+  );
   readonly cache: CacheView<ProjectsData> = this.store;
 
   constructor() {
-    this.bus.register('compose', this.store);
+    this.bus.register("compose", this.store);
   }
 
   ensureLoaded(): void {
@@ -85,7 +88,7 @@ export class ComposeService {
   }
 
   projects(): Observable<ApiResponse<ProjectsData>> {
-    return this.http.get<ApiResponse<ProjectsData>>('/api/compose/projects');
+    return this.http.get<ApiResponse<ProjectsData>>("/api/compose/projects");
   }
   createProject(
     projectName: string,
@@ -93,16 +96,19 @@ export class ComposeService {
     content: string,
   ): Observable<ApiResponse<{ projectId: string; version: string }>> {
     return this.http
-      .post<ApiResponse<{ projectId: string; version: string }>>('/api/compose/projects', {
-        projectName,
-        filename,
-        content,
-      })
+      .post<ApiResponse<{ projectId: string; version: string }>>(
+        "/api/compose/projects",
+        {
+          projectName,
+          filename,
+          content,
+        },
+      )
       .pipe(
-        tap(r => {
+        tap((r) => {
           if (r.code === 200) {
             this.store.refresh();
-            this.bus.invalidate(['containers', 'ports', 'images']);
+            this.bus.invalidate(["containers", "ports", "images"]);
           }
         }),
       );
@@ -111,17 +117,27 @@ export class ComposeService {
     ApiResponse<{ ports: PortUsage[]; conflicts: string[]; warnings: string[] }>
   > {
     return this.http.get<
-      ApiResponse<{ ports: PortUsage[]; conflicts: string[]; warnings: string[] }>
-    >('/api/ports');
+      ApiResponse<{
+        ports: PortUsage[];
+        conflicts: string[];
+        warnings: string[];
+      }>
+    >("/api/ports");
   }
   files(projectId: string): Observable<ApiResponse<ComposeFile[]>> {
-    return this.http.get<ApiResponse<ComposeFile[]>>(`/api/compose/projects/${projectId}/files`);
+    return this.http.get<ApiResponse<ComposeFile[]>>(
+      `/api/compose/projects/${projectId}/files`,
+    );
   }
   file(
     projectId: string,
     filename: string,
-  ): Observable<ApiResponse<{ filename: string; content: string; version: string }>> {
-    return this.http.get<ApiResponse<{ filename: string; content: string; version: string }>>(
+  ): Observable<
+    ApiResponse<{ filename: string; content: string; version: string }>
+  > {
+    return this.http.get<
+      ApiResponse<{ filename: string; content: string; version: string }>
+    >(
       `/api/compose/projects/${projectId}/files/${encodeURIComponent(filename)}`,
     );
   }
@@ -140,18 +156,19 @@ export class ComposeService {
     projectId: string,
     filename: string,
     content: string,
-  ): Observable<ApiResponse<{ valid: boolean; name: string; services: string[] }>> {
-    return this.http.post<ApiResponse<{ valid: boolean; name: string; services: string[] }>>(
-      '/api/compose/validate',
-      { projectId, filename, content },
-    );
+  ): Observable<
+    ApiResponse<{ valid: boolean; name: string; services: string[] }>
+  > {
+    return this.http.post<
+      ApiResponse<{ valid: boolean; name: string; services: string[] }>
+    >("/api/compose/validate", { projectId, filename, content });
   }
   deployPreview(
     projectId: string,
     filename: string,
   ): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http.post<ApiResponse<Record<string, unknown>>>(
-      '/api/compose/projects/' + projectId + '/deploy/preview',
+      "/api/compose/projects/" + projectId + "/deploy/preview",
       { filename },
     );
   }
@@ -164,14 +181,45 @@ export class ComposeService {
     pullImages = false,
   ): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http.post<ApiResponse<Record<string, unknown>>>(
-      '/api/compose/projects/' + projectId + '/deploy',
+      "/api/compose/projects/" + projectId + "/deploy",
       { filename, confirmToken, confirmWarnings, pullImages },
     );
   }
-  cleanupPreview(projectId: string): Observable<ApiResponse<Record<string, unknown>>> {
+  backup(projectId: string): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http.post<ApiResponse<Record<string, unknown>>>(
-      '/api/compose/projects/cleanup/preview',
+      `/api/compose/projects/${projectId}/backup`,
+      {},
+    );
+  }
+  backupBatch(
+    projectIds: string[],
+  ): Observable<ApiResponse<{ taskID: string }>> {
+    return this.http.post<ApiResponse<{ taskID: string }>>(
+      "/api/compose/projects/backup",
+      {
+        projectIds,
+      },
+    );
+  }
+  cleanupPreview(
+    projectId: string,
+  ): Observable<ApiResponse<Record<string, unknown>>> {
+    return this.http.post<ApiResponse<Record<string, unknown>>>(
+      "/api/compose/projects/cleanup/preview",
       { projectId },
+    );
+  }
+  cleanupBatch(
+    projectIds: string[],
+    deleteDir = true,
+  ): Observable<ApiResponse<{ taskID: string }>> {
+    return this.http.post<ApiResponse<{ taskID: string }>>(
+      "/api/compose/projects/cleanup/batch",
+      {
+        projectIds,
+        deleteDir,
+        confirm: true,
+      },
     );
   }
   cleanup(
@@ -180,17 +228,20 @@ export class ComposeService {
     deleteDir = false,
   ): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http
-      .post<ApiResponse<Record<string, unknown>>>('/api/compose/projects/cleanup', {
-        projectId,
-        previewToken,
-        deleteDir,
-        confirm: true,
-      })
+      .post<ApiResponse<Record<string, unknown>>>(
+        "/api/compose/projects/cleanup",
+        {
+          projectId,
+          previewToken,
+          deleteDir,
+          confirm: true,
+        },
+      )
       .pipe(
-        tap(r => {
+        tap((r) => {
           if (r.code === 200 && deleteDir) {
             this.store.refresh();
-            this.bus.invalidate(['containers', 'ports']);
+            this.bus.invalidate(["containers", "ports"]);
           }
         }),
       );

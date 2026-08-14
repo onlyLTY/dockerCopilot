@@ -63,18 +63,26 @@ export class TasksComponent {
   clearDone() {
     this.tasks.clearDone();
   }
-  async clearAll() {
-    if (
-      await this.confirm.open({
-        title: '清空任务记录',
-        message: '确定清空全部任务记录吗？',
-        confirmText: '清空全部',
-        danger: true,
-      })
-    )
-      this.tasks.clearAll();
+  async stopAll() {
+    const active = this.activeCount();
+    if (!active) return;
+    if (await this.confirm.open({
+      title: '停止全部任务',
+      message: `将请求停止全部 ${active} 个进行中任务。已执行的 Docker 操作不会自动回滚，确定继续吗？`,
+      confirmText: '停止全部',
+      danger: true,
+    })) {
+      const count = await this.tasks.cancelAllActive();
+      if (count) this.tasks.viewing.set('');
+    }
   }
-  statusText(t: { isDone: boolean; failed: boolean }) {
+
+  cancel(taskID: string) {
+    return this.tasks.cancel(taskID);
+  }
+  statusText(t: { isDone: boolean; failed: boolean; canceled?: boolean; timedOut?: boolean }) {
+    if (t.canceled) return '已取消';
+    if (t.timedOut) return '已超时';
     return t.failed ? '失败' : t.isDone ? '已完成' : '进行中';
   }
   time(ts: number) {

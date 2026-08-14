@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -33,7 +34,13 @@ type ServiceContext struct {
 	composeOps         map[string]string
 	updateMu           sync.Mutex
 	updatingContainers map[string]string
+	containerOpsMu     sync.Mutex
+	containerDeletes   map[string]string
 	updateSlots        chan struct{}
+	imageOps           chan struct{}
+	imageOpsMu         sync.Mutex
+	taskMu             sync.Mutex
+	taskCancels        map[string]context.CancelFunc
 
 	// 定时任务：更新检查与自动备份各持有一个 cronTask，job 由 main 注入（避免 svc 反向依赖 utiles）
 	updateTask cronTask
@@ -86,6 +93,9 @@ type TaskProgress struct {
 	Total          int64      `json:"total,omitempty"`
 	IsDone         bool       `json:"isDone"`
 	Failed         bool       `json:"failed"`
+	Canceled       bool       `json:"canceled"`
+	TimedOut       bool       `json:"timedOut"`
+	Refresh        bool       `json:"refresh"`
 	Steps          []TaskStep `json:"steps"`
 	// UpdatedAt 最近一次进度变更时间（Unix 毫秒）。用于按时间淘汰与前端展示。
 	UpdatedAt int64 `json:"updatedAt"`
@@ -160,7 +170,10 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		composeOps:         make(map[string]string),
 		DockerClient:       cli,
 		updatingContainers: make(map[string]string),
+		containerDeletes:   make(map[string]string),
 		updateSlots:        make(chan struct{}, maxConcurrentContainerUpdates),
+		imageOps:           make(chan struct{}, 1),
+		taskCancels:        make(map[string]context.CancelFunc),
 	}
 	before := len(ctx.ProgressStore)
 	ctx.pruneProgressLocked()
@@ -259,7 +272,7 @@ func (ctx *ServiceContext) scheduleProgressPersistLocked() {
 }
 
 func progressFailed(progress TaskProgress) bool {
-	if !progress.IsDone {
+	if !progress.IsDone || progress.Canceled {
 		return false
 	}
 	if progress.Failed || progress.Percentage < 100 {
@@ -290,13 +303,26 @@ func stepFailed(progress TaskProgress) bool {
 func (ctx *ServiceContext) UpdateProgress(taskID string, progress TaskProgress) {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
+	previous, exists := ctx.ProgressStore[taskID]
+	if exists && (previous.IsDone || previous.Canceled) {
+		return
+	}
+	if exists && previous.UpdatedAt > 0 && progress.UpdatedAt > 0 && progress.UpdatedAt < previous.UpdatedAt {
+		return
+	}
+	ctx.updateProgressLocked(taskID, progress, previous)
+}
+
+func (ctx *ServiceContext) updateProgressLocked(taskID string, progress, previous TaskProgress) {
 	now := time.Now().UnixMilli()
-	if progress.UpdatedAt == 0 {
+	if progress.UpdatedAt == 0 || progress.UpdatedAt < previous.UpdatedAt {
 		progress.UpdatedAt = now
 	}
-	previous := ctx.ProgressStore[taskID]
 	if progress.ResourceID == "" {
 		progress.ResourceID = previous.ResourceID
+	}
+	if !progress.Refresh {
+		progress.Refresh = previous.Refresh
 	}
 	if progress.ProgressType != ProgressTypeImagePull {
 		progress.ProgressType = ""
@@ -433,11 +459,73 @@ func (ctx *ServiceContext) ClearProgress(doneOnly bool) {
 	ctx.persistProgressLocked()
 }
 
+func (ctx *ServiceContext) RegisterTask(taskID string) context.Context {
+	base, cancel := context.WithCancel(context.Background())
+	ctx.taskMu.Lock()
+	if ctx.taskCancels == nil {
+		ctx.taskCancels = make(map[string]context.CancelFunc)
+	}
+	ctx.taskCancels[taskID] = cancel
+	ctx.taskMu.Unlock()
+	return base
+}
+
+// FinishTask releases the cancellation controller after the worker reaches a terminal state.
+func (ctx *ServiceContext) FinishTask(taskID string) {
+	ctx.taskMu.Lock()
+	delete(ctx.taskCancels, taskID)
+	ctx.taskMu.Unlock()
+}
+
+// CancelTask requests cancellation and marks the progress as terminal only when the worker observes it.
+func (ctx *ServiceContext) CancelTask(taskID string) (TaskProgress, bool, bool) {
+	progress, exists := ctx.GetProgress(taskID)
+	if !exists {
+		return TaskProgress{}, false, false
+	}
+	if progress.IsDone {
+		return progress, true, false
+	}
+	ctx.taskMu.Lock()
+	cancel, active := ctx.taskCancels[taskID]
+	ctx.taskMu.Unlock()
+	if active {
+		cancel()
+	}
+	return progress, true, active
+}
+
+func (ctx *ServiceContext) MarkTaskCanceled(taskID string, detail string) bool {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	progress, ok := ctx.ProgressStore[taskID]
+	if !ok || progress.IsDone {
+		return false
+	}
+	progress.Canceled = true
+	progress.Failed = false
+	progress.IsDone = true
+	progress.Percentage = 100
+	progress.Message = "任务已取消"
+	if detail == "" {
+		detail = "用户请求停止任务；已执行的 Docker 操作不会自动回滚"
+	}
+	progress.DetailMsg = detail
+	ctx.updateProgressLocked(taskID, progress, ctx.ProgressStore[taskID])
+	return true
+}
 func (ctx *ServiceContext) TryStartContainerUpdate(containerID, taskID string) bool {
 	ctx.updateMu.Lock()
 	defer ctx.updateMu.Unlock()
+	ctx.containerOpsMu.Lock()
+	defer ctx.containerOpsMu.Unlock()
 	if ctx.updatingContainers == nil {
 		ctx.updatingContainers = make(map[string]string)
+	}
+	if ctx.containerDeletes != nil {
+		if _, exists := ctx.containerDeletes[containerID]; exists {
+			return false
+		}
 	}
 	if _, exists := ctx.updatingContainers[containerID]; exists {
 		return false
@@ -446,8 +534,11 @@ func (ctx *ServiceContext) TryStartContainerUpdate(containerID, taskID string) b
 	return true
 }
 
-// AcquireContainerUpdateSlot waits until an actual Docker update can run.
-func (ctx *ServiceContext) AcquireContainerUpdateSlot() {
+func (ctx *ServiceContext) AcquireContainerUpdateSlot(taskContexts ...context.Context) bool {
+	taskCtx := context.Background()
+	if len(taskContexts) > 0 && taskContexts[0] != nil {
+		taskCtx = taskContexts[0]
+	}
 	if ctx.updateSlots == nil {
 		ctx.updateMu.Lock()
 		if ctx.updateSlots == nil {
@@ -455,7 +546,12 @@ func (ctx *ServiceContext) AcquireContainerUpdateSlot() {
 		}
 		ctx.updateMu.Unlock()
 	}
-	ctx.updateSlots <- struct{}{}
+	select {
+	case ctx.updateSlots <- struct{}{}:
+		return true
+	case <-taskCtx.Done():
+		return false
+	}
 }
 
 func (ctx *ServiceContext) ReleaseContainerUpdateSlot() {
@@ -471,6 +567,8 @@ func (ctx *ServiceContext) ReleaseContainerUpdateSlot() {
 func (ctx *ServiceContext) FinishContainerUpdate(containerID, taskID string) {
 	ctx.updateMu.Lock()
 	defer ctx.updateMu.Unlock()
+	ctx.containerOpsMu.Lock()
+	defer ctx.containerOpsMu.Unlock()
 	if current, ok := ctx.updatingContainers[containerID]; ok && current == taskID {
 		delete(ctx.updatingContainers, containerID)
 	}
@@ -506,7 +604,43 @@ func (ctx *ServiceContext) FinishComposeOp(projectID, op string) {
 	}
 }
 
-// spec 为 5 段 cron 表达式（分 时 日 月 周）。
+func (ctx *ServiceContext) AcquireImageOp(taskCtx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	ctx.imageOpsMu.Lock()
+	if ctx.imageOps == nil {
+		ctx.imageOps = make(chan struct{}, 1)
+	}
+	slots := ctx.imageOps
+	ctx.imageOpsMu.Unlock()
+	if taskCtx == nil {
+		taskCtx = context.Background()
+	}
+	select {
+	case slots <- struct{}{}:
+		return true
+	case <-taskCtx.Done():
+		return false
+	}
+}
+
+func (ctx *ServiceContext) ReleaseImageOp() {
+	if ctx == nil {
+		return
+	}
+	ctx.imageOpsMu.Lock()
+	slots := ctx.imageOps
+	ctx.imageOpsMu.Unlock()
+	if slots == nil {
+		return
+	}
+	select {
+	case <-slots:
+	default:
+	}
+}
+
 func (ctx *ServiceContext) StartUpdateCron(spec string, job func()) error {
 	ctx.cronMu.Lock()
 	defer ctx.cronMu.Unlock()

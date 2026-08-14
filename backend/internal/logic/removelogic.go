@@ -32,7 +32,7 @@ func (l *RemoveLogic) Remove(req *types.RemoveImageReq) (resp *types.Resp, err e
 	if !req.Force && strings.TrimSpace(req.RepoTag) != "" {
 		target = strings.TrimSpace(req.RepoTag)
 	}
-	err = utiles.RemoveImage(l.svcCtx, target, req.Force)
+	err = utiles.RemoveImageWithContext(l.ctx, l.svcCtx, target, req.Force)
 	if err != nil {
 		l.Errorf("删除镜像失败 target=%s force=%t: %v", target, req.Force, err)
 		if errorx.IsDockerUnavailable(err) {

@@ -1,6 +1,7 @@
 package module
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,6 +23,10 @@ const (
 )
 
 func GetToken(image types.Image, registryAuth string) (string, error) {
+	return GetTokenWithContext(context.Background(), image, registryAuth)
+}
+
+func GetTokenWithContext(ctx context.Context, image types.Image, registryAuth string) (string, error) {
 	logx.Infof("镜像名称 %s", image.ImageName)
 	normalizedRef, err := ref.ParseNormalizedNamed(image.ImageName)
 	if err != nil {
@@ -32,7 +37,7 @@ func GetToken(image types.Image, registryAuth string) (string, error) {
 	registry := URL.Host
 
 	var req *http.Request
-	if req, err = GetChallengeRequest(URL); err != nil {
+	if req, err = GetChallengeRequestWithContext(ctx, URL); err != nil {
 		return "", fmt.Errorf("创建认证请求失败：镜像=%s，仓库=%s：%w", image.ImageName, registry, err)
 	}
 
@@ -61,7 +66,7 @@ func GetToken(image types.Image, registryAuth string) (string, error) {
 		return fmt.Sprintf("Basic %s", registryAuth), nil
 	}
 	if strings.HasPrefix(challenge, "bearer") {
-		token, err := GetBearerHeader(challenge, normalizedRef, registryAuth)
+		token, err := GetBearerHeaderWithContext(ctx, challenge, normalizedRef, registryAuth)
 		if err != nil {
 			return "", fmt.Errorf("获取令牌失败：镜像=%s，仓库=%s：%w", image.ImageName, registry, err)
 		}
@@ -88,7 +93,11 @@ func GetToken(image types.Image, registryAuth string) (string, error) {
 }
 
 func GetChallengeRequest(URL url.URL) (*http.Request, error) {
-	req, err := http.NewRequest("GET", URL.String(), nil)
+	return GetChallengeRequestWithContext(context.Background(), URL)
+}
+
+func GetChallengeRequestWithContext(ctx context.Context, URL url.URL) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", URL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +107,10 @@ func GetChallengeRequest(URL url.URL) (*http.Request, error) {
 }
 
 func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) (string, error) {
+	return GetBearerHeaderWithContext(context.Background(), challenge, imageRef, registryAuth)
+}
+
+func GetBearerHeaderWithContext(ctx context.Context, challenge string, imageRef ref.Named, registryAuth string) (string, error) {
 	client := http.Client{}
 	authURL, err := GetAuthURL(challenge, imageRef)
 
@@ -106,7 +119,7 @@ func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) 
 	}
 
 	var r *http.Request
-	if r, err = http.NewRequest("GET", authURL.String(), nil); err != nil {
+	if r, err = http.NewRequestWithContext(ctx, "GET", authURL.String(), nil); err != nil {
 		return "", fmt.Errorf("创建令牌请求失败：%w", err)
 	}
 

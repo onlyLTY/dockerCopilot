@@ -88,6 +88,10 @@ func (l *FilesLogic) Update(req *types.ComposeProjectFileUpdateReq) (*types.Resp
 		logx.Errorf("compose operation=file_update project=%s filename=%s failed=%v", req.ProjectID, req.Filename, err)
 		return errorResp(resp, 404, clientMsg(err, "保存 Compose 文件失败")), nil
 	}
+	if !l.svcCtx.TryStartComposeOp(req.ProjectID, "save") {
+		return errorResp(resp, 409, "该项目正在部署、清理、保存或备份中，请稍后再试"), nil
+	}
+	defer l.svcCtx.FinishComposeOp(req.ProjectID, "save")
 	version, err := composeProject.SaveProjectFile(l.svcCtx, root, req.Filename, req.Content, req.Version)
 	if err != nil {
 		logx.Errorf("compose operation=file_update project=%s filename=%s failed=%v", req.ProjectID, req.Filename, err)

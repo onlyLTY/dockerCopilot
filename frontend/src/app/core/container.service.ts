@@ -1,9 +1,9 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
-import { ApiResponse } from './compose.service';
-import { CacheStore, CacheView } from './cache-store';
-import { CacheBus } from './cache-bus';
+import { Injectable, inject } from "@angular/core";
+import { HttpClient, HttpHeaders } from "@angular/common/http";
+import { Observable, tap } from "rxjs";
+import { ApiResponse } from "./compose.service";
+import { CacheStore, CacheView } from "./cache-store";
+import { CacheBus } from "./cache-bus";
 
 export interface ContainerRow {
   id: string;
@@ -17,15 +17,18 @@ export interface ContainerRow {
   updateIgnored: boolean;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class ContainerService {
   private readonly http = inject(HttpClient);
   private readonly bus = inject(CacheBus);
-  private readonly store = new CacheStore<ContainerRow[]>(() => this.list(), '读取容器失败');
+  private readonly store = new CacheStore<ContainerRow[]>(
+    () => this.list(),
+    "读取容器失败",
+  );
   readonly cache: CacheView<ContainerRow[]> = this.store;
 
   constructor() {
-    this.bus.register('containers', this.store);
+    this.bus.register("containers", this.store);
   }
 
   ensureLoaded(): void {
@@ -36,16 +39,19 @@ export class ContainerService {
   }
 
   list(): Observable<ApiResponse<ContainerRow[]>> {
-    return this.http.get<ApiResponse<ContainerRow[]>>('/api/containers');
+    return this.http.get<ApiResponse<ContainerRow[]>>("/api/containers");
   }
   /** 异步检查更新，返回 taskID 供进度跟踪 */
   checkUpdate(): Observable<ApiResponse<{ taskID: string }>> {
-    return this.http.post<ApiResponse<{ taskID: string }>>('/api/containers/check-update', {});
+    return this.http.post<ApiResponse<{ taskID: string }>>(
+      "/api/containers/check-update",
+      {},
+    );
   }
   start(id: string) {
     return this.done(
       this.http.post<ApiResponse<unknown>>(
-        '/api/container/' + encodeURIComponent(id) + '/start',
+        "/api/container/" + encodeURIComponent(id) + "/start",
         {},
       ),
     );
@@ -53,7 +59,7 @@ export class ContainerService {
   stop(id: string) {
     return this.done(
       this.http.post<ApiResponse<unknown>>(
-        '/api/container/' + encodeURIComponent(id) + '/stop',
+        "/api/container/" + encodeURIComponent(id) + "/stop",
         {},
       ),
     );
@@ -61,7 +67,7 @@ export class ContainerService {
   restart(id: string) {
     return this.done(
       this.http.post<ApiResponse<unknown>>(
-        '/api/container/' + encodeURIComponent(id) + '/restart',
+        "/api/container/" + encodeURIComponent(id) + "/restart",
         {},
       ),
     );
@@ -69,51 +75,69 @@ export class ContainerService {
   rename(id: string, newName: string) {
     return this.done(
       this.http.post<ApiResponse<unknown>>(
-        '/api/container/' + encodeURIComponent(id) + '/rename',
+        "/api/container/" + encodeURIComponent(id) + "/rename",
         { newName },
-        { headers: new HttpHeaders({ 'Content-Type': 'application/json' }) },
+        { headers: new HttpHeaders({ "Content-Type": "application/json" }) },
       ),
     );
   }
   remove(id: string, force = false) {
     return this.done(
       this.http.delete<ApiResponse<unknown>>(
-        '/api/container/' + encodeURIComponent(id) + '?force=' + force,
+        "/api/container/" + encodeURIComponent(id) + "?force=" + force,
       ),
     );
   }
-  update(id: string, imageNameAndTag = '', containerName = '') {
+  removeBatch(
+    containerIds: string[],
+  ): Observable<ApiResponse<{ taskID: string }>> {
+    return this.http.post<ApiResponse<{ taskID: string }>>(
+      "/api/containers/remove/batch",
+      {
+        containerIds,
+        confirm: true,
+      },
+    );
+  }
+  update(id: string, imageNameAndTag = "", containerName = "") {
     return this.http.post<ApiResponse<unknown>>(
-      '/api/container/' + encodeURIComponent(id) + '/update',
+      "/api/container/" + encodeURIComponent(id) + "/update",
       { imageNameAndTag, containerName },
     );
   }
   ignoreUpdate(id: string) {
     return this.http
-      .post<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/update-ignore', {})
+      .post<ApiResponse<unknown>>(
+        "/api/container/" + encodeURIComponent(id) + "/update-ignore",
+        {},
+      )
       .pipe(
-        tap(r => {
+        tap((r) => {
           if (r.code === 200) this.store.refresh();
         }),
       );
   }
   restoreUpdate(id: string) {
     return this.http
-      .delete<ApiResponse<unknown>>('/api/container/' + encodeURIComponent(id) + '/update-ignore')
+      .delete<ApiResponse<unknown>>(
+        "/api/container/" + encodeURIComponent(id) + "/update-ignore",
+      )
       .pipe(
-        tap(r => {
+        tap((r) => {
           if (r.code === 200) this.store.refresh();
         }),
       );
   }
 
   /** 操作成功后：刷新容器自身缓存，并让端口/镜像缓存失效（起停会影响端口占用与镜像使用状态） */
-  private done(obs: Observable<ApiResponse<unknown>>): Observable<ApiResponse<unknown>> {
+  private done(
+    obs: Observable<ApiResponse<unknown>>,
+  ): Observable<ApiResponse<unknown>> {
     return obs.pipe(
-      tap(r => {
+      tap((r) => {
         if (r.code === 200) {
           this.store.refresh();
-          this.bus.invalidate(['ports', 'images']);
+          this.bus.invalidate(["ports", "images"]);
         }
       }),
     );

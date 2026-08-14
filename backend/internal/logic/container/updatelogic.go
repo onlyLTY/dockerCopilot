@@ -54,7 +54,9 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 	})
 	imageNameAndTag := req.ImageNameAndTag
 	delOldContainer := os.Getenv("DelOldContainer") != "false"
+	taskCtx := l.svcCtx.RegisterTask(taskID)
 	go func() {
+		defer l.svcCtx.FinishTask(taskID)
 		defer l.svcCtx.FinishContainerUpdate(containerID, taskID)
 		defer func() {
 			if r := recover(); r != nil {
@@ -64,8 +66,15 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 			}
 		}()
 
-		l.svcCtx.AcquireContainerUpdateSlot()
+		if !l.svcCtx.AcquireContainerUpdateSlot(taskCtx) {
+			l.svcCtx.MarkTaskCanceled(taskID, "任务已停止，尚未开始执行 Docker 操作")
+			return
+		}
 		defer l.svcCtx.ReleaseContainerUpdateSlot()
+		if err := taskCtx.Err(); err != nil {
+			l.svcCtx.MarkTaskCanceled(taskID, "任务已停止，尚未开始执行 Docker 操作")
+			return
+		}
 		queued, _ := l.svcCtx.GetProgress(taskID)
 		queued.Message = "开始执行更新"
 		queued.DetailMsg = "已获得 Docker 执行槽位"
@@ -73,7 +82,7 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 
 		currentImage := imageNameAndTag
 		if currentImage == "" {
-			inspected, inspectErr := utiles.GetContainerInspect(l.svcCtx, containerID)
+			inspected, inspectErr := utiles.GetContainerInspectWithContext(taskCtx, l.svcCtx, containerID)
 			if inspectErr != nil || inspected.Config == nil || inspected.Config.Image == "" {
 				message := "无法从容器获取镜像名称"
 				if inspectErr != nil {
@@ -84,7 +93,11 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 			}
 			currentImage = inspected.Config.Image
 		}
-		if err := utiles.UpdateContainer(l.svcCtx, containerID, name, currentImage, delOldContainer, taskID); err != nil {
+		if err := utiles.UpdateContainerWithContext(taskCtx, l.svcCtx, containerID, name, currentImage, delOldContainer, taskID); err != nil {
+			if taskCtx.Err() != nil {
+				l.svcCtx.MarkTaskCanceled(taskID, "任务已停止；已执行的 Docker 操作不会自动回滚")
+				return
+			}
 			l.Errorf("update container failed task=%s container=%s: %v", taskID, containerID, err)
 		}
 	}()

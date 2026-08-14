@@ -34,7 +34,9 @@ func (l *CheckUpdateLogic) CheckUpdate() (resp *types.Resp, err error) {
 		TaskID: taskID, Name: name, Percentage: 0, Message: "任务已提交", DetailMsg: "", IsDone: false,
 	})
 	svcCtx := l.svcCtx
+	taskCtx := svcCtx.RegisterTask(taskID)
 	go func() {
+		defer svcCtx.FinishTask(taskID)
 		defer func() {
 			if r := recover(); r != nil {
 				logx.Errorf("检查更新 panic: %v", r)
@@ -43,22 +45,33 @@ func (l *CheckUpdateLogic) CheckUpdate() (resp *types.Resp, err error) {
 		}()
 		list, err := utiles.GetImagesList(svcCtx)
 		if err != nil {
+			if taskCtx.Err() != nil {
+				svcCtx.MarkTaskCanceled(taskID, "任务已停止；检查更新不会修改 Docker 资源")
+				return
+			}
 			logx.Errorf("检查更新获取镜像列表失败: %v", err)
-			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "获取镜像列表失败", DetailMsg: "获取镜像列表失败", IsDone: true})
+			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "获取镜像列表失败", DetailMsg: "获取镜像列表失败", Failed: true, IsDone: true})
 			return
 		}
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 5, Message: "开始检查", DetailMsg: "", IsDone: false})
-		svcCtx.HubImageInfo.CheckUpdateWithProgress(list, func(done, total int, current string) {
+		err = svcCtx.HubImageInfo.CheckUpdateWithProgressContext(taskCtx, list, func(done, total int, current string) {
 			pct := 5
 			if total > 0 {
 				pct = 5 + done*95/total
 			}
 			svcCtx.UpdateProgress(taskID, svc.TaskProgress{
 				TaskID: taskID, Name: name, Percentage: pct,
-				Message:   fmt.Sprintf("正在检查 %d/%d", done, total),
-				DetailMsg: current, IsDone: false,
+				Message: fmt.Sprintf("正在检查 %d/%d", done, total), DetailMsg: current, IsDone: false,
 			})
 		})
+		if err != nil {
+			if taskCtx.Err() != nil {
+				svcCtx.MarkTaskCanceled(taskID, "任务已停止；检查更新不会修改 Docker 资源")
+				return
+			}
+			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 5, Message: "检查更新失败", DetailMsg: err.Error(), Failed: true, IsDone: true})
+			return
+		}
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 100, Message: "检查完成", DetailMsg: "", IsDone: true})
 	}()
 	resp.Code = 200

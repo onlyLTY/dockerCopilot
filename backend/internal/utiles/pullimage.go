@@ -194,6 +194,13 @@ func PullImageWithTaskRange(ctx context.Context, svcCtx *svc.ServiceContext, ima
 	if svcCtx == nil || svcCtx.DockerClient == nil {
 		return fmt.Errorf("Docker 客户端不可用")
 	}
+	if !svcCtx.AcquireImageOp(ctx) {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return fmt.Errorf("镜像操作已停止")
+	}
+	defer svcCtx.ReleaseImageOp()
 	_, err := pullImageWithProgress(ctx, svcCtx.DockerClient, imageRef, func(p PullProgress) {
 		progress, ok := svcCtx.GetProgress(taskID)
 		if !ok {

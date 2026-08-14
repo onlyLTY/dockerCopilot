@@ -23,6 +23,7 @@ export interface CacheStoreOptions {
 export class CacheStore<T> {
   readonly data = signal<T | undefined>(undefined);
   readonly error = signal('');
+  readonly stale = signal(false);
 
   /** 是否已成功完成至少一次加载（含空列表） */
   private readonly settled = signal(false);
@@ -79,6 +80,7 @@ export class CacheStore<T> {
         this.inflight = null;
         // 部分接口可能返回空 body（null），需兜底避免读 code 崩溃
         if (!r) {
+          this.stale.set(this.settled());
           if (!this.settled()) this.error.set(this.withReason('响应为空'));
           return;
         }
@@ -86,14 +88,16 @@ export class CacheStore<T> {
           this.data.set(r.data as T);
           this.loadedAt = Date.now();
           this.settled.set(true);
+          this.stale.set(false);
           this.error.set('');
-        } else if (!this.settled()) {
-          // 有旧数据时静默失败；未就绪时才展示错误
-          this.error.set(this.withReason(r.msg || `业务错误码 ${r.code}`));
+        } else {
+          this.stale.set(this.settled());
+          if (!this.settled()) this.error.set(this.withReason(r.msg || `业务错误码 ${r.code}`));
         }
       },
       error: e => {
         this.inflight = null;
+        this.stale.set(this.settled());
         if (!this.settled()) this.error.set(this.formatHttpError(e));
       },
     });
@@ -147,4 +151,5 @@ export interface CacheView<T> {
   readonly data: Signal<T | undefined>;
   readonly loading: Signal<boolean>;
   readonly error: Signal<string>;
+  readonly stale: Signal<boolean>;
 }

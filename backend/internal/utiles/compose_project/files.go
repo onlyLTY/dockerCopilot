@@ -4,14 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/compose-spec/compose-go/v2/loader"
 	composeTypes "github.com/compose-spec/compose-go/v2/types"
@@ -164,10 +162,8 @@ func SaveProjectFile(svcCtx *svc.ServiceContext, root, filename, content, expect
 		if expectedVersion != "" && expectedVersion != version {
 			return "", fmt.Errorf("文件已被其他操作修改，请重新加载")
 		}
-		if err := backupVersion(svcCtx, root, filename, current, version); err != nil {
-			return "", err
-		}
 	} else if !os.IsNotExist(err) {
+
 		return "", err
 	}
 	if _, err := ParseComposeContent(root, filename, []byte(content)); err != nil {
@@ -279,61 +275,119 @@ func ContentVersion(content []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func backupVersion(svcCtx *svc.ServiceContext, root, filename string, content []byte, version string) error {
-	backupRoot := svcCtx.Config.Compose.BackupDir
-	if backupRoot == "" {
-		backupRoot = filepath.Join(utiles.BackupDirectory(), "compose-projects")
-	}
-	dir := filepath.Join(backupRoot, ProjectID(root), "versions")
-	if err := os.MkdirAll(dir, 0750); err != nil {
-		return err
-	}
-	stamp := time.Now().UTC().Format("20060102T150405.000000000Z")
-	name := stamp + "-" + filepath.Base(filename)
-	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, content, 0600); err != nil {
-		return err
-	}
-	manifest := map[string]interface{}{"filename": filename, "version": version, "createdAt": time.Now().UTC(), "size": len(content), "sha256": version}
-	data, err := json.Marshal(manifest)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path+".json", data, 0600)
-}
-
 func BackupProject(svcCtx *svc.ServiceContext, root string) (map[string]interface{}, error) {
+	composeFilename, err := findBackupComposeFilename(root)
+	if err != nil {
+		return nil, err
+	}
+	composePath, err := ProjectFilePath(root, composeFilename)
+	if err != nil {
+		return nil, err
+	}
+	composeContent, err := os.ReadFile(composePath)
+	if err != nil {
+		return nil, err
+	}
+	project, err := ParseComposeContent(root, composeFilename, composeContent)
+	if err != nil {
+		return nil, err
+	}
+	name := backupName(project)
 	backupRoot := svcCtx.Config.Compose.BackupDir
 	if backupRoot == "" {
 		backupRoot = filepath.Join(utiles.BackupDirectory(), "compose-projects")
 	}
-	dir := filepath.Join(backupRoot, ProjectID(root), "cleanup", time.Now().UTC().Format("20060102T150405.000000000Z"))
-	if err := os.MkdirAll(dir, 0750); err != nil {
+	backupDir := backupRoot
+	optional := []string{}
+	for _, filename := range []string{".env", "config.yaml"} {
+		path := filepath.Join(root, filename)
+		if info, statErr := os.Lstat(path); statErr == nil && !info.IsDir() {
+			if info.Mode()&os.ModeSymlink != 0 {
+				return nil, fmt.Errorf("不允许备份符号链接文件：%s", filename)
+			}
+			optional = append(optional, filename)
+		} else if statErr != nil && !os.IsNotExist(statErr) {
+			return nil, statErr
+		}
+	}
+	if len(optional) == 2 {
+		backupDir = filepath.Join(backupRoot, ProjectID(root))
+	}
+	if err := os.MkdirAll(backupDir, 0750); err != nil {
 		return nil, err
 	}
-	files, err := ListProjectFiles(root)
-	if err != nil {
+	backupFilename := name + "_compose.yaml"
+	if err := os.WriteFile(filepath.Join(backupDir, backupFilename), composeContent, 0600); err != nil {
 		return nil, err
 	}
-	manifest := map[string]interface{}{"projectId": ProjectID(root), "createdAt": time.Now().UTC(), "files": files}
-	for _, item := range files {
-		name := item["name"].(string)
-		content, err := os.ReadFile(filepath.Join(root, name))
+	for _, filename := range optional {
+		content, err := os.ReadFile(filepath.Join(root, filename))
 		if err != nil {
 			return nil, err
 		}
-		if err := os.WriteFile(filepath.Join(dir, name), content, 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(backupDir, filename), content, 0600); err != nil {
 			return nil, err
 		}
 	}
-	data, err := json.Marshal(manifest)
-	if err != nil {
-		return nil, err
+	files := []string{backupFilename}
+	files = append(files, optional...)
+	return map[string]interface{}{
+		"path":     backupDir,
+		"filename": backupFilename,
+		"files":    files,
+		"version":  ContentVersion(composeContent),
+	}, nil
+}
+
+func findBackupComposeFilename(root string) (string, error) {
+	for _, filename := range []string{"compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml"} {
+		path := filepath.Join(root, filename)
+		info, err := os.Lstat(path)
+		if err == nil {
+			if info.IsDir() {
+				return "", fmt.Errorf("Compose 文件不能是目录：%s", filename)
+			}
+			if info.Mode()&os.ModeSymlink != 0 {
+				return "", fmt.Errorf("不允许备份符号链接文件：%s", filename)
+			}
+			return filename, nil
+		}
+		if !os.IsNotExist(err) {
+			return "", err
+		}
 	}
-	if err := os.WriteFile(filepath.Join(dir, "manifest.json"), data, 0600); err != nil {
-		return nil, err
+	return "", fmt.Errorf("未找到 Compose 主文件（支持 compose.yaml、compose.yml、docker-compose.yaml、docker-compose.yml）")
+}
+func backupName(project *composeTypes.Project) string {
+	name := ""
+	for _, service := range project.Services {
+		containerName := strings.TrimSpace(service.ContainerName)
+		if containerName == "" {
+			continue
+		}
+		if name != "" && name != containerName {
+			return normalizedBackupName(project.Name)
+		}
+		name = containerName
 	}
-	return map[string]interface{}{"path": dir, "manifest": manifest}, nil
+	if name == "" {
+		name = project.Name
+	}
+	return normalizedBackupName(name)
+}
+
+func normalizedBackupName(name string) string {
+	name = strings.TrimSpace(name)
+	name = strings.TrimPrefix(name, "/")
+	if name == "" {
+		return "app"
+	}
+	name = regexp.MustCompile(`[^a-zA-Z0-9._-]+`).ReplaceAllString(name, "-")
+	name = strings.Trim(name, ".-")
+	if name == "" || name == "." || name == ".." {
+		return "app"
+	}
+	return name
 }
 
 func ensurePathWithin(root, target string) error {

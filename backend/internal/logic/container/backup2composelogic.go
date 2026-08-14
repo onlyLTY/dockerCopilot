@@ -25,11 +25,7 @@ func NewBackup2composeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Ba
 }
 
 func (l *Backup2composeLogic) Backup2compose() (resp *types.Resp, err error) {
-	resp = &types.Resp{}
-	err = utiles.Backup2Compose(l.svcCtx)
-	if err != nil {
-		l.Errorf("导出 Compose 备份失败: %v", err)
-		return fail(resp, err, 500, "导出 Compose 备份失败")
-	}
-	return ok(resp, nil), nil
+	return l.submitBackupTask("创建 YAML 容器备份", func(taskCtx context.Context) error {
+		return utiles.Backup2ComposeWithContext(taskCtx, l.svcCtx)
+	})
 }

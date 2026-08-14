@@ -1,30 +1,37 @@
-import { Component, computed, DestroyRef, HostListener, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { from, forkJoin, Observable, of } from 'rxjs';
-import { catchError, map, mergeMap, tap, toArray } from 'rxjs/operators';
-import { ContainerService, ContainerRow } from '../../core/container.service';
-import { IconService } from '../../core/icon.service';
-import { ToastService } from '../../core/toast.service';
-import { TaskService } from '../../core/task.service';
-import { ConfirmService } from '../../core/confirm.service';
-import { SoftRefreshHandle, startSoftRefresh } from '../../core/soft-refresh';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  HostListener,
+  inject,
+  signal,
+} from "@angular/core";
+import { FormsModule } from "@angular/forms";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { from, forkJoin, Observable, of } from "rxjs";
+import { catchError, map, mergeMap, tap, toArray } from "rxjs/operators";
+import { ContainerService, ContainerRow } from "../../core/container.service";
+import { IconService } from "../../core/icon.service";
+import { ToastService } from "../../core/toast.service";
+import { TaskService } from "../../core/task.service";
+import { ConfirmService } from "../../core/confirm.service";
+import { SoftRefreshHandle, startSoftRefresh } from "../../core/soft-refresh";
 import {
   ActionApiResult,
   actionErrorMessage,
   actionLabel,
   runAction,
-} from '../../core/run-action';
-import { PageStateComponent } from '../../shared/page-state/page-state.component';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
-import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
-import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
-import { ModalHeadingComponent } from '../../shared/modal-heading/modal-heading.component';
-import { MatTooltipModule } from '@angular/material/tooltip';
+} from "../../core/run-action";
+import { PageStateComponent } from "../../shared/page-state/page-state.component";
+import { IconComponent } from "../../shared/icon/icon.component";
+import { ResourceCardComponent } from "../../shared/resource-card/resource-card.component";
+import { StatsComponent, StatItem } from "../../shared/stats/stats.component";
+import { PageHeadingComponent } from "../../shared/page-heading/page-heading.component";
+import { ModalHeadingComponent } from "../../shared/modal-heading/modal-heading.component";
+import { MatTooltipModule } from "@angular/material/tooltip";
 
 @Component({
-  selector: 'dc-containers',
+  selector: "dc-containers",
   standalone: true,
   imports: [
     FormsModule,
@@ -36,8 +43,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     ModalHeadingComponent,
     MatTooltipModule,
   ],
-  templateUrl: './containers.component.html',
-  styleUrl: './containers.component.scss',
+  templateUrl: "./containers.component.html",
+  styleUrl: "./containers.component.scss",
 })
 export class ContainersComponent {
   private readonly service = inject(ContainerService);
@@ -60,28 +67,32 @@ export class ContainersComponent {
   readonly activeUpdateIds = signal<Set<string>>(new Set());
   readonly updateIgnoreBusyIds = signal<Set<string>>(new Set());
   readonly detail = signal<ContainerRow | undefined>(undefined);
-  readonly detailName = signal('');
-  readonly detailImage = signal('');
+  readonly detailName = signal("");
+  readonly detailImage = signal("");
   readonly renameBusy = signal(false);
   readonly detailUpdateBusy = signal(false);
   /** 单容器启停/重启进行中，按 id 记录当前动作标签，用于禁用按钮并展示「启动中」等文案 */
   readonly actionBusy = signal<Map<string, string>>(new Map());
-  readonly filter = signal('all');
-  readonly runningCount = computed(() => this.containers().filter(x => this.isRunning(x)).length);
-  readonly updateCount = computed(() => this.containers().filter(x => x.haveUpdate).length);
+  readonly filter = signal("all");
+  readonly runningCount = computed(
+    () => this.containers().filter((x) => this.isRunning(x)).length,
+  );
+  readonly updateCount = computed(
+    () => this.containers().filter((x) => x.haveUpdate).length,
+  );
   readonly ignoredUpdateCount = computed(
-    () => this.containers().filter(x => x.updateIgnored).length,
+    () => this.containers().filter((x) => x.updateIgnored).length,
   );
   readonly filteredContainers = computed(() =>
-    this.containers().filter(x => {
+    this.containers().filter((x) => {
       switch (this.filter()) {
-        case 'running':
+        case "running":
           return this.isRunning(x);
-        case 'stopped':
+        case "stopped":
           return !this.isRunning(x);
-        case 'update':
+        case "update":
           return x.haveUpdate;
-        case 'ignored':
+        case "ignored":
           return x.updateIgnored;
         default:
           return true;
@@ -89,36 +100,65 @@ export class ContainersComponent {
     }),
   );
   readonly stats = computed<readonly StatItem[]>(() => [
-    { key: 'all', value: this.containers().length, label: '总容器' },
-    { key: 'running', value: this.runningCount(), label: '运行中', tone: 'green' },
+    { key: "all", value: this.containers().length, label: "总容器" },
     {
-      key: 'stopped',
-      value: this.containers().length - this.runningCount(),
-      label: '已停止',
-      tone: 'red',
+      key: "running",
+      value: this.runningCount(),
+      label: "运行中",
+      tone: "green",
     },
-    { key: 'update', value: this.updateCount(), label: '有更新', tone: 'amber' },
-    { key: 'ignored', value: this.ignoredUpdateCount(), label: '已忽略更新', tone: 'violet' },
+    {
+      key: "stopped",
+      value: this.containers().length - this.runningCount(),
+      label: "已停止",
+      tone: "red",
+    },
+    {
+      key: "update",
+      value: this.updateCount(),
+      label: "有更新",
+      tone: "amber",
+    },
+    {
+      key: "ignored",
+      value: this.ignoredUpdateCount(),
+      label: "已忽略更新",
+      tone: "violet",
+    },
   ]);
   readonly selectedCount = computed(() => this.selected().size);
   readonly allSelected = computed(
     () =>
       this.filteredContainers().length > 0 &&
-      this.filteredContainers().every(x => this.selected().has(x.id)),
+      this.filteredContainers().every((x) => this.selected().has(x.id)),
   );
   readonly hasActiveUpdates = computed(
-    () => this.activeUpdateIds().size > 0 || this.tasks.activeResourceIDs().size > 0,
+    () =>
+      this.activeUpdateIds().size > 0 ||
+      this.tasks.activeResourceIDs().size > 0,
   );
   readonly availableUpdateCount = computed(
-    () => this.containers().filter(x => x.haveUpdate && !this.isContainerLocked(x.id)).length,
+    () =>
+      this.containers().filter(
+        (x) => x.haveUpdate && !this.isContainerLocked(x.id),
+      ).length,
   );
+  private pendingBatchTasks = new Set<string>();
   constructor() {
     this.service.ensureLoaded();
     this.icons.ensureLoaded();
-    this.tasks.completed.pipe(takeUntilDestroyed()).subscribe(({ resourceID }) => {
-      if (!resourceID) return;
-      this.markUpdateInactive(resourceID);
-    });
+    this.tasks.completed
+      .pipe(takeUntilDestroyed())
+      .subscribe(({ taskID, resourceID }) => {
+        if (resourceID) this.markUpdateInactive(resourceID);
+        if (
+          this.pendingBatchTasks.delete(taskID) &&
+          this.pendingBatchTasks.size === 0
+        ) {
+          this.busy.set(false);
+          this.bulkAction.set(null);
+        }
+      });
     this.softRefresh = startSoftRefresh({
       intervalMs: 20_000,
       refresh: () => this.service.refresh(),
@@ -130,7 +170,7 @@ export class ContainersComponent {
     this.service.refresh();
   }
   selectFilter(key: string): void {
-    this.filter.set(this.filter() === key || key === 'all' ? 'all' : key);
+    this.filter.set(this.filter() === key || key === "all" ? "all" : key);
     this.selected.set(new Set());
   }
   // 手动检查更新：异步任务，登记进度；完成后刷新容器列表以更新“有更新”标识
@@ -139,17 +179,26 @@ export class ContainersComponent {
     runAction({
       request: this.service.checkUpdate(),
       onStart: () => this.checking.set(true),
-      onFinally: () => this.checking.set(false),
-      onSuccess: r => {
+      onFinally: () => {},
+      onSuccess: (r) => {
         const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
-        if (taskID) this.tasks.track(String(taskID), '检查更新', true);
-        else this.toast.info('检查更新任务已提交');
+        if (taskID) this.tasks.track(String(taskID), "检查更新", true);
+        else {
+          this.toast.error("检查更新失败：服务未返回任务编号");
+          this.checking.set(false);
+        }
       },
-      onBizError: r => this.toast.error(`检查更新失败：${r.msg || '未知错误'}`),
-      onHttpError: e => this.toast.error(`检查更新失败：${actionErrorMessage(e)}`),
+      onBizError: (r) => {
+        this.checking.set(false);
+        this.toast.error(`检查更新失败：${r.msg || "未知错误"}`);
+      },
+      onHttpError: (e) => {
+        this.checking.set(false);
+        this.toast.error(`检查更新失败：${actionErrorMessage(e)}`);
+      },
     });
   }
-  @HostListener('document:keydown.escape') onEscape(): void {
+  @HostListener("document:keydown.escape") onEscape(): void {
     if (this.detail()) this.closeDetail();
   }
 
@@ -172,14 +221,16 @@ export class ContainersComponent {
 
   private detailContainer(): ContainerRow | undefined {
     const current = this.detail();
-    return current ? this.containers().find(x => x.id === current.id) || current : undefined;
+    return current
+      ? this.containers().find((x) => x.id === current.id) || current
+      : undefined;
   }
 
   renameDetail(): void {
     const x = this.detailContainer();
     const name = this.detailName().trim();
     if (!x || this.renameBusy() || this.isContainerLocked(x.id) || !name) {
-      if (!name) this.toast.error('容器名称不能为空');
+      if (!name) this.toast.error("容器名称不能为空");
       return;
     }
     if (name === x.name) return;
@@ -188,11 +239,12 @@ export class ContainersComponent {
       onStart: () => this.renameBusy.set(true),
       onFinally: () => this.renameBusy.set(false),
       onSuccess: () => {
-        this.detail.update(item => (item ? { ...item, name } : item));
+        this.detail.update((item) => (item ? { ...item, name } : item));
         this.toast.success(`${x.name} 重命名成功`);
       },
-      onBizError: r => this.toast.error(`重命名失败：${r.msg || '未知错误'}`),
-      onHttpError: e => this.toast.error(`重命名失败：${actionErrorMessage(e)}`),
+      onBizError: (r) => this.toast.error(`重命名失败：${r.msg || "未知错误"}`),
+      onHttpError: (e) =>
+        this.toast.error(`重命名失败：${actionErrorMessage(e)}`),
     });
   }
 
@@ -200,9 +252,15 @@ export class ContainersComponent {
     const x = this.detailContainer();
     const name = this.detailName().trim();
     const image = this.detailImage().trim();
-    if (!x || this.detailUpdateBusy() || this.isContainerLocked(x.id) || !name || !image) {
-      if (!name) this.toast.error('容器名称不能为空');
-      else if (!image) this.toast.error('镜像名称和标签不能为空');
+    if (
+      !x ||
+      this.detailUpdateBusy() ||
+      this.isContainerLocked(x.id) ||
+      !name ||
+      !image
+    ) {
+      if (!name) this.toast.error("容器名称不能为空");
+      else if (!image) this.toast.error("镜像名称和标签不能为空");
       return;
     }
     if (this.isContainerLocked(x.id)) return;
@@ -215,7 +273,7 @@ export class ContainersComponent {
       onSuccess: (r: any) => {
         const taskID = r.data?.taskID;
         if (taskID) {
-          this.tasks.track(String(taskID), '更新 ' + name, true, x.id);
+          this.tasks.track(String(taskID), "更新 " + name, true, x.id);
           this.detail.set(undefined);
         } else {
           this.detailUpdateBusy.set(false);
@@ -223,12 +281,12 @@ export class ContainersComponent {
           this.toast.info(`${name} 更新任务已提交`);
         }
       },
-      onBizError: r => {
+      onBizError: (r) => {
         this.detailUpdateBusy.set(false);
         this.markUpdateInactive(x.id);
-        this.toast.error(`${x.name} 更新失败：${r.msg || '未知错误'}`);
+        this.toast.error(`${x.name} 更新失败：${r.msg || "未知错误"}`);
       },
-      onHttpError: e => {
+      onHttpError: (e) => {
         this.detailUpdateBusy.set(false);
         this.markUpdateInactive(x.id);
         this.toast.error(`${x.name} 更新失败：${actionErrorMessage(e)}`);
@@ -257,7 +315,7 @@ export class ContainersComponent {
     // status 是 Docker 的短状态（running/restarting/exited 等，全小写）。
     // restarting（崩溃循环）的进程仍在活动，也视为运行并可停止；
     // 必须精确匹配，避免 "restarting" 误命中 "running" 子串。
-    return x.status === 'running' || x.status === 'restarting';
+    return x.status === "running" || x.status === "restarting";
   }
   icon(x: ContainerRow) {
     return this.icons.resolve(x.usingImage, this.iconMap());
@@ -268,44 +326,46 @@ export class ContainersComponent {
 
   // 将 Docker 状态文本（如 "Up 3 hours"）解析为本地化时长
   private duration(text: string): string {
-    if (!text) return '';
-    if (/less than a second/i.test(text)) return '刚刚';
+    if (!text) return "";
+    if (/less than a second/i.test(text)) return "刚刚";
     let s = text
-      .replace(/^Up\s+/i, '')
-      .replace(/\s+\(.*\)/, '')
-      .replace(/^About\s+/i, '')
+      .replace(/^Up\s+/i, "")
+      .replace(/\s+\(.*\)/, "")
+      .replace(/^About\s+/i, "")
       .trim();
-    const m = s.match(/^(\d+|an?)\s+(second|minute|hour|day|week|month|year)s?/i);
-    if (!m) return '';
-    const num = m[1] === 'a' || m[1] === 'an' ? 1 : parseInt(m[1], 10);
+    const m = s.match(
+      /^(\d+|an?)\s+(second|minute|hour|day|week|month|year)s?/i,
+    );
+    if (!m) return "";
+    const num = m[1] === "a" || m[1] === "an" ? 1 : parseInt(m[1], 10);
     const unit: Record<string, string> = {
-      second: '秒',
-      minute: '分钟',
-      hour: '小时',
-      day: '天',
-      week: '周',
-      month: '个月',
-      year: '年',
+      second: "秒",
+      minute: "分钟",
+      hour: "小时",
+      day: "天",
+      week: "周",
+      month: "个月",
+      year: "年",
     };
     return `${num}${unit[m[2].toLowerCase()]}`;
   }
   private stateLabel(state: string): string {
     const map: Record<string, string> = {
-      running: '运行中',
-      exited: '已停止',
-      created: '已创建',
-      restarting: '重启中',
-      paused: '已暂停',
-      dead: '已停止',
-      removing: '删除中',
+      running: "运行中",
+      exited: "已停止",
+      created: "已创建",
+      restarting: "重启中",
+      paused: "已暂停",
+      dead: "已停止",
+      removing: "删除中",
     };
-    return map[(state || '').toLowerCase()] || state || '未知';
+    return map[(state || "").toLowerCase()] || state || "未知";
   }
   // 卡片上的一行：运行中显示 “运行：30分钟”，其余显示本地化状态
   statusText(x: ContainerRow): string {
     if (this.isRunning(x)) {
       const d = this.duration(x.runningTime);
-      return d ? `运行：${d}` : '运行中';
+      return d ? `运行：${d}` : "运行中";
     }
     return this.stateLabel(x.status);
   }
@@ -332,11 +392,14 @@ export class ContainersComponent {
   toggleAll() {
     const visible = this.filteredContainers();
     const current = this.selected();
-    const allVisible = visible.length > 0 && visible.every(x => current.has(x.id));
+    const allVisible =
+      visible.length > 0 && visible.every((x) => current.has(x.id));
     this.selected.set(
       allVisible
-        ? new Set([...current].filter(id => !visible.some(x => x.id === id)))
-        : new Set([...current, ...visible.map(x => x.id)]),
+        ? new Set(
+            [...current].filter((id) => !visible.some((x) => x.id === id)),
+          )
+        : new Set([...current, ...visible.map((x) => x.id)]),
     );
   }
 
@@ -364,27 +427,33 @@ export class ContainersComponent {
     if (this.isContainerLocked(x.id)) return Promise.resolve(false);
     return runAction({
       request: fn(x.id),
-      onStart: () => this.actionBusy.update(m => new Map(m).set(x.id, label)),
+      onStart: () => this.actionBusy.update((m) => new Map(m).set(x.id, label)),
       onFinally: () => this.clearActionBusy(x.id),
       onSuccess: () => {
         if (async) this.toast.info(`${x.name} ${label}任务已提交`);
         else this.toast.success(actionLabel(x.name, label, true));
       },
-      onBizError: r => this.toast.error(actionLabel(x.name, label, false, r.msg || '未知错误')),
-      onHttpError: e => this.toast.error(actionLabel(x.name, label, false, actionErrorMessage(e))),
+      onBizError: (r) =>
+        this.toast.error(
+          actionLabel(x.name, label, false, r.msg || "未知错误"),
+        ),
+      onHttpError: (e) =>
+        this.toast.error(
+          actionLabel(x.name, label, false, actionErrorMessage(e)),
+        ),
     });
   }
   start(x: ContainerRow) {
     if (this.isContainerLocked(x.id)) return;
-    this.run(x, id => this.service.start(id), '启动');
+    this.run(x, (id) => this.service.start(id), "启动");
   }
   stop(x: ContainerRow) {
     if (this.isContainerLocked(x.id)) return;
-    this.run(x, id => this.service.stop(id), '停止');
+    this.run(x, (id) => this.service.stop(id), "停止");
   }
   restart(x: ContainerRow) {
     if (this.isContainerLocked(x.id)) return;
-    this.run(x, id => this.service.restart(id), '重启');
+    this.run(x, (id) => this.service.restart(id), "重启");
   }
   async detailRemove(): Promise<void> {
     const x = this.detailContainer();
@@ -395,7 +464,7 @@ export class ContainersComponent {
   async remove(x: ContainerRow): Promise<boolean> {
     if (this.isContainerLocked(x.id)) return false;
     const running = this.isRunning(x);
-    const label = running ? '强制删除' : '删除';
+    const label = running ? "强制删除" : "删除";
     if (
       !(await this.confirm.open({
         title: `${label}容器`,
@@ -408,10 +477,10 @@ export class ContainersComponent {
       }))
     )
       return false;
-    return this.run(x, id => this.service.remove(id, running), label);
+    return this.run(x, (id) => this.service.remove(id, running), label);
   }
   private clearActionBusy(id: string): void {
-    this.actionBusy.update(m => {
+    this.actionBusy.update((m) => {
       const next = new Map(m);
       next.delete(id);
       return next;
@@ -425,19 +494,24 @@ export class ContainersComponent {
       onStart: () => this.markUpdateActive(x.id),
       onSuccess: (r: any) => {
         const taskID = r.data?.taskID;
-        if (taskID) this.tasks.track(String(taskID), '更新 ' + x.name, true, x.id);
+        if (taskID)
+          this.tasks.track(String(taskID), "更新 " + x.name, true, x.id);
         else {
           this.markUpdateInactive(x.id);
           this.toast.error(`${x.name} 更新失败：服务未返回任务编号`);
         }
       },
-      onBizError: r => {
+      onBizError: (r) => {
         this.markUpdateInactive(x.id);
-        this.toast.error(actionLabel(x.name, '更新', false, r.msg || '未知错误'));
+        this.toast.error(
+          actionLabel(x.name, "更新", false, r.msg || "未知错误"),
+        );
       },
-      onHttpError: e => {
+      onHttpError: (e) => {
         this.markUpdateInactive(x.id);
-        this.toast.error(actionLabel(x.name, '更新', false, actionErrorMessage(e)));
+        this.toast.error(
+          actionLabel(x.name, "更新", false, actionErrorMessage(e)),
+        );
       },
     });
   }
@@ -450,149 +524,214 @@ export class ContainersComponent {
   }
   private setUpdateIgnored(x: ContainerRow, ignored: boolean): void {
     if (this.isContainerLocked(x.id)) return;
-    const label = ignored ? '忽略更新' : '恢复检测';
-    const request = ignored ? this.service.ignoreUpdate(x.id) : this.service.restoreUpdate(x.id);
+    const label = ignored ? "忽略更新" : "恢复检测";
+    const request = ignored
+      ? this.service.ignoreUpdate(x.id)
+      : this.service.restoreUpdate(x.id);
     runAction({
       request,
-      onStart: () => this.updateIgnoreBusyIds.update(ids => new Set(ids).add(x.id)),
+      onStart: () =>
+        this.updateIgnoreBusyIds.update((ids) => new Set(ids).add(x.id)),
       onFinally: () =>
-        this.updateIgnoreBusyIds.update(ids => {
+        this.updateIgnoreBusyIds.update((ids) => {
           const copy = new Set(ids);
           copy.delete(x.id);
           return copy;
         }),
-      onBizError: r => this.toast.error(actionLabel(x.name, label, false, r.msg || '未知错误')),
-      onHttpError: e => this.toast.error(actionLabel(x.name, label, false, actionErrorMessage(e))),
+      onBizError: (r) =>
+        this.toast.error(
+          actionLabel(x.name, label, false, r.msg || "未知错误"),
+        ),
+      onHttpError: (e) =>
+        this.toast.error(
+          actionLabel(x.name, label, false, actionErrorMessage(e)),
+        ),
     });
   }
   private bulk(fn: (id: string) => any, label: string, async = false) {
-    const targets = this.filteredContainers().filter(
-      x => this.selected().has(x.id) && !this.isContainerLocked(x.id),
+    const selected = this.filteredContainers().filter((x) =>
+      this.selected().has(x.id),
     );
+    const locked = selected.filter((x) => this.isContainerLocked(x.id));
+    const targets = selected.filter((x) => !this.isContainerLocked(x.id));
+    if (locked.length)
+      this.toast.info(
+        `已选 ${selected.length} 个容器，将跳过 ${locked.length} 个正在执行任务的容器`,
+      );
     if (!targets.length || this.busy()) return;
     this.busy.set(true);
     this.bulkAction.set(label);
     // 批量期间锁定各卡片按钮，并给出即时反馈
-    this.actionBusy.update(m => {
+    this.actionBusy.update((m) => {
       const next = new Map(m);
-      targets.forEach(x => next.set(x.id, label));
+      targets.forEach((x) => next.set(x.id, label));
       return next;
     });
     forkJoin(
-      targets.map(x =>
+      targets.map((x) =>
         fn(x.id).pipe(
           map((r: any) => ({ name: x.name, ok: r.code === 200, msg: r.msg })),
           catchError((e: any) =>
-            of({ name: x.name, ok: false, msg: e.error?.msg || e.message || '请求错误' }),
+            of({
+              name: x.name,
+              ok: false,
+              msg: e.error?.msg || e.message || "请求错误",
+            }),
           ),
         ),
       ),
-    ).subscribe(results => {
+    ).subscribe((results) => {
       this.busy.set(false);
       this.bulkAction.set(null);
-      this.actionBusy.update(m => {
+      this.actionBusy.update((m) => {
         const next = new Map(m);
-        targets.forEach(x => next.delete(x.id));
+        targets.forEach((x) => next.delete(x.id));
         return next;
       });
-      const ok = results.filter(r => r.ok).length;
+      const ok = results.filter((r) => r.ok).length;
       const fail = results.length - ok;
+      const skipped = locked.length;
       if (fail === 0)
         async
-          ? this.toast.info(`已提交 ${ok} 个容器的${label}任务`)
-          : this.toast.success(`已${label} ${ok} 个容器`);
+          ? this.toast.info(
+              `已提交 ${ok} 个容器的${label}任务${skipped ? `，跳过 ${skipped} 个` : ""}`,
+            )
+          : this.toast.success(
+              `已${label} ${ok} 个容器${skipped ? `，跳过 ${skipped} 个` : ""}`,
+            );
       else {
-        const first = results.find(r => !r.ok);
-        this.toast.error(`${label}完成 ${ok} 个，失败 ${fail} 个${first ? '：' + first.msg : ''}`);
+        const first = results.find((r) => !r.ok);
+        this.toast.error(
+          `${label}完成 ${ok} 个，失败 ${fail} 个${skipped ? `，跳过 ${skipped} 个` : ""}${first ? "：" + first.msg : ""}`,
+        );
       }
       this.selected.set(new Set());
     });
   }
   bulkStart() {
-    this.bulk(id => this.service.start(id), '启动');
+    this.bulk((id) => this.service.start(id), "启动");
   }
   bulkStop() {
-    this.bulk(id => this.service.stop(id), '停止');
+    this.bulk((id) => this.service.stop(id), "停止");
   }
   async bulkRemove() {
     const targets = this.filteredContainers().filter(
-      x => this.selected().has(x.id) && !this.isContainerLocked(x.id),
+      (x) => this.selected().has(x.id) && !this.isContainerLocked(x.id),
     );
     if (!targets.length || this.busy()) return;
-    const runningCount = targets.filter(x => this.isRunning(x)).length;
+    const runningCount = targets.filter((x) => this.isRunning(x)).length;
     if (
       !(await this.confirm.open({
-        title: '批量删除容器',
+        title: "批量删除容器",
         message:
           runningCount > 0
             ? `将删除 ${targets.length} 个容器（其中 ${runningCount} 个正在运行，会先强制停止）。此操作不可恢复，确定继续吗？`
             : `将删除 ${targets.length} 个容器。此操作不可恢复，确定继续吗？`,
-        confirmText: '确认删除',
+        confirmText: "确认删除",
         danger: true,
         critical: runningCount > 0,
       }))
     )
       return;
-    // 运行中的容器用 force，已停止的普通删除
-    const targetsById = new Map(targets.map(x => [x.id, x]));
-    this.bulk(id => {
-      const item = targetsById.get(id);
-      return this.service.remove(id, item ? this.isRunning(item) : true);
-    }, '删除');
+    runAction({
+      request: this.service.removeBatch(targets.map((x) => x.id)),
+      onStart: () => {
+        this.busy.set(true);
+        this.bulkAction.set("删除");
+      },
+      onFinally: () => {
+        if (!this.pendingBatchTasks.size) {
+          this.busy.set(false);
+          this.bulkAction.set(null);
+        }
+      },
+      onSuccess: (r) => {
+        const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
+        if (taskID) {
+          this.pendingBatchTasks.add(String(taskID));
+          this.tasks.track(taskID, "批量删除容器", true);
+        } else {
+          this.busy.set(false);
+          this.bulkAction.set(null);
+          this.toast.error("批量删除失败：服务未返回任务编号");
+          this.selected.set(new Set());
+          return;
+        }
+        this.selected.set(new Set());
+        this.toast.info(`已提交 ${targets.length} 个容器的删除任务`);
+      },
+      onBizError: (r) =>
+        this.toast.error(`批量删除失败：${r.msg || "未知错误"}`),
+      onHttpError: (e) =>
+        this.toast.error(`批量删除失败：${actionErrorMessage(e)}`),
+    });
   }
   // 批量更新使用固定并发窗口，避免一次性启动大量 Docker 重建任务
   bulkUpdate() {
     this.submitUpdates(
       this.filteredContainers().filter(
-        x => this.selected().has(x.id) && !this.isContainerLocked(x.id),
+        (x) => this.selected().has(x.id) && !this.isContainerLocked(x.id),
       ),
     );
   }
   async updateAll() {
     const targets = this.containers().filter(
-      x => x.haveUpdate && !this.isContainerLocked(x.id),
+      (x) => x.haveUpdate && !this.isContainerLocked(x.id),
     );
     if (!targets.length || this.busy()) {
-      if (!targets.length) this.toast.info('当前没有可更新的容器');
+      if (!targets.length) this.toast.info("当前没有可更新的容器");
       return;
     }
     if (
       !(await this.confirm.open({
-        title: '一键更新容器',
+        title: "一键更新容器",
         message: `将更新 ${targets.length} 个容器，并在更新过程中短暂停止服务。确定继续吗？`,
-        confirmText: '确认更新',
+        confirmText: "确认更新",
       }))
     )
       return;
     this.submitUpdates(
-      this.containers().filter(x => x.haveUpdate && !this.isContainerLocked(x.id)),
+      this.containers().filter(
+        (x) => x.haveUpdate && !this.isContainerLocked(x.id),
+      ),
     );
   }
   private submitUpdates(targets: ContainerRow[]): void {
     if (!targets.length || this.busy()) return;
     this.busy.set(true);
-    this.bulkAction.set('更新');
-    targets.forEach(x => this.markUpdateActive(x.id));
+    this.bulkAction.set("更新");
+    targets.forEach((x) => this.markUpdateActive(x.id));
     from(targets)
       .pipe(
         mergeMap(
-          x =>
+          (x) =>
             this.service.update(x.id, x.usingImage, x.name).pipe(
               map((r: any) => ({
                 container: x,
                 ok: r.code === 200 && !!r.data?.taskID,
                 taskID: r.data?.taskID,
-                msg: r.code === 200 && !r.data?.taskID ? '服务未返回任务编号' : r.msg,
+                msg:
+                  r.code === 200 && !r.data?.taskID
+                    ? "服务未返回任务编号"
+                    : r.msg,
               })),
               tap((r: any) => {
-                if (r.ok) this.tasks.track(String(r.taskID), '更新 ' + x.name, true, x.id);
+                if (r.ok) {
+                  this.pendingBatchTasks.add(String(r.taskID));
+                  this.tasks.track(
+                    String(r.taskID),
+                    "更新 " + x.name,
+                    true,
+                    x.id,
+                  );
+                }
               }),
               catchError((e: any) =>
                 of({
                   container: x,
                   ok: false,
                   taskID: undefined,
-                  msg: e.error?.msg || e.message || '请求错误',
+                  msg: e.error?.msg || e.message || "请求错误",
                 }),
               ),
             ),
@@ -600,18 +739,23 @@ export class ContainersComponent {
         ),
         toArray(),
       )
-      .subscribe(results => {
-        this.busy.set(false);
-        this.bulkAction.set(null);
-        results.forEach(r => {
+      .subscribe((results) => {
+        if (!this.pendingBatchTasks.size) {
+          this.busy.set(false);
+          this.bulkAction.set(null);
+        }
+        this.bulkAction.set(this.pendingBatchTasks.size ? "更新" : null);
+        results.forEach((r) => {
           if (!r.ok) this.markUpdateInactive(r.container.id);
         });
-        const ok = results.filter(r => r.ok).length;
+        const ok = results.filter((r) => r.ok).length;
         const fail = results.length - ok;
         if (fail === 0) this.toast.info(`已提交 ${ok} 个容器的更新任务`);
         else {
-          const first = results.find(r => !r.ok);
-          this.toast.error(`更新提交 ${ok} 个，失败 ${fail} 个${first ? '：' + first.msg : ''}`);
+          const first = results.find((r) => !r.ok);
+          this.toast.error(
+            `更新提交 ${ok} 个，失败 ${fail} 个${first ? "：" + first.msg : ""}`,
+          );
         }
         this.selected.set(new Set());
       });

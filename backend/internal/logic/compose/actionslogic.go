@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -129,7 +130,7 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 	taskID := uuid.New().String()
 	name := "部署 " + req.ProjectID
 	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{
-		TaskID: taskID, Name: name, Percentage: 0, Message: "任务已提交", DetailMsg: "", IsDone: false,
+		TaskID: taskID, Refresh: true, Name: name, Percentage: 0, Message: "任务已提交", DetailMsg: "", IsDone: false,
 	})
 	logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=submit success", req.ProjectID, req.Filename, taskID)
 	svcCtx := l.svcCtx
@@ -137,8 +138,11 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 	filename := req.Filename
 	pullImages := req.PullImages
 	started = true // 锁交给异步任务释放
+	taskCtx := l.svcCtx.RegisterTask(taskID)
 	go func() {
+		defer svcCtx.FinishTask(taskID)
 		defer svcCtx.FinishComposeOp(projectID, deployOp)
+
 		defer func() {
 			if r := recover(); r != nil {
 				logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=panic failed=%v", projectID, filename, taskID, r)
@@ -146,18 +150,35 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 0, Message: "部署异常", DetailMsg: "部署过程发生内部错误，请查看服务日志", IsDone: true})
 			}
 		}()
-		bg, cancel := context.WithTimeout(context.Background(), timeout)
+		bg, cancel := context.WithTimeout(taskCtx, timeout)
 		defer cancel()
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 20, Message: "正在检查配置", DetailMsg: "", IsDone: false})
 
 		configResult, err := composeRunner.Config(bg, svcCtx.DockerClient, root, files, timeout)
 		if err != nil {
 			logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=config failed=%v output=%q", projectID, filename, taskID, err, configResult.Output)
-			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 20, Message: "配置检查失败", DetailMsg: composeErrMsg("Compose 配置检查失败", err, configResult.Output), IsDone: true})
+			if errors.Is(err, context.Canceled) || errors.Is(bg.Err(), context.Canceled) {
+				svcCtx.MarkTaskCanceled(taskID, "任务已停止；Compose 配置检查未完成")
+				return
+			}
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(bg.Err(), context.DeadlineExceeded) {
+				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 20, Message: "配置检查超时", DetailMsg: "配置检查超过设定时间，未完成的 Compose 操作已停止", TimedOut: true, IsDone: true})
+				return
+			}
+			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 20, Message: "配置检查失败", DetailMsg: composeErrMsg("Compose 配置检查失败", err, configResult.Output), Failed: true, IsDone: true})
 			return
 		}
 		logx.Infof("compose operation=deploy project=%s filename=%s task=%s stage=config success", projectID, filename, taskID)
 		svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "正在部署（compose up）", DetailMsg: "", IsDone: false})
+		if !svcCtx.AcquireImageOp(bg) {
+			if bg.Err() != nil {
+				svcCtx.MarkTaskCanceled(taskID, "任务已停止；Compose 镜像操作尚未开始")
+				return
+			}
+			svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "部署失败", DetailMsg: "无法获取镜像操作槽位", Failed: true, IsDone: true})
+			return
+		}
+		defer svcCtx.ReleaseImageOp()
 		result, err := composeRunner.UpWithProgressAndPullTimeout(bg, svcCtx.DockerClient, root, files, timeout, pullTimeout, pullImages, func(event composeRunner.ProgressEvent) {
 			message := event.Message
 			percentage := event.Percentage
@@ -172,7 +193,14 @@ func (l *ActionsLogic) Deploy(req *types.ComposeDeployReq) (*types.Resp, error) 
 		}, deploymentMappings...)
 
 		if err != nil {
-			logx.Errorf("compose operation=deploy project=%s filename=%s task=%s stage=up failed=%v output=%q", projectID, filename, taskID, err, result.Output)
+			if errors.Is(err, context.Canceled) {
+				svcCtx.MarkTaskCanceled(taskID, "任务已停止；已执行的 Compose 操作不会自动回滚")
+				return
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Percentage: 50, Message: "部署超时", DetailMsg: "部署超过设定时间，已执行的 Docker 操作不会自动回滚", TimedOut: true, IsDone: true})
+				return
+			}
 			svcCtx.UpdateProgress(taskID, svc.TaskProgress{
 				TaskID: taskID, Name: name, Percentage: 50, Message: "部署失败",
 				DetailMsg: composeErrMsg("Compose 部署失败", err, result.Output), Failed: true, IsDone: true,
@@ -219,13 +247,8 @@ func (l *ActionsLogic) CleanupPreview(req *types.ComposeCleanupPreviewReq) (*typ
 	l.svcCtx.ComposeMu.Lock()
 	l.svcCtx.ComposeTokens[token] = svc.ComposeToken{ProjectID: req.ProjectID, ExpiresAt: time.Now().Add(10 * time.Minute)}
 	l.svcCtx.ComposeMu.Unlock()
-	backup, err := composeProject.BackupProject(l.svcCtx, root)
-	if err != nil {
-		logx.Errorf("compose operation=cleanup_preview project=%s failed=backup error=%v", req.ProjectID, err)
-		return errorResp(resp, 500, "备份项目失败，不能清理"), nil
-	}
 	logx.Infof("compose operation=cleanup_preview project=%s success files=%d", req.ProjectID, len(files))
-	return successResp(resp, map[string]interface{}{"projectId": req.ProjectID, "status": target.Status, "files": files, "backup": backup, "previewToken": token}), nil
+	return successResp(resp, map[string]interface{}{"projectId": req.ProjectID, "status": target.Status, "files": files, "previewToken": token}), nil
 }
 
 func (l *ActionsLogic) Cleanup(req *types.ComposeCleanupReq) (*types.Resp, error) {

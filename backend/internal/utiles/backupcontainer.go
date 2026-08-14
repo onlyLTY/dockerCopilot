@@ -12,18 +12,25 @@ import (
 )
 
 func BackupContainer(ctx *svc.ServiceContext) error {
+	return BackupContainerWithContext(context.Background(), ctx)
+}
+
+func BackupContainerWithContext(taskCtx context.Context, ctx *svc.ServiceContext) error {
 	if err := requireDocker(ctx); err != nil {
 		return err
 	}
-	containerList, err := GetContainerList(ctx)
+	containerList, err := GetContainerListWithContext(taskCtx, ctx)
 	if err != nil {
 		return err
 	}
 	var backupList []dockerBackend.ContainerCreateConfig
 	for i, v := range containerList {
 		containerID := containerList[i].ID
-		ctx.DockerClient.NegotiateAPIVersion(context.TODO())
-		inspectedContainer, err := ctx.DockerClient.ContainerInspect(context.TODO(), containerID)
+		if err := taskCtx.Err(); err != nil {
+			return err
+		}
+		ctx.DockerClient.NegotiateAPIVersion(taskCtx)
+		inspectedContainer, err := ctx.DockerClient.ContainerInspect(taskCtx, containerID)
 		if err != nil {
 			logx.Error("获取容器信息失败" + err.Error())
 			return err

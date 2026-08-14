@@ -1,7 +1,26 @@
 <dc-page-heading title="项目" subtitle="管理 Compose 项目和配置文件">
+  @if (cacheStale()) {
+    <span class="text-amber fs-12 mr-10" title="后台刷新失败，当前显示上次成功加载的数据">当前显示上次成功数据</span>
+  }
   <div page-heading-actions>
     <button class="btn text-secondary-text bg-secondary-bg" (click)="refresh()" title="刷新项目">
       <dc-icon name="refresh"></dc-icon>刷新
+    </button>
+    <button
+      class="btn text-secondary-text bg-secondary-bg"
+      [disabled]="!data()?.projects?.length || backupBusy() || !!backingUpProject() || cleanupBusy() || !!deletingProject()"
+      title="在任务页查看所有 Compose 项目的备份结果"
+      (click)="backupAllProjects()"
+    >
+      <dc-icon name="save"></dc-icon>{{ backupBusy() ? '备份中…' : '批量备份' }}
+    </button>
+    <button
+      class="btn text-red bg-secondary-bg"
+      [disabled]="!unusedProjects().length || cleanupBusy() || backupBusy() || !!backingUpProject() || !!deletingProject()"
+      title="递归删除所有未使用项目的整个文件夹及其中数据，此操作不可恢复"
+      (click)="deleteUnusedProjects()"
+    >
+      <dc-icon name="delete"></dc-icon>{{ cleanupBusy() ? '删除中…' : '删除未使用' }}
     </button>
     <button class="btn text-white bg-blue" (click)="newProject()" title="新建项目">
       <dc-icon name="add"></dc-icon>新建
@@ -63,13 +82,18 @@
           >
         </div>
         <div resource-card-actions>
-          <button class="btn text-blue border-1 py-8 px-7 fs-12" (click)="openEditor(project)">
-            <dc-icon name="edit"></dc-icon>查看/编辑
+          <button
+            class="btn text-secondary-text border-1 py-8 px-7 fs-12"
+            [disabled]="!!backingUpProject() || backupBusy() || cleanupBusy() || !!deletingProject()"
+            title="手动备份 Compose 配置"
+            (click)="backupProject(project)"
+          >
+            <dc-icon name="save"></dc-icon>{{ backingUpProject() === project.id ? '备份中…' : '备份' }}
           </button>
           @if (project.status === 'unused') {
             <button
               class="btn text-red border-1 py-8 px-7 fs-12"
-              [disabled]="!!deletingProject() || cleanupBusy()"
+              [disabled]="!!deletingProject() || cleanupBusy() || backupBusy()"
               title="删除整个项目文件夹"
               (click)="deleteProject(project)"
             >
@@ -148,6 +172,13 @@
           <div class="editor-actions d-flex items-center gap-8 flex-none">
             <button
               class="btn text-secondary-text bg-secondary-bg"
+              [disabled]="deployBusy() || fileLoading() || !!fileError() || !editorDirty()"
+              (click)="save()"
+            >
+              保存
+            </button>
+            <button
+              class="btn text-secondary-text bg-secondary-bg"
               [disabled]="deployBusy() || fileLoading() || !!fileError()"
               (click)="validate()"
             >
@@ -186,7 +217,7 @@
             <textarea
               class="code-editor fs-14"
               [ngModel]="projectContent()"
-              (ngModelChange)="projectContent.set($event)"
+              (ngModelChange)="projectContent.set($event); createValidated.set(false); createError.set('')"
               (scroll)="onCreateScroll($event)"
               spellcheck="false"
               placeholder="请写入compose文件内容"

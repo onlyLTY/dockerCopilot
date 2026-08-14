@@ -143,4 +143,4 @@ go test ./...
 | `{DataDir}/icon/` | 自定义图标 |
 | `{DataDir}/config/taskProgress.json` | 任务进度 |
 
-`Compose.BackupDir`（yaml）可省略，默认 `{DataDir}/backups/compose-projects`（或 `BACKUP_DIR/compose-projects`），只用于 Compose 项目文件版本/清理备份，**不是**备份页目录。亦支持 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖。
+`Compose.BackupDir`（yaml）可省略，默认 `{DataDir}/backups/compose-projects`（或 `BACKUP_DIR/compose-projects`），仅用于手动备份 Compose 项目：支持 `compose.yaml`、`compose.yml`、`docker-compose.yaml`、`docker-compose.yml`，输出文件名为 `<container_name>_compose.yaml`；存在 `.env` 和 `config.yaml` 时会在 `{ProjectID}` 子目录中一并复制这两个文件。没有唯一 `container_name` 时使用 Compose 项目名。保存文件和清理项目不会自动创建 Compose 备份。它**不是**备份页目录。亦支持 `BACKUP_DIR`、`APP_SETTINGS_PATH`、`TASK_PROGRESS_PATH` 单独覆盖。

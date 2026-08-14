@@ -1,19 +1,25 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { ImageRow, ImageService } from '../../core/image.service';
-import { IconService } from '../../core/icon.service';
-import { ToastService } from '../../core/toast.service';
-import { SoftRefreshHandle, startSoftRefresh } from '../../core/soft-refresh';
-import { actionErrorMessage, actionLabel, runAction } from '../../core/run-action';
-import { PageStateComponent } from '../../shared/page-state/page-state.component';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { ConfirmService } from '../../core/confirm.service';
-import { ResourceCardComponent } from '../../shared/resource-card/resource-card.component';
-import { StatsComponent, StatItem } from '../../shared/stats/stats.component';
-import { PageHeadingComponent } from '../../shared/page-heading/page-heading.component';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { Component, computed, DestroyRef, inject, signal } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { ImageRow, ImageService } from "../../core/image.service";
+import { IconService } from "../../core/icon.service";
+import { ToastService } from "../../core/toast.service";
+import { SoftRefreshHandle, startSoftRefresh } from "../../core/soft-refresh";
+import {
+  actionErrorMessage,
+  actionLabel,
+  runAction,
+} from "../../core/run-action";
+import { PageStateComponent } from "../../shared/page-state/page-state.component";
+import { IconComponent } from "../../shared/icon/icon.component";
+import { ConfirmService } from "../../core/confirm.service";
+import { ResourceCardComponent } from "../../shared/resource-card/resource-card.component";
+import { StatsComponent, StatItem } from "../../shared/stats/stats.component";
+import { PageHeadingComponent } from "../../shared/page-heading/page-heading.component";
+import { TaskService } from "../../core/task.service";
+import { MatTooltipModule } from "@angular/material/tooltip";
 
 @Component({
-  selector: 'dc-images',
+  selector: "dc-images",
   standalone: true,
   imports: [
     PageStateComponent,
@@ -23,13 +29,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     PageHeadingComponent,
     MatTooltipModule,
   ],
-  templateUrl: './images.component.html',
+  templateUrl: "./images.component.html",
 })
 export class ImagesComponent {
   private readonly service = inject(ImageService);
   private readonly icons = inject(IconService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
+  private readonly tasks = inject(TaskService);
   private readonly destroyRef = inject(DestroyRef);
   private softRefresh: SoftRefreshHandle | null = null;
   readonly images = computed(() => this.service.cache.data() || []);
@@ -37,31 +44,52 @@ export class ImagesComponent {
   readonly error = this.service.cache.error;
   readonly iconMap = computed(() => this.icons.cache.data() || {});
   readonly cleaning = signal<boolean>(false);
-  readonly filter = signal('all');
+  private pendingCleanupTasks = new Set<string>();
+  readonly filter = signal("all");
   readonly filteredImages = computed(() =>
     this.images().filter(
-      x =>
-        this.filter() === 'all' ||
-        (this.filter() === 'used'
+      (x) =>
+        this.filter() === "all" ||
+        (this.filter() === "used"
           ? x.inUsed
-          : this.filter() === 'unused'
+          : this.filter() === "unused"
             ? !x.inUsed && !this.isUntagged(x)
             : this.isUntagged(x)),
     ),
   );
-  readonly usedCount = computed(() => this.images().filter(x => x.inUsed).length);
-  readonly untaggedCount = computed(() => this.images().filter(x => this.isUntagged(x)).length);
+  readonly usedCount = computed(
+    () => this.images().filter((x) => x.inUsed).length,
+  );
+  readonly untaggedCount = computed(
+    () => this.images().filter((x) => this.isUntagged(x)).length,
+  );
   /** 未使用（不含无 Tag 的 dangling 镜像，与 Docker dangling=false 语义对齐） */
-  readonly unusedCount = computed(() => this.images().filter(x => !x.inUsed && !this.isUntagged(x)).length);
+  readonly unusedCount = computed(
+    () => this.images().filter((x) => !x.inUsed && !this.isUntagged(x)).length,
+  );
   readonly stats = computed<readonly StatItem[]>(() => [
-    { key: 'all', value: this.images().length, label: '总镜像' },
-    { key: 'used', value: this.usedCount(), label: '使用中', tone: 'green' },
-    { key: 'unused', value: this.unusedCount(), label: '未使用', tone: 'amber' },
-    { key: 'untagged', value: this.untaggedCount(), label: '无 Tag', tone: 'red' },
+    { key: "all", value: this.images().length, label: "总镜像" },
+    { key: "used", value: this.usedCount(), label: "使用中", tone: "green" },
+    {
+      key: "unused",
+      value: this.unusedCount(),
+      label: "未使用",
+      tone: "amber",
+    },
+    {
+      key: "untagged",
+      value: this.untaggedCount(),
+      label: "无 Tag",
+      tone: "red",
+    },
   ]);
   constructor() {
     this.service.ensureLoaded();
     this.icons.ensureLoaded();
+    this.tasks.completed.pipe(takeUntilDestroyed()).subscribe(({ taskID }) => {
+      if (!this.pendingCleanupTasks.delete(taskID)) return;
+      this.cleaning.set(this.pendingCleanupTasks.size > 0);
+    });
     this.softRefresh = startSoftRefresh({
       intervalMs: 30_000,
       refresh: () => this.service.refresh(),
@@ -73,20 +101,21 @@ export class ImagesComponent {
     this.service.refresh();
   }
   selectFilter(key: string): void {
-    this.filter.set(this.filter() === key || key === 'all' ? 'all' : key);
+    this.filter.set(this.filter() === key || key === "all" ? "all" : key);
   }
   isUntagged(x: ImageRow) {
-    return !x.tag || ['<none>', 'none'].includes(x.tag.toLowerCase());
+    return !x.tag || ["<none>", "none"].includes(x.tag.toLowerCase());
   }
-  async cleanup(kind: 'untagged' | 'unused') {
-    const count = kind === 'untagged' ? this.untaggedCount() : this.unusedCount();
-    const label = kind === 'untagged' ? '无 Tag' : '未使用';
+  async cleanup(kind: "untagged" | "unused") {
+    const count =
+      kind === "untagged" ? this.untaggedCount() : this.unusedCount();
+    const label = kind === "untagged" ? "无 Tag" : "未使用";
     if (
       !count ||
       !(await this.confirm.open({
         title: `清理${label}镜像`,
         message: `确定清理 ${count} 个${label}镜像吗？`,
-        confirmText: '确认清理',
+        confirmText: "确认清理",
         danger: true,
       }))
     )
@@ -94,13 +123,26 @@ export class ImagesComponent {
     runAction({
       request: this.service.cleanup(kind),
       onStart: () => this.cleaning.set(true),
-      onFinally: () => this.cleaning.set(false),
-      onSuccess: r =>
-        this.toast.success(
-          `已清理 ${(r.data as { deleted?: number } | undefined)?.deleted ?? ''} 个${label}镜像`,
-        ),
-      onBizError: r => this.toast.error(`清理失败：${r.msg || '未知错误'}`),
-      onHttpError: e => this.toast.error(`清理失败：${actionErrorMessage(e)}`),
+      onFinally: () => {},
+      onSuccess: (r) => {
+        const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
+        if (taskID) {
+          this.pendingCleanupTasks.add(taskID);
+          this.cleaning.set(true);
+          this.tasks.track(taskID, `清理${label}镜像`, true);
+        } else {
+          this.cleaning.set(false);
+          this.toast.error("镜像清理失败：服务未返回任务编号");
+        }
+      },
+      onBizError: (r) => {
+        this.cleaning.set(false);
+        this.toast.error(`清理失败：${r.msg || "未知错误"}`);
+      },
+      onHttpError: (e) => {
+        this.cleaning.set(false);
+        this.toast.error(`清理失败：${actionErrorMessage(e)}`);
+      },
     });
   }
   icon(x: ImageRow) {
@@ -111,14 +153,16 @@ export class ImagesComponent {
   }
   private deleteTarget(x: ImageRow): string {
     const displayRef = `${x.name}:${x.tag}`;
-    const tags = (x.repoTags || []).filter(tag => !!tag.trim());
-    return tags.find(tag => tag === displayRef) ||
-      tags.find(tag => tag.endsWith(`/${displayRef}`)) ||
+    const tags = (x.repoTags || []).filter((tag) => !!tag.trim());
+    return (
+      tags.find((tag) => tag === displayRef) ||
+      tags.find((tag) => tag.endsWith(`/${displayRef}`)) ||
       tags[0] ||
-      x.id;
+      x.id
+    );
   }
   async remove(x: ImageRow, force: boolean) {
-    const label = force ? '强制删除' : '删除';
+    const label = force ? "强制删除" : "删除";
     const target = force ? x.id : this.deleteTarget(x);
     if (
       !(await this.confirm.open({
@@ -133,8 +177,14 @@ export class ImagesComponent {
     runAction({
       request: this.service.remove(x.id, force, force ? undefined : target),
       onSuccess: () => this.toast.success(actionLabel(x.name, label, true)),
-      onBizError: r => this.toast.error(actionLabel(x.name, label, false, r.msg || '未知错误')),
-      onHttpError: e => this.toast.error(actionLabel(x.name, label, false, actionErrorMessage(e))),
+      onBizError: (r) =>
+        this.toast.error(
+          actionLabel(x.name, label, false, r.msg || "未知错误"),
+        ),
+      onHttpError: (e) =>
+        this.toast.error(
+          actionLabel(x.name, label, false, actionErrorMessage(e)),
+        ),
     });
   }
 }

@@ -3,8 +3,9 @@ package container
 import (
 	"context"
 	"net/url"
-	"os"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
@@ -28,33 +29,26 @@ func NewDelRestoreLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DelRes
 
 func (l *DelRestoreLogic) DelRestore(req *types.DelContainerBackupReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	fileName, err := url.QueryUnescape(req.Filename)
+	fileName, err := url.QueryUnescape(strings.TrimSpace(req.Filename))
 	if err != nil {
 		resp.Code = 400
 		resp.Msg = "文件名解码失败"
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
-	fullPath, err := utiles.ResolveBackupPath(fileName)
-	if err != nil {
+	if _, err := utiles.ResolveBackupPath(fileName); err != nil {
 		l.Errorf("删除备份文件失败，filename=%q, error=%v", fileName, err)
 		resp.Code = 400
 		resp.Msg = "备份文件名不合法"
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
-	err = os.Remove(fullPath)
-	if err != nil {
-		l.Errorf("删除备份文件失败，filename=%q, error=%v", fileName, err)
-		resp.Code = 400
-		resp.Msg = "删除备份失败"
-		resp.Data = map[string]interface{}{}
-		return resp, nil
-	}
-	resp.Code = 200
-	resp.Msg = "success"
-	resp.Data = map[string]interface{}{}
-	return resp, nil
+	taskID := uuid.NewString()
+	name := "删除容器备份"
+	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Refresh: true, Name: name, Message: "任务已提交"})
+	taskCtx := l.svcCtx.RegisterTask(taskID)
+	go runDeleteBackupTask(taskCtx, l.svcCtx, taskID, name, fileName)
+	return ok(resp, map[string]interface{}{"taskID": taskID}), nil
 }
 
 func CleanFilename(filename string) string {

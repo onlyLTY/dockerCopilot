@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SettingsService, DaemonProxySettings, DaemonRestartOperation } from '../../core/settings.service';
 import { VersionService, VersionInfo } from '../../core/version.service';
@@ -43,6 +43,10 @@ export class MeComponent {
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
+  private readonly destroyRef = inject(DestroyRef);
+  private daemonPollTimer: ReturnType<typeof setTimeout> | null = null;
+  private daemonPollStartedAt = 0;
+  private daemonPollFailures = 0;
 
   readonly daemonProxy = signal<DaemonProxySettings | null>(null);
   readonly daemonProxyLoading = signal(false);
@@ -65,7 +69,7 @@ export class MeComponent {
   readonly logLevelStats = computed<StatItem[]>(() => {
     const n = this.logResultCount();
     const f = this.logLevelFilter();
-    const v = (key: string) => (f === key ? n : 0);
+    const v = (key: string) => (f === key ? n : '-');
     return [
       { key: 'error', value: v('error'), label: 'ERROR', tone: 'red' },
       { key: 'warn', value: v('warn'), label: 'WARN', tone: 'amber' },
@@ -148,6 +152,9 @@ export class MeComponent {
   };
 
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.daemonPollTimer) clearTimeout(this.daemonPollTimer);
+    });
     this.versions.local().subscribe({
       next: r => {
         if (r.code === 200) this.version.set(r.data);
@@ -312,6 +319,8 @@ export class MeComponent {
           return;
         }
         this.daemonRestart.set(response.data);
+        this.daemonPollStartedAt = Date.now();
+        this.daemonPollFailures = 0;
         this.pollDaemonRestart(response.data.operationID);
       },
       error: error => {
@@ -322,6 +331,11 @@ export class MeComponent {
   }
 
   private pollDaemonRestart(operationID: string): void {
+    if (Date.now() - this.daemonPollStartedAt > 120_000 || this.daemonPollFailures >= 20) {
+      this.daemonProxyBusy.set(false);
+      this.toast.error('无法确认 Docker daemon 最终状态，请手动检查 Docker 服务');
+      return;
+    }
     this.settings.getDaemonOperation(operationID).subscribe({
       next: response => {
         if (response.code !== 200 || !response.data) {
@@ -331,7 +345,7 @@ export class MeComponent {
         }
         this.daemonRestart.set(response.data);
         if (response.data.status === 'restarting') {
-          setTimeout(() => this.pollDaemonRestart(operationID), 1500);
+          this.daemonPollTimer = setTimeout(() => this.pollDaemonRestart(operationID), 1500);
           return;
         }
         this.daemonProxyBusy.set(false);
@@ -343,7 +357,8 @@ export class MeComponent {
         }
       },
       error: error => {
-        setTimeout(() => this.pollDaemonRestart(operationID), 2000);
+        this.daemonPollFailures++;
+        this.daemonPollTimer = setTimeout(() => this.pollDaemonRestart(operationID), 2000);
       },
     });
   }
@@ -427,7 +442,14 @@ export class MeComponent {
       retention: value,
     });
     this.showSettings.set(false);
-    this.toast.success(msg || '设置已保存，代理设置将在重启服务后生效');
+    const scope = [
+      this.updateDraft !== this.runtime().updateInterval ? '更新检查频率已对后续自动检查生效' : '',
+      this.backupDraft !== this.runtime().backupInterval ? '自动备份频率已对后续定时任务生效' : '',
+      this.logDraft !== this.runtime().logLevel ? '日志级别已立即生效' : '',
+      value !== this.runtime().retention ? '备份保留数量已对后续清理生效' : '',
+      '镜像拉取超时和加速源已对新发起的任务生效',
+    ].filter(Boolean).join('；');
+    this.toast.success(msg || `设置已保存${scope ? '：' + scope : ''}`);
   }
 
   openLogs() {

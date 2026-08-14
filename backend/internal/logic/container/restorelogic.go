@@ -42,8 +42,11 @@ func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
-	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Message: "任务已提交", DetailMsg: "", IsDone: false})
+	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Refresh: true, Name: name, Message: "任务已提交", DetailMsg: "", IsDone: false})
+	taskCtx := l.svcCtx.RegisterTask(taskID)
 	go func() {
+		defer l.svcCtx.FinishTask(taskID)
+
 		defer func() {
 			if r := recover(); r != nil {
 				message := fmt.Sprintf("恢复容器异常: %v", r)
@@ -51,8 +54,21 @@ func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp
 				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{TaskID: taskID, Name: name, Message: "恢复失败", DetailMsg: message, IsDone: true})
 			}
 		}()
-		if err := utiles.RestoreContainer(l.svcCtx, fileName, taskID); err != nil {
+		if err := utiles.RestoreContainerWithContext(taskCtx, l.svcCtx, fileName, taskID); err != nil {
+			if taskCtx.Err() != nil {
+				l.svcCtx.MarkTaskCanceled(taskID, "任务已停止；已恢复的容器不会自动回滚")
+				return
+			}
 			l.Errorf("restore container failed task=%s file=%s: %v", taskID, fileName, err)
+			l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{
+				TaskID:     taskID,
+				Name:       name,
+				Percentage: 100,
+				Message:    "恢复失败",
+				DetailMsg:  err.Error(),
+				Failed:     true,
+				IsDone:     true,
+			})
 		}
 	}()
 	resp.Code = 200

@@ -25,11 +25,7 @@ func NewBackupLogic(ctx context.Context, svcCtx *svc.ServiceContext) *BackupLogi
 }
 
 func (l *BackupLogic) Backup() (resp *types.Resp, err error) {
-	resp = &types.Resp{}
-	err = utiles.BackupContainer(l.svcCtx)
-	if err != nil {
-		l.Errorf("备份容器失败: %v", err)
-		return fail(resp, err, 500, "备份容器失败")
-	}
-	return ok(resp, nil), nil
+	return l.submitBackupTask("创建 JSON 容器备份", func(taskCtx context.Context) error {
+		return utiles.BackupContainerWithContext(taskCtx, l.svcCtx)
+	})
 }

@@ -1,24 +1,22 @@
-package handler
+package container
 
 import (
 	"net/http"
 
-	"github.com/onlyLTY/dockerCopilot/internal/logic"
+	containerLogic "github.com/onlyLTY/dockerCopilot/internal/logic/container"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-func pruneImagesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func RemoveBatchHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.ImagePruneReq
+		var req types.BatchRemoveContainersReq
 		if err := httpx.Parse(r, &req); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
-
-		l := logic.NewPruneImagesLogic(r.Context(), svcCtx)
-		resp, err := l.SubmitPrune(&req)
-		WriteLogicResp(w, r, resp, err)
+		resp, err := containerLogic.NewRemoveLogic(r.Context(), svcCtx).RemoveBatch(&req)
+		writeLogicResp(w, r, resp, err)
 	}
 }

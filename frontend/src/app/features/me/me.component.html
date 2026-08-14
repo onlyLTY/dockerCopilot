@@ -101,14 +101,14 @@
       />
       <div class="modal-body">
         <div class="settings-grid d-grid grid-cols-4 gap-20">
-          <label class="form-field d-block mt-20 fs-12"
+          <label class="form-field d-block mt-20 fs-12" title="更新检查配置仅影响后台自动检查；手动检查不受影响"
             >更新检查频率<dc-form-select
               class="d-block mt-8"
               [options]="updateSelectOptions()"
               [(ngModel)]="updateDraft"
             ></dc-form-select
           ></label>
-          <label class="form-field d-block mt-20 fs-12"
+          <label class="form-field d-block mt-20 fs-12" title="自动备份配置影响后台定时备份；不会立即创建备份"
             >自动备份频率<dc-form-select
               class="d-block mt-8"
               [options]="backupSelectOptions()"
@@ -124,14 +124,14 @@
               [(ngModel)]="retentionDraft"
               title="JSON 和 YAML 分别保留最近的备份"
           /></label>
-          <label class="form-field d-block mt-20 fs-12"
+          <label class="form-field d-block mt-20 fs-12" title="日志级别立即影响新写入的日志；已有日志不会改变"
             >日志级别<dc-form-select
               class="d-block mt-8"
               [options]="logSelectOptions()"
               [(ngModel)]="logDraft"
             ></dc-form-select
           ></label>
-          <label class="form-field d-block mt-20 fs-12" title="拉取镜像超时，0 表示未配置（使用默认 5 分钟）"
+          <label class="form-field d-block mt-20 fs-12" title="拉取镜像超时对保存后启动的拉取、更新、恢复和 Compose 部署生效；正在执行的任务不受影响"
             >拉取镜像超时（秒）<input
               class="field-control d-block mt-8 py-12 px-12"
               type="number"
@@ -155,7 +155,7 @@
         <dc-form-expansion
           class="mt-20"
           title="Docker加速源"
-          description="用于官方镜像的更新检查，以及本应用内的更新/恢复/Compose 拉取"
+          description="用于官方镜像的更新检查，以及本应用内的更新/恢复/Compose 拉取；保存后对新发起的任务生效"
         >
           <div expansionActions class="d-flex flex-wrap gap-10">
             <button type="button" class="btn text-white bg-blue" (click)="addHubUrl()">添加</button>

@@ -8,7 +8,11 @@
     >
       <dc-modal-heading [title]="dialog.options.title" (closed)="confirm.close(false)" />
       <div class="modal-body">
-        <p class="my-22 text-black lh-17 text-pre-wrap">{{ dialog.options.message }}</p>
+        <p
+          class="my-22 text-black lh-17 text-pre-wrap"
+          [matTooltip]="dialog.options.messageTooltip || ''"
+          [matTooltipDisabled]="!dialog.options.messageTooltip"
+        >{{ dialog.options.message }}</p>
       </div>
       <div class="modal-actions d-flex justify-end gap-8 pt-18">
         <button class="btn text-secondary-text bg-secondary-bg" (click)="confirm.close(false)">
