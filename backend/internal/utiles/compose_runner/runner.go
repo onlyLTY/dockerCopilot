@@ -359,7 +359,7 @@ func deployService(ctx context.Context, cli client.APIClient, projectName, root,
 		}
 		logf("服务 %s 配置变化，重建容器", serviceName)
 		reportStage("正在移除旧容器（"+serviceName+"）", 70)
-		if err := removeContainer(ctx, cli, existing.ID); err != nil {
+		if err := removeContainer(ctx, cli, existing.ID, t.name); err != nil {
 			reportFailure("移除旧容器失败（"+serviceName+"）", 70, err)
 			return fmt.Errorf("服务 %s 移除旧容器失败: %w", serviceName, err)
 		}
@@ -415,10 +415,8 @@ type containerSummary struct {
 	Labels map[string]string
 }
 
-func removeContainer(ctx context.Context, cli client.APIClient, id string) error {
-	timeout := 10
-	_ = cli.ContainerStop(ctx, id, container.StopOptions{Timeout: &timeout})
-	return cli.ContainerRemove(ctx, id, container.RemoveOptions{Force: true})
+func removeContainer(ctx context.Context, cli client.APIClient, id string, name string) error {
+	return utiles.RemoveContainerWithClient(ctx, cli, id, true, name)
 }
 
 // topoSort 按 depends_on 拓扑排序，保证依赖先启动；有环则报错。

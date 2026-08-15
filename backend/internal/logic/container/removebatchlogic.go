@@ -76,7 +76,7 @@ func runBatchRemoveContainers(taskCtx context.Context, svcCtx *svc.ServiceContex
 		inspect, err := svcCtx.DockerClient.ContainerInspect(taskCtx, id)
 		force := err == nil && inspect.State != nil && inspect.State.Running
 		if err == nil {
-			err = utiles.RemoveContainerWithContext(taskCtx, svcCtx, id, force)
+			err = utiles.RemoveContainerWithClient(taskCtx, svcCtx.DockerClient, id, force, inspect.Name)
 		}
 		percentage := (index + 1) * 100 / len(ids)
 		if err != nil {

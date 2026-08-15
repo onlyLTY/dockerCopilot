@@ -172,7 +172,7 @@ func UpdateContainerWithContext(taskCtx context.Context, serviceContext *svc.Ser
 		return err
 	}
 	if delOldContainer {
-		err = serviceContext.DockerClient.ContainerRemove(taskCtx, id, container.RemoveOptions{})
+		err = RemoveContainerWithClient(taskCtx, serviceContext.DockerClient, id, false, name+"-"+currentDate)
 		if err != nil {
 			oldTaskProgress.Message = "删除旧容器失败"
 			oldTaskProgress.DetailMsg = "删除旧容器失败"
