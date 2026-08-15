@@ -1,4 +1,5 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, DestroyRef, inject, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { switchMap } from 'rxjs';
 import { ApiResponse } from '../../../../core/compose.service';
@@ -20,7 +21,7 @@ interface LogEntry {
 })
 export class LogDialogComponent {
   private readonly http = inject(HttpClient);
-  private requestID = 0;
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly closed = output<void>();
   readonly loading = signal(false);
@@ -28,6 +29,7 @@ export class LogDialogComponent {
   readonly logs = signal<LogEntry[]>([]);
   readonly level = signal('error');
   readonly stats = signal<StatItem[]>([]);
+  private requestID = 0;
 
   constructor() {
     this.fetch('error');
@@ -49,7 +51,9 @@ export class LogDialogComponent {
     this.loading.set(true);
     this.error.set('');
     const params = new URLSearchParams({ limit: '100', level });
-    this.http.get<ApiResponse<{ entries: LogEntry[] }>>('/api/logs?' + params.toString()).subscribe({
+    this.http.get<ApiResponse<{ entries: LogEntry[] }>>('/api/logs?' + params.toString())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: response => {
         if (requestID !== this.requestID) return;
         this.loading.set(false);

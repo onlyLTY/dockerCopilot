@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -20,8 +21,10 @@ import (
 )
 
 const (
-	socketPath = "/run/dockercopilot-helper.sock"
-	maxBody    = 32 * 1024
+	socketPath    = "/run/dockercopilot-helper.sock"
+	maxBody       = 32 * 1024
+	operationTTL  = 10 * time.Minute
+	maxOperations = 64
 )
 
 var (
@@ -65,12 +68,15 @@ type restartResponse struct {
 type helper struct {
 	mu              sync.Mutex
 	operations      map[string]*restartOperation
+	restartingID    string
 	restartRequired bool
 }
 
 type restartOperation struct {
-	Status  string
-	Message string
+	Status    string
+	Message   string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func main() {
@@ -137,14 +143,19 @@ func (h *helper) apply(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": err.Error()})
 		return
 	}
-	if req.Hash == "" || req.Hash != current.Hash {
+	if req.Hash != current.Hash && !(req.Hash == "" && !current.FileExists) {
 		writeJSON(w, http.StatusConflict, map[string]string{"message": "daemon 配置已变化，请刷新后重试"})
 		return
 	}
-	content, err := os.ReadFile(daemonPath)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "无法读取 Docker daemon 配置"})
-		return
+	var content []byte
+	if current.FileExists {
+		content, err = os.ReadFile(daemonPath)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"message": "无法读取 Docker daemon 配置"})
+			return
+		}
+	} else {
+		content = []byte(`{}`)
 	}
 	var doc map[string]any
 	if err := json.Unmarshal(content, &doc); err != nil || doc == nil {
@@ -185,14 +196,24 @@ func (h *helper) restart(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"message": "method not allowed"})
 		return
 	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.restartingID != "" {
+		if operation, ok := h.operations[h.restartingID]; ok && operation.Status == "restarting" {
+			writeJSON(w, http.StatusConflict, restartResponse{OperationID: h.restartingID, Status: operation.Status, Message: "Docker daemon 正在重启"})
+			return
+		}
+		h.restartingID = ""
+	}
 	if err := validateDaemonConfig(); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "daemon 配置校验失败，请先修正配置"})
 		return
 	}
+	h.pruneOperationsLocked(time.Now())
 	operationID := fmt.Sprintf("restart-%d", time.Now().UnixNano())
-	h.mu.Lock()
-	h.operations[operationID] = &restartOperation{Status: "restarting", Message: "正在重启 Docker daemon"}
-	h.mu.Unlock()
+	now := time.Now()
+	h.operations[operationID] = &restartOperation{Status: "restarting", Message: "正在重启 Docker daemon", CreatedAt: now, UpdatedAt: now}
+	h.restartingID = operationID
 	writeJSON(w, http.StatusAccepted, restartResponse{OperationID: operationID, Status: "restarting", Message: "正在重启 Docker daemon"})
 	go h.runRestart(operationID)
 }
@@ -204,9 +225,10 @@ func (h *helper) operation(w http.ResponseWriter, r *http.Request) {
 	}
 	id := strings.TrimPrefix(r.URL.Path, "/operations/")
 	h.mu.Lock()
+	h.pruneOperationsLocked(time.Now())
 	operation, ok := h.operations[id]
 	if ok {
-		operation = &restartOperation{Status: operation.Status, Message: operation.Message}
+		operation = &restartOperation{Status: operation.Status, Message: operation.Message, CreatedAt: operation.CreatedAt, UpdatedAt: operation.UpdatedAt}
 	}
 	h.mu.Unlock()
 	if !ok {
@@ -243,6 +265,34 @@ func (h *helper) setOperation(id, status, message string) {
 	if operation, ok := h.operations[id]; ok {
 		operation.Status = status
 		operation.Message = message
+		operation.UpdatedAt = time.Now()
+		if h.restartingID == id {
+			h.restartingID = ""
+		}
+	}
+}
+
+func (h *helper) pruneOperationsLocked(now time.Time) {
+	for id, operation := range h.operations {
+		if operation.Status != "restarting" && now.Sub(operation.UpdatedAt) > operationTTL {
+			delete(h.operations, id)
+		}
+	}
+	for len(h.operations) > maxOperations {
+		var oldestID string
+		var oldest time.Time
+		for id, operation := range h.operations {
+			if id == h.restartingID {
+				continue
+			}
+			if oldestID == "" || operation.UpdatedAt.Before(oldest) {
+				oldestID, oldest = id, operation.UpdatedAt
+			}
+		}
+		if oldestID == "" {
+			break
+		}
+		delete(h.operations, oldestID)
 	}
 }
 
@@ -346,11 +396,19 @@ func setOptional(values map[string]any, key, value string) {
 }
 
 func decodeBody(r *http.Request, out any) error {
-	body := io.LimitReader(r.Body, maxBody+1)
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxBody+1))
 	defer r.Body.Close()
-	decoder := json.NewDecoder(body)
+	if err != nil || len(body) > maxBody {
+		return errors.New("请求体过大或读取失败")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(out); err != nil {
 		return errors.New("请求格式无效")
+	}
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		return errors.New("请求只能包含一个 JSON 对象")
 	}
 	return nil
 }

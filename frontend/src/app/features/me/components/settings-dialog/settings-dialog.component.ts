@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, output, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   DaemonProxySettings,
@@ -8,21 +8,13 @@ import {
 import { ToastService } from '../../../../core/toast.service';
 import { ConfirmService } from '../../../../core/confirm.service';
 import { FormExpansionComponent } from '../../../../shared/form-expansion/form-expansion.component';
-import {
-  FormSelectComponent,
-  FormSelectOption,
-} from '../../../../shared/form-select/form-select.component';
+import { FormSelectComponent, FormSelectOption } from '../../../../shared/form-select/form-select.component';
 import { ModalHeadingComponent } from '../../../../shared/modal-heading/modal-heading.component';
 
 @Component({
   selector: 'dc-settings-dialog',
   standalone: true,
-  imports: [
-    FormsModule,
-    ModalHeadingComponent,
-    FormSelectComponent,
-    FormExpansionComponent,
-  ],
+  imports: [FormsModule, ModalHeadingComponent, FormSelectComponent, FormExpansionComponent],
   templateUrl: './settings-dialog.component.html',
   styleUrl: './settings-dialog.component.scss',
 })
@@ -31,15 +23,14 @@ export class SettingsDialogComponent {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
-  private daemonPollTimer: ReturnType<typeof setTimeout> | null = null;
-  private daemonPollStartedAt = 0;
-  private daemonPollFailures = 0;
 
   readonly closed = output<void>();
   readonly daemonProxy = signal<DaemonProxySettings | null>(null);
   readonly daemonProxyLoading = signal(false);
   readonly daemonProxyBusy = signal(false);
   readonly saving = signal(false);
+  readonly settingsLoading = signal(true);
+  readonly settingsLoadFailed = signal(false);
   readonly daemonRestart = signal<DaemonRestartOperation | null>(null);
   readonly updateOptions = signal<string[]>([]);
   readonly backupOptions = signal<string[]>([]);
@@ -65,61 +56,50 @@ export class SettingsDialogComponent {
   daemonProxyErrors = { httpProxy: '', httpsProxy: '', noProxy: '' };
 
   private defaultHubUrls: string[] = [
-    'docker.1ms.run',
-    'docker.m.daocloud.io',
-    'docker.1panel.top',
-    'docker.1panel.live',
-    'proxy.1panel.live',
-    'dockerproxy.1panel.live',
-    'docker.1panel.dev',
-    'docker.anye.in',
-    'hub.rat.dev',
-    'docker.amingg.com',
+    'docker.1ms.run', 'docker.m.daocloud.io', 'docker.1panel.top', 'docker.1panel.live',
+    'proxy.1panel.live', 'dockerproxy.1panel.live', 'docker.1panel.dev', 'docker.anye.in',
+    'hub.rat.dev', 'docker.amingg.com',
   ];
   private daemonProxyDraftConfigured = false;
   private daemonProxyHash = '';
-
   private readonly updateLabels: Record<string, string> = {
-    off: '关闭（仅手动检查）',
-    '30m': '每 30 分钟',
-    '1h': '每小时',
-    '6h': '每 6 小时',
-    '12h': '每 12 小时',
-    '24h': '每天一次',
+    off: '关闭（仅手动检查）', '30m': '每 30 分钟', '1h': '每小时', '6h': '每 6 小时',
+    '12h': '每 12 小时', '24h': '每天一次',
   };
   private readonly backupLabels: Record<string, string> = {
-    off: '关闭（仅手动备份）',
-    '6h': '每 6 小时',
-    '12h': '每 12 小时',
-    '24h': '每天一次',
-    week: '每周',
-    month: '每月',
+    off: '关闭（仅手动备份）', '6h': '每 6 小时', '12h': '每 12 小时',
+    '24h': '每天一次', week: '每周', month: '每月',
   };
 
   constructor() {
-    this.destroyRef.onDestroy(() => {
-      if (this.daemonPollTimer) clearTimeout(this.daemonPollTimer);
+    effect(() => {
+      const operation = this.settings.daemonOperation();
+      this.daemonRestart.set(operation);
+      if (operation && operation.status !== 'restarting') this.daemonProxyBusy.set(false);
     });
+    this.settings.resumeDaemonOperation();
+    this.destroyRef.onDestroy(() => undefined);
     this.loadSettings();
   }
 
-  updateLabel(key: string): string {
-    return this.updateLabels[key] || key;
-  }
+  updateLabel(key: string): string { return this.updateLabels[key] || key; }
+  backupLabel(key: string): string { return this.backupLabels[key] || key; }
 
-  backupLabel(key: string): string {
-    return this.backupLabels[key] || key;
-  }
-
-  close(): void {
-    if (!this.saving()) this.closed.emit();
-  }
+  reloadSettings(): void { this.loadSettings(); }
+  close(): void { if (!this.saving()) this.closed.emit(); }
 
   private loadSettings(): void {
-    this.settings.getAll().subscribe({
+    this.settingsLoading.set(true);
+    this.settingsLoadFailed.set(false);
+    this.settings.refresh().subscribe({
       next: response => {
-        if (response.code !== 200 || !response.data) return;
+        if (response.code !== 200 || !response.data) {
+          this.settingsLoading.set(false);
+          this.settingsLoadFailed.set(true);
+          return;
+        }
         const data = response.data;
+        this.settingsLoading.set(false);
         this.updateOptions.set(data.updateCheck?.options || []);
         this.backupOptions.set(data.autoBackup?.options || []);
         this.logOptions.set(data.logLevel?.options || this.logOptions());
@@ -136,6 +116,11 @@ export class SettingsDialogComponent {
           this.daemonProxyDraft = { ...this.daemonProxyDraft, ...data.daemonProxyDraft };
         }
         this.loadDaemonProxy();
+      },
+      error: () => {
+        this.settingsLoading.set(false);
+        this.settingsLoadFailed.set(true);
+        this.toast.error('设置加载失败，请重试');
       },
     });
   }
@@ -175,16 +160,12 @@ export class SettingsDialogComponent {
       }
       try {
         const parsed = new URL(value);
-        if (!parsed.hostname) throw new Error();
-        if (!['http:', 'https:', 'socks5:', 'socks5h:'].includes(parsed.protocol)) throw new Error();
-        if (parsed.username || parsed.password) throw new Error();
+        if (!parsed.hostname || !['http:', 'https:', 'socks5:', 'socks5h:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error();
       } catch {
         errors[key] = '请输入有效的 http、https、socks5 或 socks5h 代理 URL，且不能包含账号密码';
       }
     }
-    if (/[\u0000-\u001f\u007f]/.test(this.daemonProxyDraft.noProxy)) {
-      errors.noProxy = '不能包含控制字符或换行';
-    }
+    if (/[\u0000-\u001f\u007f]/.test(this.daemonProxyDraft.noProxy)) errors.noProxy = '不能包含控制字符或换行';
     this.daemonProxyErrors = errors;
     return !Object.values(errors).some(Boolean);
   }
@@ -194,7 +175,7 @@ export class SettingsDialogComponent {
     this.validateDaemonProxy();
   }
 
-  private daemonProxyDraftValue(): { httpProxy: string; httpsProxy: string; noProxy: string } {
+  private daemonProxyDraftValue() {
     return {
       httpProxy: this.daemonProxyDraft.httpProxy.trim(),
       httpsProxy: this.daemonProxyDraft.httpsProxy.trim(),
@@ -208,13 +189,12 @@ export class SettingsDialogComponent {
       return;
     }
     const confirmed = await this.confirm.open({
-      title: '覆写 Docker daemon 代理配置',
-      message: '这会修改宿主机全局 Docker daemon 配置，影响所有容器后续的镜像拉取和构建。配置写入后需要重启 Docker daemon 才会生效。确认继续吗？',
-      confirmText: '确认覆写',
-      danger: true,
-      critical: true,
+      title: '覆写 Docker daemon 代理',
+      message: '这会修改宿主机全局 Docker daemon 配置，写入后需要重启才会生效。确认继续吗？',
+      confirmText: '确认覆写', danger: true, critical: true,
     });
-    if (!confirmed || this.daemonProxyBusy() || !this.daemonProxy()?.helperEnabled || !this.daemonProxy()?.writable) return;
+    const daemon = this.daemonProxy();
+    if (!confirmed || this.daemonProxyBusy() || !daemon?.helperEnabled || !daemon.writable) return;
     this.daemonProxyBusy.set(true);
     this.settings.applyDaemonProxy({ ...this.daemonProxyDraftValue(), hash: this.daemonProxyHash }).subscribe({
       next: response => {
@@ -223,7 +203,7 @@ export class SettingsDialogComponent {
           this.toast.error(response.msg || '覆写 daemon 代理失败');
           return;
         }
-        this.toast.success('daemon.json 已覆写；当前 Docker daemon 尚未更新，请按需重启使配置生效');
+        this.toast.success('daemon.json 已覆写，重启 Docker daemon 后生效');
         this.loadDaemonProxy();
       },
       error: error => {
@@ -236,10 +216,8 @@ export class SettingsDialogComponent {
   async restartDaemon(): Promise<void> {
     const confirmed = await this.confirm.open({
       title: '重启 Docker daemon',
-      message: '这会短暂中断宿主机上所有容器的 Docker 管理操作，Docker Copilot 也可能暂时失联。确认重启吗？',
-      confirmText: '确认重启',
-      danger: true,
-      critical: true,
+      message: '这会短暂中断宿主机上的 Docker 管理操作。确认重启吗？',
+      confirmText: '确认重启', danger: true, critical: true,
     });
     if (!confirmed || this.daemonProxyBusy()) return;
     this.daemonProxyBusy.set(true);
@@ -251,9 +229,7 @@ export class SettingsDialogComponent {
           return;
         }
         this.daemonRestart.set(response.data);
-        this.daemonPollStartedAt = Date.now();
-        this.daemonPollFailures = 0;
-        this.pollDaemonRestart(response.data.operationID);
+        this.toast.info('Docker daemon 重启已提交', '状态会在后台继续更新');
       },
       error: error => {
         this.daemonProxyBusy.set(false);
@@ -262,126 +238,51 @@ export class SettingsDialogComponent {
     });
   }
 
-  private pollDaemonRestart(operationID: string): void {
-    if (Date.now() - this.daemonPollStartedAt > 120_000 || this.daemonPollFailures >= 20) {
-      this.daemonProxyBusy.set(false);
-      this.toast.error('无法确认 Docker daemon 最终状态，请手动检查 Docker 服务');
-      return;
-    }
-    this.settings.getDaemonOperation(operationID).subscribe({
-      next: response => {
-        if (response.code !== 200 || !response.data) {
-          this.daemonProxyBusy.set(false);
-          this.toast.error(response.msg || '读取 Docker daemon 重启状态失败');
-          return;
-        }
-        this.daemonRestart.set(response.data);
-        if (response.data.status === 'restarting') {
-          this.daemonPollTimer = setTimeout(() => this.pollDaemonRestart(operationID), 1500);
-          return;
-        }
-        this.daemonProxyBusy.set(false);
-        if (response.data.status === 'succeeded') {
-          this.toast.success('Docker daemon 已重启并恢复');
-          this.loadDaemonProxy();
-        } else {
-          this.toast.error(response.data.message || 'Docker daemon 重启失败');
-        }
-      },
-      error: () => {
-        this.daemonPollFailures++;
-        this.daemonPollTimer = setTimeout(() => this.pollDaemonRestart(operationID), 2000);
-      },
-    });
-  }
-
   addHubUrl(): void {
-    if (this.hubUrlsDraft.length >= 20) {
-      this.toast.error('最多 20 个加速源');
-      return;
-    }
+    if (this.hubUrlsDraft.length >= 20) { this.toast.error('最多 20 个加速源'); return; }
     this.hubUrlsDraft = [...this.hubUrlsDraft, ''];
   }
-
-  removeHubUrl(index: number): void {
-    this.hubUrlsDraft = this.hubUrlsDraft.filter((_, i) => i !== index);
-  }
-
-  updateHubUrl(index: number, value: string): void {
-    const next = [...this.hubUrlsDraft];
-    next[index] = value;
-    this.hubUrlsDraft = next;
-  }
-
-  resetHubUrls(): void {
-    this.hubUrlsDraft = [...this.defaultHubUrls];
-  }
-
-  trackHubUrl(index: number): number {
-    return index;
-  }
+  removeHubUrl(index: number): void { this.hubUrlsDraft = this.hubUrlsDraft.filter((_, i) => i !== index); }
+  updateHubUrl(index: number, value: string): void { const next = [...this.hubUrlsDraft]; next[index] = value; this.hubUrlsDraft = next; }
+  resetHubUrls(): void { this.hubUrlsDraft = [...this.defaultHubUrls]; }
+  trackHubUrl(index: number): number { return index; }
 
   saveSettings(): void {
-    if (!this.validateDaemonProxy()) {
-      this.toast.error('daemon 代理配置有误，请先修正标红字段');
-      return;
-    }
+    if (this.settingsLoading() || this.settingsLoadFailed()) { this.toast.error('设置尚未成功加载，暂时不能保存'); return; }
+    if (!this.validateDaemonProxy()) { this.toast.error('daemon 代理配置有误，请先修正标红字段'); return; }
     const value = Number(this.retentionDraft);
-    if (!Number.isInteger(value) || value < 1 || value > 100) {
-      this.toast.error('保留数量必须是 1-100 的整数');
-      return;
-    }
+    if (!Number.isInteger(value) || value < 1 || value > 100) { this.toast.error('保留数量必须是 1-100 的整数'); return; }
     const pullTimeout = Number(this.pullTimeoutDraft);
-    if (!Number.isInteger(pullTimeout) || pullTimeout < 0 || pullTimeout > 3600) {
-      this.toast.error('拉取镜像超时必须在 0-3600 秒之间，0 表示未配置');
-      return;
-    }
-    const hubUrls = this.hubUrlsDraft.map(x => x.trim()).filter(Boolean);
+    if (!Number.isInteger(pullTimeout) || pullTimeout < 0 || pullTimeout > 3600) { this.toast.error('拉取镜像超时必须在 0-3600 秒之间'); return; }
     this.saving.set(true);
-    this.settings
-      .saveAll({
-        updateCheckInterval: this.updateDraft,
-        autoBackupInterval: this.backupDraft,
-        logLevel: this.logDraft,
-        retention: value,
-        pullTimeoutSec: pullTimeout,
-        hubUrls,
-        proxy: this.proxyDraft,
-        daemonProxyDraft: this.daemonProxyDraftValue(),
-      })
-      .subscribe({
-        next: response => {
-          if (response.code === 200 && response.data) {
-            this.pullTimeoutDraft = response.data.pullTimeoutSec ?? pullTimeout;
-            if (response.data.hubUrls) this.hubUrlsDraft = [...response.data.hubUrls];
-            if (response.data.daemonProxyDraftConfigured) this.daemonProxyDraftConfigured = true;
-          }
-          this.finishSave(value, response.code !== 200, response.msg);
-        },
-        error: () => this.finishSave(value, true),
-      });
+    this.settings.saveAll({
+      updateCheckInterval: this.updateDraft, autoBackupInterval: this.backupDraft, logLevel: this.logDraft,
+      retention: value, pullTimeoutSec: pullTimeout, hubUrls: this.hubUrlsDraft.map(x => x.trim()).filter(Boolean),
+      proxy: this.proxyDraft, daemonProxyDraft: this.daemonProxyDraftValue(),
+    }).subscribe({
+      next: response => {
+        if (response.code === 200 && response.data) {
+          this.pullTimeoutDraft = response.data.pullTimeoutSec ?? pullTimeout;
+          if (response.data.hubUrls) this.hubUrlsDraft = [...response.data.hubUrls];
+          if (response.data.daemonProxyDraftConfigured) this.daemonProxyDraftConfigured = true;
+        }
+        this.finishSave(value, response.code !== 200, response.msg);
+      },
+      error: () => this.finishSave(value, true),
+    });
   }
 
   private finishSave(value: number, failed: boolean, msg?: string): void {
     this.saving.set(false);
-    if (failed) {
-      this.toast.error(msg || '设置保存失败');
-      return;
-    }
+    if (failed) { this.toast.error(msg || '设置保存失败'); return; }
     const runtime = this.settings.runtime();
-    this.settings.setRuntime({
-      updateInterval: this.updateDraft,
-      backupInterval: this.backupDraft,
-      logLevel: this.logDraft,
-      retention: value,
-    });
+    this.settings.setRuntime({ updateInterval: this.updateDraft, backupInterval: this.backupDraft, logLevel: this.logDraft, retention: value });
     this.closed.emit();
     const scope = [
-      this.updateDraft !== runtime.updateInterval ? '更新检查频率已对后续自动检查生效' : '',
-      this.backupDraft !== runtime.backupInterval ? '自动备份频率已对后续定时任务生效' : '',
-      this.logDraft !== runtime.logLevel ? '日志级别已立即生效' : '',
-      value !== runtime.retention ? '备份保留数量已对后续清理生效' : '',
-      '镜像拉取超时和加速源已对新发起的任务生效',
+      this.updateDraft !== runtime.updateInterval ? '更新检查频率已生效' : '',
+      this.backupDraft !== runtime.backupInterval ? '自动备份频率已生效' : '',
+      this.logDraft !== runtime.logLevel ? '日志级别已生效' : '',
+      value !== runtime.retention ? '备份保留数量已生效' : '',
     ].filter(Boolean).join('；');
     this.toast.success(msg || `设置已保存${scope ? '：' + scope : ''}`);
   }

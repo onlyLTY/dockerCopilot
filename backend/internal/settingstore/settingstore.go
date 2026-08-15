@@ -161,14 +161,154 @@ func load() Settings {
 }
 
 func save(s Settings) error {
-	if err := os.MkdirAll(filepath.Dir(SettingsPath()), 0755); err != nil {
+	path := SettingsPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
 	content, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(SettingsPath(), content, 0644)
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".appSettings-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err := tmp.Chmod(0644); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(content); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		return err
+	}
+	if dir, err := os.Open(filepath.Dir(path)); err == nil {
+		_ = dir.Sync()
+		_ = dir.Close()
+	}
+	return nil
+}
+
+// AppSettingsPatch updates all supplied fields under one lock and one atomic write.
+type AppSettingsPatch struct {
+	UpdateCheckInterval *string
+	AutoBackupInterval  *string
+	LogLevel            *string
+	Retention           *int
+	PullTimeoutSec      *int
+	HubURLs             *[]string
+	Proxy               *ProxySettings
+	DaemonProxyDraft    *DaemonProxyDraft
+}
+
+// Snapshot returns one consistent settings snapshot for aggregate responses.
+func Snapshot() Settings {
+	settingsMu.Lock()
+	defer settingsMu.Unlock()
+	return load()
+}
+
+// DefaultRetention returns the configured retention without a second store read.
+func DefaultRetention() int {
+	return Snapshot().Retention
+}
+
+// ApplyPatch validates the complete patch before changing the persisted snapshot.
+func ApplyPatch(patch AppSettingsPatch) (Settings, error) {
+	settingsMu.Lock()
+	defer settingsMu.Unlock()
+	s := load()
+	if patch.UpdateCheckInterval != nil {
+		if !ValidUpdateCheckInterval(*patch.UpdateCheckInterval) {
+			return Settings{}, fmt.Errorf("无效的更新检查频率：%s", *patch.UpdateCheckInterval)
+		}
+		s.UpdateCheckInterval = *patch.UpdateCheckInterval
+	}
+	if patch.AutoBackupInterval != nil {
+		if !ValidAutoBackupInterval(*patch.AutoBackupInterval) {
+			return Settings{}, fmt.Errorf("无效的自动备份频率：%s", *patch.AutoBackupInterval)
+		}
+		s.AutoBackupInterval = *patch.AutoBackupInterval
+	}
+	if patch.LogLevel != nil {
+		if !ValidLogLevel(*patch.LogLevel) {
+			return Settings{}, fmt.Errorf("无效的日志级别：%s", *patch.LogLevel)
+		}
+		s.LogLevel = *patch.LogLevel
+	}
+	if patch.Retention != nil {
+		if !ValidRetention(*patch.Retention) {
+			return Settings{}, fmt.Errorf("备份保留数量必须在 %d-%d 之间", minRetention, maxRetention)
+		}
+		s.Retention = *patch.Retention
+	}
+	if patch.PullTimeoutSec != nil {
+		if !ValidPullTimeoutSec(*patch.PullTimeoutSec) {
+			return Settings{}, fmt.Errorf("拉取镜像超时必须在 0-3600 秒之间")
+		}
+		s.PullTimeoutSec = *patch.PullTimeoutSec
+	}
+	if patch.HubURLs != nil {
+		if len(*patch.HubURLs) > maxHubURLs {
+			return Settings{}, fmt.Errorf("hubUrls 最多 %d 个", maxHubURLs)
+		}
+		for _, item := range *patch.HubURLs {
+			if err := validHubURLEntry(item); err != nil {
+				return Settings{}, err
+			}
+		}
+		s.HubURLs = normalizeHubURLs(*patch.HubURLs)
+		s.HubURLsConfigured = true
+	}
+	if patch.Proxy != nil {
+		proxy := *patch.Proxy
+		if err := validProxyURL(proxy.GithubProxy, "githubProxy"); err != nil {
+			return Settings{}, err
+		}
+		if err := validProxyURL(proxy.HTTPProxy, "HTTP_PROXY"); err != nil {
+			return Settings{}, err
+		}
+		if err := validProxyURL(proxy.HTTPSProxy, "HTTPS_PROXY"); err != nil {
+			return Settings{}, err
+		}
+		if err := validNoProxy(proxy.NoProxy); err != nil {
+			return Settings{}, err
+		}
+		s.GithubProxy = strings.TrimSpace(proxy.GithubProxy)
+		s.HTTPProxy = strings.TrimSpace(proxy.HTTPProxy)
+		s.HTTPSProxy = strings.TrimSpace(proxy.HTTPSProxy)
+		s.NoProxy = strings.TrimSpace(proxy.NoProxy)
+		s.ProxySettingsConfigured = true
+	}
+	if patch.DaemonProxyDraft != nil {
+		draft := *patch.DaemonProxyDraft
+		if err := validProxyURL(draft.HTTPProxy, "httpProxy"); err != nil {
+			return Settings{}, err
+		}
+		if err := validProxyURL(draft.HTTPSProxy, "httpsProxy"); err != nil {
+			return Settings{}, err
+		}
+		if err := validNoProxy(draft.NoProxy); err != nil {
+			return Settings{}, err
+		}
+		s.DaemonProxyDraft = DaemonProxyDraft{HTTPProxy: strings.TrimSpace(draft.HTTPProxy), HTTPSProxy: strings.TrimSpace(draft.HTTPSProxy), NoProxy: strings.TrimSpace(draft.NoProxy)}
+		s.DaemonProxyConfigured = true
+	}
+	if err := save(s); err != nil {
+		return Settings{}, err
+	}
+	return s, nil
 }
 
 func update(fn func(*Settings) error) error {

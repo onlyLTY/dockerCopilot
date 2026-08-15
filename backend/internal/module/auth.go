@@ -18,8 +18,9 @@ import (
 
 const ChallengeHeader = "WWW-Authenticate"
 const (
-	DefaultRegistryDomain = "docker.io"
-	DefaultRegistryHost   = "index.docker.io"
+	DefaultRegistryDomain  = "docker.io"
+	DefaultRegistryHost    = "index.docker.io"
+	registryRequestTimeout = 20 * time.Second
 )
 
 func GetToken(image types.Image, registryAuth string) (string, error) {
@@ -33,7 +34,7 @@ func GetTokenWithContext(ctx context.Context, image types.Image, registryAuth st
 		return "", fmt.Errorf("解析镜像失败：%s：%w", image.ImageName, err)
 	}
 
-	URL := GetChallengeURL(normalizedRef)
+	URL := GetChallengeURLWithContext(ctx, normalizedRef)
 	registry := URL.Host
 
 	var req *http.Request
@@ -41,7 +42,7 @@ func GetTokenWithContext(ctx context.Context, image types.Image, registryAuth st
 		return "", fmt.Errorf("创建认证请求失败：镜像=%s，仓库=%s：%w", image.ImageName, registry, err)
 	}
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: registryRequestTimeout}
 	var res *http.Response
 	if res, err = client.Do(req); err != nil {
 		return "", fmt.Errorf("请求镜像仓库失败：镜像=%s，仓库=%s：%w", image.ImageName, registry, err)
@@ -111,7 +112,7 @@ func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) 
 }
 
 func GetBearerHeaderWithContext(ctx context.Context, challenge string, imageRef ref.Named, registryAuth string) (string, error) {
-	client := http.Client{}
+	client := http.Client{Timeout: registryRequestTimeout}
 	authURL, err := GetAuthURL(challenge, imageRef)
 
 	if err != nil {
@@ -194,78 +195,76 @@ func GetAuthURL(challenge string, imageRef ref.Named) (*url.URL, error) {
 }
 
 func GetChallengeURL(imageRef ref.Named) url.URL {
-	host, _ := GetRegistryAddress(imageRef.Name())
+	return GetChallengeURLWithContext(context.Background(), imageRef)
+}
 
-	URL := url.URL{
+func GetChallengeURLWithContext(ctx context.Context, imageRef ref.Named) url.URL {
+	host, _ := GetRegistryAddressWithContext(ctx, imageRef.Name())
+
+	return url.URL{
 		Scheme: "https",
 		Host:   host,
 		Path:   "/v2/",
 	}
-	return URL
 }
 
 func GetRegistryAddress(imageRef string) (string, error) {
+	return GetRegistryAddressWithContext(context.Background(), imageRef)
+}
+
+func GetRegistryAddressWithContext(ctx context.Context, imageRef string) (string, error) {
 	normalizedRef, err := ref.ParseNormalizedNamed(imageRef)
 	if err != nil {
 		return "", err
 	}
 
 	address := ref.Domain(normalizedRef)
-
 	if address == DefaultRegistryDomain {
-		// 官方 Hub：并发探测所有候选 host（官方 + 加速源），取最快响应的可用 host。
-		// 避免在 index.docker.io 不可达时串行等待每个 host 超时。
-		address = quickestHost(DefaultRegistryHost, settingstore.GetHubURLs()...)
+		address = quickestHost(ctx, DefaultRegistryHost, settingstore.GetHubURLs()...)
 	}
 	return address, nil
 }
 
-// quickestHost 并发探测多个 host，返回第一个可用的；全部不可用时返回 fallback。
-func quickestHost(fallback string, hosts ...string) string {
+func quickestHost(ctx context.Context, fallback string, hosts ...string) string {
 	type result struct {
 		host string
 		ok   bool
 	}
-	results := make(chan result, len(hosts)+1)
 	all := append([]string{fallback}, hosts...)
+	results := make(chan result, len(all))
 	for _, host := range all {
 		host := host
 		go func() {
-			results <- result{host: host, ok: checkHost(host)}
+			results <- result{host: host, ok: checkHost(ctx, host)}
 		}()
 	}
 	for range all {
-		if r := <-results; r.ok {
-			return r.host
+		select {
+		case r := <-results:
+			if r.ok {
+				return r.host
+			}
+		case <-ctx.Done():
+			return fallback
 		}
 	}
 	return fallback
 }
 
-// checkHost 用短超时 GET /v2/ 探测 registry 是否可达；200/401 均视为通（未鉴权也正常）。
-func checkHost(host string) bool {
+func checkHost(ctx context.Context, host string) bool {
+	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 	URL := "https://" + host + "/v2/"
-	client := http.Client{
-		Timeout: 2 * time.Second,
-	}
-	resp, err := client.Get(URL)
+	req, err := http.NewRequestWithContext(probeCtx, http.MethodGet, URL, nil)
 	if err != nil {
-		// 连接失败是预期行为（网络隔离/防火墙等），降为 Info 避免刷 Error 日志。
+		return false
+	}
+	client := http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
 		logx.Infof("registry 不可达 %s: %s", URL, err)
 		return false
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logx.Errorf("关闭body失败" + err.Error())
-		}
-	}(resp.Body)
-
-	if resp.StatusCode == http.StatusOK ||
-		resp.StatusCode == http.StatusUnauthorized {
-		return true
-	}
-
-	logx.Infof("registry 返回非预期状态码 %s: %s", URL, resp.Status)
-	return false
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusUnauthorized
 }

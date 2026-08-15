@@ -14,6 +14,14 @@
       (closed)="close()"
     />
     <div class="modal-body">
+      @if (settingsLoading()) {
+        <div class="d-flex items-center justify-center py-30 text-muted">正在加载设置…</div>
+      } @else if (settingsLoadFailed()) {
+        <div class="d-flex flex-column items-center justify-center gap-10 py-30">
+          <p class="text-red m-0">设置加载失败，未保存任何修改。</p>
+          <button type="button" class="btn text-white bg-blue" (click)="reloadSettings()">重试</button>
+        </div>
+      } @else {
       <div class="settings-grid d-grid grid-cols-4 gap-20">
         <label class="form-field d-block mt-20 fs-12" title="更新检查配置仅影响后台自动检查；手动检查不受影响"
           >更新检查频率<dc-form-select
@@ -121,7 +129,7 @@
             @if (!daemon.helperEnabled) {
               <div class="text-amber fs-12 mt-8">当前未启用宿主机 helper：可以保存草稿，但不能覆写 daemon.json 或重启 Docker daemon。</div>
             } @else if (!daemon.fileExists) {
-              <div class="text-amber fs-12 mt-8">未找到 daemon.json，当前 helper 不会自动创建配置文件。</div>
+              <div class="text-amber fs-12 mt-8">未找到 daemon.json，首次覆写时 helper 会安全创建配置文件。</div>
             } @else if (!daemon.writable) {
               <div class="text-amber fs-12 mt-8">daemon.json 不可写，请检查 helper 权限。</div>
             }
@@ -163,7 +171,7 @@
             <button
               type="button"
               class="btn text-white bg-red"
-              [disabled]="daemonProxyBusy() || !daemon.helperEnabled || !daemon.fileExists || !daemon.writable || !!daemonProxyErrors.httpProxy || !!daemonProxyErrors.httpsProxy || !!daemonProxyErrors.noProxy"
+              [disabled]="daemonProxyBusy() || !daemon.helperEnabled || !daemon.writable || !!daemonProxyErrors.httpProxy || !!daemonProxyErrors.httpsProxy || !!daemonProxyErrors.noProxy"
               (click)="applyDaemonProxy()"
             >
               覆写 daemon 代理
@@ -187,6 +195,7 @@
           <p class="text-muted fs-12 mt-16 mb-0">无法读取 Docker daemon 代理状态。</p>
         }
       </dc-form-expansion>
+      }
     </div>
     <div class="modal-actions d-flex justify-end gap-10 pt-18">
       <button class="btn text-secondary-text bg-secondary-bg" (click)="close()">取消</button>

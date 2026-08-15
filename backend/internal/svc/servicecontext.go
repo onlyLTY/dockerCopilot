@@ -3,6 +3,7 @@ package svc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -41,6 +42,11 @@ type ServiceContext struct {
 	imageOpsMu         sync.Mutex
 	taskMu             sync.Mutex
 	taskCancels        map[string]context.CancelFunc
+	shutdownCtx        context.Context
+	shutdownCancel     context.CancelFunc
+	closing            bool
+	closeOnce          sync.Once
+	taskWG             sync.WaitGroup
 
 	// 定时任务：更新检查与自动备份各持有一个 cronTask，job 由 main 注入（避免 svc 反向依赖 utiles）
 	updateTask cronTask
@@ -70,13 +76,18 @@ const (
 	maxDoneProgressAge = 24 * time.Hour
 	// maxConcurrentContainerUpdates 限制实际 Docker 重建任务的并发数。
 	maxConcurrentContainerUpdates = 3
+	closeWaitTimeout              = 15 * time.Second
 )
+
+var ErrServiceClosing = errors.New("服务正在关闭")
+var ErrActiveTask = errors.New("任务仍在执行")
 
 // cronTask 封装单个可动态重新调度的定时任务。
 type cronTask struct {
 	cron  *cron.Cron
 	jobID cron.EntryID
-	job   func()
+	job   func(context.Context)
+	name  string
 }
 
 type TaskProgress struct {
@@ -175,6 +186,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		imageOps:           make(chan struct{}, 1),
 		taskCancels:        make(map[string]context.CancelFunc),
 	}
+	ctx.shutdownCtx, ctx.shutdownCancel = context.WithCancel(context.Background())
 	before := len(ctx.ProgressStore)
 	ctx.pruneProgressLocked()
 	if needsPersist || len(ctx.ProgressStore) != before {
@@ -439,41 +451,68 @@ func (ctx *ServiceContext) ListProgress() ProgressStoreType {
 	return store
 }
 
-// DeleteProgress 删除指定任务进度记录并立即落盘。
-func (ctx *ServiceContext) DeleteProgress(taskID string) {
+// DeleteProgress 删除指定任务进度并立即落盘。活动任务必须先取消并等待终态。
+func (ctx *ServiceContext) DeleteProgress(taskID string) error {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
+	if progress, exists := ctx.ProgressStore[taskID]; exists && !progress.IsDone {
+		return ErrActiveTask
+	}
 	delete(ctx.ProgressStore, taskID)
 	ctx.persistProgressLocked()
+	return nil
 }
 
 // ClearProgress 清空任务进度记录，doneOnly=true 时只清空已完成任务。
-func (ctx *ServiceContext) ClearProgress(doneOnly bool) {
+// 为避免活动 worker 丢失控制入口，doneOnly=false 也只清理已完成记录并返回活动数量。
+func (ctx *ServiceContext) ClearProgress(doneOnly bool) int {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
+	active := 0
 	for id, p := range ctx.ProgressStore {
-		if !doneOnly || p.IsDone {
+		if !p.IsDone {
+			active++
+			continue
+		}
+		if p.IsDone {
 			delete(ctx.ProgressStore, id)
 		}
 	}
 	ctx.persistProgressLocked()
+	return active
 }
 
+// RegisterTask registers a cancellable worker. The returned context is also
+// canceled when the service starts shutting down.
 func (ctx *ServiceContext) RegisterTask(taskID string) context.Context {
-	base, cancel := context.WithCancel(context.Background())
 	ctx.taskMu.Lock()
+	defer ctx.taskMu.Unlock()
+	if ctx.closing {
+		return nil
+	}
 	if ctx.taskCancels == nil {
 		ctx.taskCancels = make(map[string]context.CancelFunc)
 	}
+	if _, exists := ctx.taskCancels[taskID]; exists {
+		return nil
+	}
+	base := ctx.shutdownCtx
+	if base == nil {
+		base = context.Background()
+	}
+	taskCtx, cancel := context.WithCancel(base)
 	ctx.taskCancels[taskID] = cancel
-	ctx.taskMu.Unlock()
-	return base
+	ctx.taskWG.Add(1)
+	return taskCtx
 }
 
 // FinishTask releases the cancellation controller after the worker reaches a terminal state.
 func (ctx *ServiceContext) FinishTask(taskID string) {
 	ctx.taskMu.Lock()
-	delete(ctx.taskCancels, taskID)
+	if _, exists := ctx.taskCancels[taskID]; exists {
+		delete(ctx.taskCancels, taskID)
+		ctx.taskWG.Done()
+	}
 	ctx.taskMu.Unlock()
 }
 
@@ -641,10 +680,10 @@ func (ctx *ServiceContext) ReleaseImageOp() {
 	}
 }
 
-func (ctx *ServiceContext) StartUpdateCron(spec string, job func()) error {
+func (ctx *ServiceContext) StartUpdateCron(spec string, job func(context.Context)) error {
 	ctx.cronMu.Lock()
 	defer ctx.cronMu.Unlock()
-	return ctx.startLocked(&ctx.updateTask, spec, job)
+	return ctx.startLocked(&ctx.updateTask, "update", spec, job)
 }
 
 // RescheduleUpdateCron 按新的 cron 表达式重新调度更新检查任务。
@@ -655,10 +694,10 @@ func (ctx *ServiceContext) RescheduleUpdateCron(spec string) error {
 }
 
 // StartBackupCron 启动自动备份定时任务；job 为要执行的备份逻辑（由 main 注入）。
-func (ctx *ServiceContext) StartBackupCron(spec string, job func()) error {
+func (ctx *ServiceContext) StartBackupCron(spec string, job func(context.Context)) error {
 	ctx.cronMu.Lock()
 	defer ctx.cronMu.Unlock()
-	return ctx.startLocked(&ctx.backupTask, spec, job)
+	return ctx.startLocked(&ctx.backupTask, "backup", spec, job)
 }
 
 // RescheduleBackupCron 按新的 cron 表达式重新调度自动备份任务。
@@ -669,12 +708,14 @@ func (ctx *ServiceContext) RescheduleBackupCron(spec string) error {
 }
 
 // startLocked 首次初始化调度器并注入 job，然后按 spec 调度。需持有 cronMu。
-func (ctx *ServiceContext) startLocked(t *cronTask, spec string, job func()) error {
+func (ctx *ServiceContext) startLocked(t *cronTask, name, spec string, job func(context.Context)) error {
 	t.job = job
+	t.name = name
 	if t.cron == nil {
-		t.cron = cron.New(cron.WithParser(cron.NewParser(
-			cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
-		)))
+		t.cron = cron.New(
+			cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)),
+			cron.WithParser(cron.NewParser(cron.Minute|cron.Hour|cron.Dom|cron.Month|cron.Dow)),
+		)
 		t.cron.Start()
 	}
 	return ctx.scheduleLocked(t, spec)
@@ -688,20 +729,28 @@ func (ctx *ServiceContext) rescheduleLocked(t *cronTask, spec string) error {
 	return ctx.scheduleLocked(t, spec)
 }
 
-// scheduleLocked 移除旧任务并按 spec 添加新任务；spec 为空表示关闭（仅移除）。需持有 cronMu。
+// scheduleLocked 先添加新任务，成功后再移除旧任务；spec 为空表示关闭。
 func (ctx *ServiceContext) scheduleLocked(t *cronTask, spec string) error {
+	var next cron.EntryID
+	if spec != "" {
+		var err error
+		next, err = t.cron.AddFunc(spec, func() {
+			taskID := "cron-" + t.name + "-" + time.Now().Format("20060102150405.000000000")
+			taskCtx := ctx.RegisterTask(taskID)
+			if taskCtx == nil {
+				return
+			}
+			defer ctx.FinishTask(taskID)
+			t.job(taskCtx)
+		})
+		if err != nil {
+			return err
+		}
+	}
 	if t.jobID != 0 {
 		t.cron.Remove(t.jobID)
-		t.jobID = 0
 	}
-	if spec == "" {
-		return nil
-	}
-	id, err := t.cron.AddFunc(spec, t.job)
-	if err != nil {
-		return err
-	}
-	t.jobID = id
+	t.jobID = next
 	return nil
 }
 
@@ -726,17 +775,39 @@ func (ctx *ServiceContext) StopCrons() {
 	stopOne(&ctx.backupTask)
 }
 
-// Close 优雅收尾：停 cron、刷进度、关 Docker 客户端。可重复调用。
+// Close 优雅收尾：停止新任务、取消并等待 worker、刷进度、关 Docker 客户端。可重复调用。
 func (ctx *ServiceContext) Close() {
 	if ctx == nil {
 		return
 	}
-	ctx.StopCrons()
-	ctx.FlushProgress()
-	if ctx.DockerClient != nil {
-		if err := ctx.DockerClient.Close(); err != nil {
-			logx.Errorf("关闭 Docker 客户端失败: %v", err)
+	ctx.closeOnce.Do(func() {
+		ctx.taskMu.Lock()
+		ctx.closing = true
+		if ctx.shutdownCancel != nil {
+			ctx.shutdownCancel()
 		}
-		ctx.DockerClient = nil
-	}
+		for _, cancel := range ctx.taskCancels {
+			cancel()
+		}
+		ctx.taskMu.Unlock()
+
+		ctx.StopCrons()
+		done := make(chan struct{})
+		go func() {
+			ctx.taskWG.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(closeWaitTimeout):
+			logx.Errorf("等待后台任务退出超时")
+		}
+		ctx.FlushProgress()
+		if ctx.DockerClient != nil {
+			if err := ctx.DockerClient.Close(); err != nil {
+				logx.Errorf("关闭 Docker 客户端失败: %v", err)
+			}
+			ctx.DockerClient = nil
+		}
+	})
 }

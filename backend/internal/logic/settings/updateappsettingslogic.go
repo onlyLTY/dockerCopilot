@@ -24,77 +24,44 @@ func NewUpdateAppSettingsLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *UpdateAppSettingsLogic) UpdateAppSettings(body *types.UpdateAppSettingsPartial) (*types.Resp, error) {
+	patch := settingstore.AppSettingsPatch{
+		UpdateCheckInterval: body.UpdateCheckInterval,
+		AutoBackupInterval:  body.AutoBackupInterval,
+		LogLevel:            body.LogLevel,
+		Retention:           body.Retention,
+		PullTimeoutSec:      body.PullTimeoutSec,
+		HubURLs:             body.HubURLs,
+	}
+	if body.Proxy != nil {
+		patch.Proxy = &settingstore.ProxySettings{GithubProxy: body.Proxy.GithubProxy, HTTPProxy: body.Proxy.HTTPProxy, HTTPSProxy: body.Proxy.HTTPSProxy, NoProxy: body.Proxy.NoProxy}
+	}
+	if body.DaemonProxyDraft != nil {
+		patch.DaemonProxyDraft = &settingstore.DaemonProxyDraft{HTTPProxy: body.DaemonProxyDraft.HTTPProxy, HTTPSProxy: body.DaemonProxyDraft.HTTPSProxy, NoProxy: body.DaemonProxyDraft.NoProxy}
+	}
+	before := settingstore.Snapshot()
+	stored, err := settingstore.ApplyPatch(patch)
+	if err != nil {
+		return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
+	}
 	var warnings []string
-
 	if body.UpdateCheckInterval != nil {
-		interval, err := settingstore.SetUpdateCheckInterval(*body.UpdateCheckInterval)
-		if err != nil {
-			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
-		}
-		if err := l.svcCtx.RescheduleUpdateCron(settingstore.UpdateCheckCron(interval)); err != nil {
+		if err := l.svcCtx.RescheduleUpdateCron(settingstore.UpdateCheckCron(stored.UpdateCheckInterval)); err != nil {
 			warnings = append(warnings, "更新检查定时任务重新调度失败："+err.Error())
 		}
 	}
-
 	if body.AutoBackupInterval != nil {
-		interval, err := settingstore.SetAutoBackupInterval(*body.AutoBackupInterval)
-		if err != nil {
-			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
-		}
-		if err := l.svcCtx.RescheduleBackupCron(settingstore.AutoBackupCron(interval)); err != nil {
+		if err := l.svcCtx.RescheduleBackupCron(settingstore.AutoBackupCron(stored.AutoBackupInterval)); err != nil {
 			warnings = append(warnings, "自动备份定时任务重新调度失败："+err.Error())
 		}
 	}
-
 	if body.LogLevel != nil {
-		level, err := settingstore.SetLogLevel(*body.LogLevel)
-		if err != nil {
-			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
-		}
-		logx.SetLevel(LogLevel(level))
+		logx.SetLevel(LogLevel(stored.LogLevel))
 	}
-
 	if body.Retention != nil {
-		if _, err := backupstore.SetRetention(*body.Retention); err != nil {
-			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
+		if err := backupstore.Retain(stored.Retention); err != nil {
+			warnings = append(warnings, "清理旧备份失败："+err.Error())
 		}
 	}
-
-	if body.PullTimeoutSec != nil {
-		if _, err := settingstore.SetPullTimeoutSec(*body.PullTimeoutSec); err != nil {
-			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
-		}
-	}
-
-	if body.HubURLs != nil {
-		if _, err := settingstore.SetHubURLs(*body.HubURLs); err != nil {
-			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
-		}
-	}
-
-	if body.Proxy != nil {
-		proxy := settingstore.ProxySettings{
-			GithubProxy: body.Proxy.GithubProxy,
-			HTTPProxy:   body.Proxy.HTTPProxy,
-			HTTPSProxy:  body.Proxy.HTTPSProxy,
-			NoProxy:     body.Proxy.NoProxy,
-		}
-		if _, err := settingstore.SetProxySettings(proxy); err != nil {
-			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
-		}
-	}
-
-	if body.DaemonProxyDraft != nil {
-		draft := settingstore.DaemonProxyDraft{
-			HTTPProxy:  body.DaemonProxyDraft.HTTPProxy,
-			HTTPSProxy: body.DaemonProxyDraft.HTTPSProxy,
-			NoProxy:    body.DaemonProxyDraft.NoProxy,
-		}
-		if _, err := settingstore.SetDaemonProxyDraft(draft); err != nil {
-			return logic.Biz(400, err.Error(), map[string]interface{}{}), nil
-		}
-	}
-
 	msg := "success"
 	if body.Proxy != nil && body.DaemonProxyDraft != nil {
 		msg = "设置已保存；Copilot 代理需重启服务生效，daemon 代理草稿需单独确认覆写"
@@ -106,21 +73,9 @@ func (l *UpdateAppSettingsLogic) UpdateAppSettings(body *types.UpdateAppSettings
 	if len(warnings) > 0 {
 		msg = strings.Join(append([]string{msg}, warnings...), "；")
 	}
-
 	data := SnapshotAppSettings()
-	if len(warnings) > 0 {
-		return logic.Biz(200, msg, map[string]interface{}{
-			"updateCheck":                data.UpdateCheck,
-			"autoBackup":                 data.AutoBackup,
-			"logLevel":                   data.LogLevel,
-			"retention":                  data.Retention,
-			"pullTimeoutSec":             data.PullTimeoutSec,
-			"hubUrls":                    data.HubURLs,
-			"proxy":                      data.Proxy,
-			"daemonProxyDraft":           data.DaemonProxyDraft,
-			"daemonProxyDraftConfigured": data.DaemonProxyDraftConfigured,
-			"warnings":                   warnings,
-		}), nil
+	if before.LogLevel != stored.LogLevel {
+		logx.Infof("日志级别已更新为 %s", stored.LogLevel)
 	}
 	return logic.Biz(200, msg, data), nil
 }

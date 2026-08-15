@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"go/types"
@@ -131,13 +132,13 @@ export const customImageLogos = {
 		go ctx.HubImageInfo.CheckUpdate(list)
 	}
 	// 更新检查定时任务：频率由 settingstore 持久化配置，可在设置页动态调整。
-	updateCheckJob := func() {
-		list, err := utiles.GetImagesList(ctx)
+	updateCheckJob := func(taskCtx context.Context) {
+		list, err := utiles.GetImagesListWithContext(taskCtx, ctx)
 		if err != nil {
 			logx.Errorf("定时获取镜像列表出错: %v", err)
 			return
 		}
-		ctx.HubImageInfo.CheckUpdate(list)
+		_ = ctx.HubImageInfo.CheckUpdateWithProgressContext(taskCtx, list, nil)
 	}
 	// 无论开启还是关闭都注入 job 并初始化调度器：spec 为空时只初始化不添加任务，
 	// 便于后续在设置页开启时直接重新调度。
@@ -147,11 +148,11 @@ export const customImageLogos = {
 	}
 
 	// 自动备份定时任务：同时创建 JSON 与 YAML 备份，频率由 settingstore 配置，可在设置页动态调整。
-	backupJob := func() {
-		if err := utiles.BackupContainer(ctx); err != nil {
+	backupJob := func(taskCtx context.Context) {
+		if err := utiles.BackupContainerWithContext(taskCtx, ctx); err != nil {
 			logx.Errorf("定时备份（JSON）出错: %v", err)
 		}
-		if err := utiles.Backup2Compose(ctx); err != nil {
+		if err := utiles.Backup2ComposeWithContext(taskCtx, ctx); err != nil {
 			logx.Errorf("定时备份（YAML）出错: %v", err)
 		}
 	}

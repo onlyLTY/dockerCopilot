@@ -5,7 +5,19 @@ type LoginReq {
 }
 
 type GetProgressReq {
-	TaskId string `path:"taskid" validate:"required"`
+    TaskId string `path:"taskid" validate:"required"`
+}
+
+type CancelProgressReq {
+    TaskId string `path:"taskid" validate:"required"`
+}
+
+type DeleteProgressReq {
+    TaskId string `path:"taskid" validate:"required"`
+}
+
+type ClearProgressReq {
+    DoneOnly bool `form:"doneOnly,optional"`
 }
 
 type Resp {
@@ -38,12 +50,17 @@ type RemoveImageReq {
 }
 
 type RemoveContainerReq {
-	IdReq
-	Force bool `form:"force,default=false"`
+    IdReq
+    Force bool `form:"force,default=false"`
+}
+
+type BatchRemoveContainersReq {
+    ContainerIDs []string `json:"containerIds" validate:"required,min=1"`
+    Confirm bool `json:"confirm"`
 }
 
 type ImagePruneReq {
-	Kind string `form:"kind,optional"`
+    Kind string `form:"kind,optional"`
 }
 
 type ContainerUpdateReq {
@@ -88,7 +105,7 @@ type ComposeDeployReq {
 }
 
 type ComposeProjectValidateReq {
-	ProjectID string `json:"projectId" validate:"optional"`
+    ProjectID string `json:"projectId,optional" validate:"optional"`
 	Filename  string `json:"filename" validate:"required"`
 	Content   string `json:"content" validate:"required"`
 }
@@ -109,11 +126,16 @@ type ComposeCleanupPreviewReq {
 		Confirm      bool   `json:"confirm,optional"`
 	}
 
-	type ComposeCleanupBatchReq {
-		ProjectIDs []string `json:"projectIds" validate:"required,min=1"`
-		DeleteDir  bool     `json:"deleteDir,optional"`
-		Confirm    bool     `json:"confirm"`
-	}
+type ComposeCleanupBatchReq {
+    ProjectIDs []string `json:"projectIds" validate:"required,min=1"`
+    DeleteDir bool `json:"deleteDir,optional"`
+    Confirm bool `json:"confirm"`
+}
+
+type ComposeProjectBackupBatchReq {
+    ProjectIDs []string `json:"projectIds" validate:"required,min=1"`
+}
+
 
 type VersionReq {
 	Type string `form:"type,optional"`
@@ -156,12 +178,14 @@ type DaemonOperationReq {
 
 // 聚合写入契约占位；实际 partial 更新用 logic 内指针 DTO（handler 自定义 Decode）。
 type UpdateAppSettingsReq {
-	UpdateCheckInterval string            `json:"updateCheckInterval,optional"`
-	AutoBackupInterval  string            `json:"autoBackupInterval,optional"`
-	LogLevel            string            `json:"logLevel,optional"`
-	Retention           int               `json:"retention,optional"`
-	HubURLs             []string          `json:"hubUrls,optional"`
-	Proxy               ProxySettingsData `json:"proxy,optional"`
+    UpdateCheckInterval string            `json:"updateCheckInterval,optional"`
+    AutoBackupInterval  string            `json:"autoBackupInterval,optional"`
+    LogLevel            string            `json:"logLevel,optional"`
+    Retention           int               `json:"retention,optional"`
+    PullTimeoutSec      int               `json:"pullTimeoutSec,optional"`
+    HubURLs             []string          `json:"hubUrls,optional"`
+    Proxy               ProxySettingsData `json:"proxy,optional"`
+    DaemonProxyDraft    DaemonProxyDraftData `json:"daemonProxyDraft,optional"`
 }
 
 type IntervalSettingsReq {
@@ -207,8 +231,14 @@ service dockerCopilot {
 	@handler GetProgress
 	get /progress/:taskid (GetProgressReq) returns (Resp)
 
-	@handler CancelProgress
-	post /progress/:taskid/cancel (CancelProgressReq) returns (Resp)
+    @handler CancelProgress
+    post /progress/:taskid/cancel (CancelProgressReq) returns (Resp)
+
+    @handler DeleteProgress
+    delete /progress/:taskid (DeleteProgressReq) returns (Resp)
+
+    @handler ClearProgress
+    delete /progress/clear (ClearProgressReq) returns (Resp)
 }
 
 @server (

@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"time"
 
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
@@ -22,7 +23,13 @@ func NewRestartLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RestartLo
 
 func (l *RestartLogic) Restart(req *types.IdReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	err = utiles.RestartContainer(l.svcCtx, req.Id)
+	if !l.svcCtx.TryStartContainerUpdate(req.Id, "direct-restart") {
+		return fail(resp, nil, 409, "容器当前正被其他操作占用")
+	}
+	defer l.svcCtx.FinishContainerUpdate(req.Id, "direct-restart")
+	operationCtx, cancel := context.WithTimeout(l.ctx, 60*time.Second)
+	defer cancel()
+	err = utiles.RestartContainerWithContext(operationCtx, l.svcCtx, req.Id)
 	if err != nil {
 		l.Errorf("重启容器失败 id=%s: %v", req.Id, err)
 		return fail(resp, err, 400, "重启容器失败")

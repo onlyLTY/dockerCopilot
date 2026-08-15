@@ -10,11 +10,15 @@ import (
 )
 
 func GetImagesList(ctx *svc.ServiceContext) ([]types.Image, error) {
+	return GetImagesListWithContext(context.Background(), ctx)
+}
+
+func GetImagesListWithContext(taskCtx context.Context, ctx *svc.ServiceContext) ([]types.Image, error) {
 	if err := requireDocker(ctx); err != nil {
 		return nil, err
 	}
 	var imagesList []types.Image
-	dockerImages, err := ctx.DockerClient.ImageList(context.Background(), image.ListOptions{})
+	dockerImages, err := ctx.DockerClient.ImageList(taskCtx, image.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +34,7 @@ func GetImagesList(ctx *svc.ServiceContext) ([]types.Image, error) {
 		imagesList = append(imagesList, i)
 	}
 	// 链式多遍遍历会反复分配切片；体量通常不大，保持值传递可读性优先。
-	imagesList, err = checkImageInUsed(ctx, splitImageNameAndTag(calculateImageSize(imagesList)))
+	imagesList, err = checkImageInUsedWithContext(taskCtx, ctx, splitImageNameAndTag(calculateImageSize(imagesList)))
 	if err != nil {
 		return imagesList, err
 	}
@@ -59,7 +63,11 @@ func splitImageNameAndTag(imagesList []types.Image) []types.Image {
 	return imagesList
 }
 func checkImageInUsed(svc *svc.ServiceContext, imageList []types.Image) ([]types.Image, error) {
-	list, err := GetContainerList(svc)
+	return checkImageInUsedWithContext(context.Background(), svc, imageList)
+}
+
+func checkImageInUsedWithContext(taskCtx context.Context, svc *svc.ServiceContext, imageList []types.Image) ([]types.Image, error) {
+	list, err := GetContainerListWithContext(taskCtx, svc)
 	if err != nil {
 		return imageList, err
 	}

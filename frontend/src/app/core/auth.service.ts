@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
@@ -15,6 +16,7 @@ interface LoginData {
 export class AuthService {
   private readonly http = inject(HttpClient);
   readonly authenticated = signal(!!localStorage.getItem('docker-copilot-token'));
+  readonly loggedOut = new Subject<void>();
   login(secretKey: string): Observable<ApiResponse<LoginData>> {
     // 后端 LoginReq 使用 form:"secretKey"，需 application/x-www-form-urlencoded
     const body = new HttpParams().set('secretKey', secretKey);
@@ -31,6 +33,7 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem('docker-copilot-token');
     this.authenticated.set(false);
+    this.loggedOut.next();
   }
   isAuthenticated(): boolean {
     return this.authenticated();

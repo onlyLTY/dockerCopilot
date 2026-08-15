@@ -115,13 +115,17 @@ export class TaskService {
   constructor() {
     effect(() => {
       if (this.auth.authenticated()) this.loadPersisted();
+      else {
+        this.persistedLoaded = false;
+        this.stopBatch();
+      }
     });
     if (this.tasks().some((t) => !t.isDone)) this.scheduleBatch();
   }
 
   /** 登记一个异步任务并开始轮询；refresh 表示完成后要联动刷新资源缓存 */
   track(taskID: string, title: string, refresh = false, resourceID = ""): void {
-    if (!taskID) return;
+    if (!taskID || !this.auth.authenticated()) return;
     const now = Date.now();
     const existing = this.tasks().find((t) => t.taskID === taskID);
     if (existing) {

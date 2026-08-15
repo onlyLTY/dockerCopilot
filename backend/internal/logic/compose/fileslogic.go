@@ -50,7 +50,7 @@ func (l *FilesLogic) List(req *types.ComposeProjectIdReq) (*types.Resp, error) {
 		logx.Errorf("compose operation=file_list project=%s failed=%v", req.ProjectID, err)
 		return errorResp(resp, 404, clientMsg(err, "Compose 项目不存在")), nil
 	}
-	files, err := composeProject.ListProjectFiles(root)
+	files, err := composeProject.ListProjectFilesWithLimit(root, l.svcCtx.Config.Compose.MaxFileSize)
 	if err != nil {
 		logx.Errorf("compose operation=file_list project=%s failed=%v", req.ProjectID, err)
 		return errorResp(resp, 500, "读取 Compose 文件失败"), errorx.NewCodeError(500, "读取 Compose 文件失败")
@@ -67,7 +67,7 @@ func (l *FilesLogic) Read(req *types.ComposeProjectFileReq) (*types.Resp, error)
 		logx.Errorf("compose operation=file_read project=%s filename=%s failed=%v", req.ProjectID, req.Filename, err)
 		return errorResp(resp, 404, clientMsg(err, "Compose 项目不存在")), nil
 	}
-	content, version, err := composeProject.ReadProjectFile(root, req.Filename)
+	content, version, err := composeProject.ReadProjectFileWithLimit(root, req.Filename, l.svcCtx.Config.Compose.MaxFileSize)
 	if err != nil {
 		logx.Errorf("compose operation=file_read project=%s filename=%s failed=%v", req.ProjectID, req.Filename, err)
 		return errorResp(resp, 404, "读取 Compose 文件失败"), nil

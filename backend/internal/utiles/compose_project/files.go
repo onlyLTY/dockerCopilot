@@ -200,9 +200,20 @@ func SaveProjectFile(svcCtx *svc.ServiceContext, root, filename, content, expect
 }
 
 func ReadProjectFile(root, filename string) ([]byte, string, error) {
+	return ReadProjectFileWithLimit(root, filename, 0)
+}
+
+func ReadProjectFileWithLimit(root, filename string, maxSize int64) ([]byte, string, error) {
 	path, err := ProjectFilePath(root, filename)
 	if err != nil {
 		return nil, "", err
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, "", err
+	}
+	if maxSize > 0 && info.Size() > maxSize {
+		return nil, "", fmt.Errorf("Compose 文件超过大小限制")
 	}
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -212,6 +223,10 @@ func ReadProjectFile(root, filename string) ([]byte, string, error) {
 }
 
 func ListProjectFiles(root string) ([]map[string]interface{}, error) {
+	return ListProjectFilesWithLimit(root, 0)
+}
+
+func ListProjectFilesWithLimit(root string, maxSize int64) ([]map[string]interface{}, error) {
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return nil, err
@@ -225,6 +240,9 @@ func ListProjectFiles(root string) ([]map[string]interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
+		if maxSize > 0 && info.Size() > maxSize {
+			return nil, fmt.Errorf("文件 %s 超过大小限制", entry.Name())
+		}
 		content, err := os.ReadFile(filepath.Join(root, entry.Name()))
 		if err != nil {
 			return nil, err
@@ -236,7 +254,14 @@ func ListProjectFiles(root string) ([]map[string]interface{}, error) {
 }
 
 func ParseComposeContent(root, filename string, content []byte) (*composeTypes.Project, error) {
+	return ParseComposeContentWithContext(context.Background(), root, filename, content)
+}
+
+func ParseComposeContentWithContext(ctx context.Context, root, filename string, content []byte) (*composeTypes.Project, error) {
 	if err := ValidateComposeFilename(filename); err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	var raw map[string]interface{}
@@ -261,7 +286,7 @@ func ParseComposeContent(root, filename string, content []byte) (*composeTypes.P
 	if projectName == "" {
 		projectName = "app"
 	}
-	return loader.LoadWithContext(context.Background(), composeTypes.ConfigDetails{
+	return loader.LoadWithContext(ctx, composeTypes.ConfigDetails{
 		WorkingDir:  root,
 		ConfigFiles: []composeTypes.ConfigFile{{Filename: filepath.Join(root, filename), Content: content}},
 		Environment: composeTypes.Mapping{},

@@ -103,7 +103,7 @@ func (i *ImageUpdateData) checkSingleImageContext(ctx context.Context, image typ
 		}
 		logx.Errorf("获取令牌失败，继续检查：%v", err)
 	}
-	digestURL, err := BuildManifestURL(image)
+	digestURL, err := BuildManifestURLWithContext(ctx, image)
 	if err != nil {
 		logx.Error("获取digestURL失败" + err.Error())
 		return nil
@@ -139,6 +139,10 @@ func (i *ImageUpdateData) checkSingleImageContext(ctx context.Context, image typ
 }
 
 func BuildManifestURL(image types.Image) (string, error) {
+	return BuildManifestURLWithContext(context.Background(), image)
+}
+
+func BuildManifestURLWithContext(ctx context.Context, image types.Image) (string, error) {
 	normalizedRef, err := ref.ParseDockerRef(image.ImageName + ":" + image.ImageTag)
 	if err != nil {
 		return "", err
@@ -148,7 +152,7 @@ func BuildManifestURL(image types.Image) (string, error) {
 		return "", errors.New("镜像无tag" + normalizedRef.String())
 	}
 
-	host, ErrGetRegistryAddress := GetRegistryAddress(normalizedTaggedRef.Name())
+	host, ErrGetRegistryAddress := GetRegistryAddressWithContext(ctx, normalizedTaggedRef.Name())
 	img, tag := ref.Path(normalizedTaggedRef), normalizedTaggedRef.Tag()
 
 	if ErrGetRegistryAddress != nil {
@@ -181,7 +185,7 @@ func GetDigestWithContext(ctx context.Context, url string, token string) (string
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig:       &tls.Config{},
 	}
-	client := &http.Client{Transport: tr}
+	client := &http.Client{Transport: tr, Timeout: registryRequestTimeout}
 
 	req, err := http.NewRequestWithContext(ctx, "HEAD", url, nil)
 	if err != nil {

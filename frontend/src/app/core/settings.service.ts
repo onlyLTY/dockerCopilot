@@ -93,19 +93,32 @@ export class SettingsService {
   });
   private loaded = false;
   private cachedSnapshot: AppSettings | null = null;
+  private cachedAt = 0;
+  private cacheVersion = 0;
   private settingsRequest$: Observable<ApiResponse<AppSettings>> | null = null;
+  private readonly cacheTtlMs = 30_000;
+  private operationID = '';
+  readonly daemonOperation = signal<DaemonRestartOperation | null>(null);
+  private daemonPollTimer: ReturnType<typeof setTimeout> | null = null;
+  private daemonPollStartedAt = 0;
 
   constructor() {
     this.load();
   }
 
-  getAll(): Observable<ApiResponse<AppSettings>> {
-    if (this.cachedSnapshot) return of({ code: 200, msg: '', data: this.cachedSnapshot });
+  getAll(force = false): Observable<ApiResponse<AppSettings>> {
+    const now = Date.now();
+    if (!force && this.cachedSnapshot && now - this.cachedAt < this.cacheTtlMs) {
+      return of({ code: 200, msg: '', data: this.cachedSnapshot });
+    }
     if (!this.settingsRequest$) {
+      const requestVersion = this.cacheVersion;
       this.settingsRequest$ = this.http.get<ApiResponse<AppSettings>>('/api/settings').pipe(
         tap(result => {
+          if (requestVersion !== this.cacheVersion) return;
           if (result.code === 200 && result.data) {
             this.cachedSnapshot = result.data;
+            this.cachedAt = Date.now();
             this.applySnapshot(result.data);
           }
         }),
@@ -118,11 +131,25 @@ export class SettingsService {
     return this.settingsRequest$;
   }
 
+  refresh(): Observable<ApiResponse<AppSettings>> {
+    this.invalidate();
+    return this.getAll(true);
+  }
+
+  invalidate(): void {
+    this.cacheVersion++;
+    this.cachedSnapshot = null;
+    this.cachedAt = 0;
+  }
+
   saveAll(body: AppSettingsUpdate): Observable<ApiResponse<AppSettings>> {
+    const requestVersion = ++this.cacheVersion;
     return this.http.put<ApiResponse<AppSettings>>('/api/settings', body).pipe(
       tap(r => {
+        if (requestVersion !== this.cacheVersion) return;
         if (r.code === 200 && r.data) {
           this.cachedSnapshot = r.data;
+          this.cachedAt = Date.now();
           this.applySnapshot(r.data);
         }
       }),
@@ -164,7 +191,39 @@ export class SettingsService {
   }
 
   restartDaemon(): Observable<ApiResponse<DaemonRestartOperation>> {
-    return this.http.post<ApiResponse<DaemonRestartOperation>>('/api/daemon/restart', {});
+    return this.http.post<ApiResponse<DaemonRestartOperation>>('/api/daemon/restart', {}).pipe(
+      tap(response => {
+        if (response.code === 202 && response.data) {
+          this.operationID = response.data.operationID;
+          this.daemonOperation.set(response.data);
+          this.daemonPollStartedAt = Date.now();
+          this.pollDaemonOperation();
+        }
+      }),
+    );
+  }
+
+  resumeDaemonOperation(): void {
+    if (this.operationID && !this.daemonOperation()?.status?.match(/succeeded|failed/)) {
+      this.daemonPollStartedAt ||= Date.now();
+      this.pollDaemonOperation();
+    }
+  }
+
+  private pollDaemonOperation(): void {
+    if (!this.operationID || Date.now() - this.daemonPollStartedAt > 120_000) return;
+    this.getDaemonOperation(this.operationID).subscribe({
+      next: response => {
+        if (response.code !== 200 || !response.data) return;
+        this.daemonOperation.set(response.data);
+        if (response.data.status === 'restarting') {
+          this.daemonPollTimer = setTimeout(() => this.pollDaemonOperation(), 1500);
+        }
+      },
+      error: () => {
+        this.daemonPollTimer = setTimeout(() => this.pollDaemonOperation(), 2000);
+      },
+    });
   }
 
   getDaemonOperation(operationID: string): Observable<ApiResponse<DaemonRestartOperation>> {

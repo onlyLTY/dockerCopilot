@@ -92,13 +92,18 @@ jobs:
       - name: Check if release already exists
         id: check_release
         run: |
-          exists=$(gh release view ${{ env.version }} 2>&1 | grep "release not found" || true)
-          if [[ -z "$exists" ]]; then
-            echo "Release exists"
-            echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
+          if gh release view "${{ env.version }}" >/dev/null 2>&1; then
+            echo "RELEASE_EXISTS=true" >> "$GITHUB_ENV"
           else
-            echo "Release does not exist"
-            echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
+            status=$?
+            echo "Release lookup failed or release does not exist (status $status)"
+            if gh api "repos/${{ github.repository }}/releases/tags/${{ env.version }}" >/dev/null 2>&1; then
+              echo "Release exists"
+              echo "RELEASE_EXISTS=true" >> "$GITHUB_ENV"
+            else
+              echo "Release does not exist"
+              echo "RELEASE_EXISTS=false" >> "$GITHUB_ENV"
+            fi
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

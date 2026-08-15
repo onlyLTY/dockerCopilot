@@ -31,27 +31,18 @@ type LevelSettings struct {
 }
 
 func SnapshotAppSettings() AppSettingsData {
-	daemonDraft, daemonDraftConfigured := settingstore.GetDaemonProxyDraft()
+	s := settingstore.Snapshot()
 	return AppSettingsData{
-		UpdateCheck: IntervalSettings{
-			Interval: settingstore.GetUpdateCheckInterval(),
-			Options:  settingstore.UpdateCheckOptions(),
-		},
-		AutoBackup: IntervalSettings{
-			Interval: settingstore.GetAutoBackupInterval(),
-			Options:  settingstore.AutoBackupOptions(),
-		},
-		LogLevel: LevelSettings{
-			Level:   settingstore.GetLogLevel(),
-			Options: settingstore.LogLevelOptions(),
-		},
-		Retention:                  settingstore.GetRetention(),
-		PullTimeoutSec:             settingstore.GetPullTimeoutSec(),
-		HubURLs:                    settingstore.GetHubURLs(),
+		UpdateCheck:                IntervalSettings{Interval: s.UpdateCheckInterval, Options: settingstore.UpdateCheckOptions()},
+		AutoBackup:                 IntervalSettings{Interval: s.AutoBackupInterval, Options: settingstore.AutoBackupOptions()},
+		LogLevel:                   LevelSettings{Level: s.LogLevel, Options: settingstore.LogLevelOptions()},
+		Retention:                  s.Retention,
+		PullTimeoutSec:             s.PullTimeoutSec,
+		HubURLs:                    append([]string(nil), s.HubURLs...),
 		DefaultHubURLs:             settingstore.DefaultHubURLList(),
-		Proxy:                      settingstore.GetProxySettings(),
-		DaemonProxyDraft:           daemonDraft,
-		DaemonProxyDraftConfigured: daemonDraftConfigured,
+		Proxy:                      settingstore.ProxySettings{GithubProxy: s.GithubProxy, HTTPProxy: s.HTTPProxy, HTTPSProxy: s.HTTPSProxy, NoProxy: s.NoProxy},
+		DaemonProxyDraft:           s.DaemonProxyDraft,
+		DaemonProxyDraftConfigured: s.DaemonProxyConfigured,
 	}
 }
 

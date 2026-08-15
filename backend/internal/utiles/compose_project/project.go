@@ -66,7 +66,7 @@ func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.Co
 	if err := svcCtx.RequireDocker(); err != nil {
 		return nil, err
 	}
-	groups, err := discoverFiles(svcCtx)
+	groups, err := discoverFiles(ctx, svcCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func ScanProjects(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.Co
 			project.Files = append(project.Files, composeFile)
 		}
 
-		parsed, parseErr := loadProject(group)
+		parsed, parseErr := loadProject(ctx, group)
 		if parseErr != nil {
 			project.Status = statusUnknown
 			project.Warnings = append(project.Warnings, parseErr.Error())
@@ -193,7 +193,7 @@ func displayRoot(svcCtx *svc.ServiceContext, root string) string {
 	}
 	return filepath.ToSlash(root)
 }
-func discoverFiles(svcCtx *svc.ServiceContext) ([]projectFiles, error) {
+func discoverFiles(ctx context.Context, svcCtx *svc.ServiceContext) ([]projectFiles, error) {
 	var groups []projectFiles
 	seen := make(map[string][]string)
 	paths := svcCtx.Config.Compose.ScanPaths
@@ -215,6 +215,9 @@ func discoverFiles(svcCtx *svc.ServiceContext) ([]projectFiles, error) {
 		}
 		maxDepth := svcCtx.Config.Compose.MaxDepth
 		err = filepath.Walk(rootAbs, func(path string, info os.FileInfo, walkErr error) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			if walkErr != nil {
 				return walkErr
 			}
@@ -227,7 +230,7 @@ func discoverFiles(svcCtx *svc.ServiceContext) ([]projectFiles, error) {
 				}
 				return nil
 			}
-			if composeFilenames[strings.ToLower(info.Name())] {
+			if IsComposeFile(info.Name()) {
 				dir := filepath.Dir(path)
 				seen[dir] = append(seen[dir], path)
 			}
@@ -239,14 +242,17 @@ func discoverFiles(svcCtx *svc.ServiceContext) ([]projectFiles, error) {
 	}
 	for root, files := range seen {
 		sort.Strings(files)
+		if maxFiles := svcCtx.Config.Compose.MaxFiles; maxFiles > 0 && len(files) > maxFiles {
+			return nil, fmt.Errorf("Compose 项目 %s 文件数超过限制 %d", root, maxFiles)
+		}
 		groups = append(groups, projectFiles{root: root, files: files})
 	}
 	sort.Slice(groups, func(i, j int) bool { return groups[i].root < groups[j].root })
 	return groups, nil
 }
 
-func loadProject(group projectFiles) (*composeProject, error) {
-	project, err := LoadProject(context.Background(), group.root, group.files)
+func loadProject(ctx context.Context, group projectFiles) (*composeProject, error) {
+	project, err := LoadProject(ctx, group.root, group.files)
 	if err != nil {
 		return nil, err
 	}
