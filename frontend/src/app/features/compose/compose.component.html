@@ -83,6 +83,13 @@
         </div>
         <div resource-card-actions>
           <button
+            class="btn text-blue border-1 py-8 px-7 fs-12"
+            title="查看和编辑项目文件"
+            (click)="openEditor(project)"
+          >
+            <dc-icon name="edit"></dc-icon>查看/编辑
+          </button>
+          <button
             class="btn text-secondary-text border-1 py-8 px-7 fs-12"
             [disabled]="!!backingUpProject() || backupBusy() || cleanupBusy() || !!deletingProject()"
             title="手动备份 Compose 配置"
