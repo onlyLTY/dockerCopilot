@@ -1,0 +1,55 @@
+<div
+  class="modal-backdrop d-grid place-items-center"
+  (click)="$event.target === $event.currentTarget && close()"
+>
+  <section
+    class="modal min-w-0 d-grid modal-content modal-xl h-auto"
+    role="dialog"
+    aria-modal="true"
+    (click)="$event.stopPropagation()"
+  >
+    <dc-modal-heading
+      title="日志"
+      subtitle="最近最多 100 条；切换级别会重新向服务端按级别查询"
+      (closed)="close()"
+    />
+    <div class="modal-body">
+      @if (loading()) {
+        <p class="text-muted">读取中…</p>
+      }
+      @if (error()) {
+        <p class="message error text-red">{{ error() }}</p>
+      }
+      @if (!loading() && !error()) {
+        <dc-stats
+          [items]="stats()"
+          [columns]="4"
+          [activeKey]="level()"
+          (selectedChange)="selectLevel($event)"
+        ></dc-stats>
+        <div class="min-h-0 h-full overflow-y-auto">
+          @for (entry of logs(); track $index) {
+            <article class="py-14 border-b-1">
+              <div class="d-flex items-center gap-9">
+                <span
+                  class="log-level fw-750 letter-wide"
+                  [class.text-muted]="entry.level === 'debug'"
+                  [class.text-blue]="entry.level === 'info'"
+                  [class.text-amber]="entry.level === 'warn'"
+                  [class.text-red]="entry.level === 'error'"
+                  >{{ entry.level.toUpperCase() }}</span
+                ><time class="d-block fs-12 text-muted">{{ entry.timestamp }}</time>
+              </div>
+              <p class="m-0 mt-7 fs-12 text-black text-pre-wrap break-word">
+                {{ entry.message }}
+              </p>
+            </article>
+          }
+          @if (!logs().length) {
+            <p class="text-muted">暂无日志</p>
+          }
+        </div>
+      }
+    </div>
+  </section>
+</div>

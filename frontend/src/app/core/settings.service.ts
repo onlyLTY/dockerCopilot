@@ -1,20 +1,23 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, map } from 'rxjs';
+import { Observable, finalize, of, tap, shareReplay } from 'rxjs';
 import { ApiResponse } from './compose.service';
 
 export interface UpdateSettings {
   interval: string;
   options: string[];
 }
+
 export interface BackupSettings {
   interval: string;
   options: string[];
 }
+
 export interface LogSettings {
   level: string;
   options: string[];
 }
+
 export interface ProxySettings {
   githubProxy: string;
   HTTP_PROXY: string;
@@ -89,19 +92,37 @@ export class SettingsService {
     pullTimeoutSec: 0,
   });
   private loaded = false;
+  private cachedSnapshot: AppSettings | null = null;
+  private settingsRequest$: Observable<ApiResponse<AppSettings>> | null = null;
 
   constructor() {
     this.load();
   }
 
   getAll(): Observable<ApiResponse<AppSettings>> {
-    return this.http.get<ApiResponse<AppSettings>>('/api/settings');
+    if (this.cachedSnapshot) return of({ code: 200, msg: '', data: this.cachedSnapshot });
+    if (!this.settingsRequest$) {
+      this.settingsRequest$ = this.http.get<ApiResponse<AppSettings>>('/api/settings').pipe(
+        tap(result => {
+          if (result.code === 200 && result.data) {
+            this.cachedSnapshot = result.data;
+            this.applySnapshot(result.data);
+          }
+        }),
+        finalize(() => {
+          this.settingsRequest$ = null;
+        }),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
+    }
+    return this.settingsRequest$;
   }
 
   saveAll(body: AppSettingsUpdate): Observable<ApiResponse<AppSettings>> {
     return this.http.put<ApiResponse<AppSettings>>('/api/settings', body).pipe(
       tap(r => {
         if (r.code === 200 && r.data) {
+          this.cachedSnapshot = r.data;
           this.applySnapshot(r.data);
         }
       }),
@@ -124,74 +145,6 @@ export class SettingsService {
 
   setRuntime(value: Partial<RuntimeSettings>): void {
     this.runtime.update(current => ({ ...current, ...value }));
-  }
-
-  // 兼容旧分项调用：设置页等仍可单独读写某一类配置。
-
-  getUpdateSettings(): Observable<ApiResponse<UpdateSettings>> {
-    return this.getAll().pipe(
-      map(r => ({
-        code: r.code,
-        msg: r.msg,
-        data: r.data?.updateCheck ?? { interval: '', options: [] },
-      })),
-    );
-  }
-
-  setUpdateInterval(interval: string): Observable<ApiResponse<UpdateSettings>> {
-    return this.saveAll({ updateCheckInterval: interval }).pipe(
-      map(r => ({
-        code: r.code,
-        msg: r.msg,
-        data: r.data?.updateCheck ?? { interval, options: [] },
-      })),
-    );
-  }
-
-  getBackupSettings(): Observable<ApiResponse<BackupSettings>> {
-    return this.getAll().pipe(
-      map(r => ({
-        code: r.code,
-        msg: r.msg,
-        data: r.data?.autoBackup ?? { interval: '', options: [] },
-      })),
-    );
-  }
-
-  setBackupInterval(interval: string): Observable<ApiResponse<BackupSettings>> {
-    return this.saveAll({ autoBackupInterval: interval }).pipe(
-      map(r => ({
-        code: r.code,
-        msg: r.msg,
-        data: r.data?.autoBackup ?? { interval, options: [] },
-      })),
-    );
-  }
-
-  getLogSettings(): Observable<ApiResponse<LogSettings>> {
-    return this.getAll().pipe(
-      map(r => ({
-        code: r.code,
-        msg: r.msg,
-        data: r.data?.logLevel ?? { level: 'info', options: [] },
-      })),
-    );
-  }
-
-  setLogLevel(level: string): Observable<ApiResponse<LogSettings>> {
-    return this.saveAll({ logLevel: level }).pipe(
-      map(r => ({ code: r.code, msg: r.msg, data: r.data?.logLevel ?? { level, options: [] } })),
-    );
-  }
-
-  getProxySettings(): Observable<ApiResponse<ProxySettings>> {
-    return this.getAll().pipe(
-      map(r => ({
-        code: r.code,
-        msg: r.msg,
-        data: r.data?.proxy ?? { githubProxy: '', HTTP_PROXY: '', HTTPS_PROXY: '', NO_PROXY: '' },
-      })),
-    );
   }
 
   getDaemonProxy(): Observable<ApiResponse<DaemonProxySettings>> {
@@ -217,15 +170,6 @@ export class SettingsService {
   getDaemonOperation(operationID: string): Observable<ApiResponse<DaemonRestartOperation>> {
     return this.http.get<ApiResponse<DaemonRestartOperation>>(
       '/api/daemon/restart/' + encodeURIComponent(operationID),
-    );
-  }
-  setProxySettings(settings: ProxySettings): Observable<ApiResponse<ProxySettings>> {
-    return this.saveAll({ proxy: settings }).pipe(
-      map(r => ({
-        code: r.code,
-        msg: r.msg,
-        data: r.data?.proxy ?? settings,
-      })),
     );
   }
 

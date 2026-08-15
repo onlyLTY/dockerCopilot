@@ -1,0 +1,21 @@
+.modal-settings {
+  width: min(860px, 92vw);
+}
+
+.modal-settings .settings-grid > .form-field {
+  margin-top: 0 !important;
+}
+
+.hub-url-row .hub-url-index {
+  width: 1.25rem;
+}
+
+@media (max-width: 600px) {
+  .modal-settings {
+    width: 90vw;
+  }
+
+  .modal-settings .settings-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
