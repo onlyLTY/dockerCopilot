@@ -36,6 +36,8 @@ __pycache__/
 /backend/logs/
 # 构建/CI 中间产物与测试截图
 /gui-test-screenshots/
+# 本地 Docker 镜像打包脚本（固定生成 syueya/myown:dc-xia）
+/docker/build-local-dcxia.sh
 # 本地测试用 Dockerfile（换国内 apk 源，仅本地使用，不入库）
 /docker/Dockerfile.localtest
 # Windows 本地辅助脚本
