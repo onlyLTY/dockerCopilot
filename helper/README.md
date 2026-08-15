@@ -1,8 +1,12 @@
-# Docker Copilot daemon helper
+# Docker Copilot 守护进程辅助程序
 
-This helper is for a Linux host running the local Docker Engine. It is deliberately separate from the Copilot container because changing `/etc/docker/daemon.json` and restarting Docker affects every container on the host.
+此辅助程序用于 Linux 主机上的本地 Docker Engine，可让 Docker Copilot 读取和修改 Docker 代理配置，并按需重启 Docker。
 
-Build and install:
+仅支持 Linux 本地 Docker Engine，不支持 Docker Desktop、远程 Docker、Rootless Docker 或 Windows。
+
+## 安装辅助程序
+
+在项目根目录执行：
 
 ```bash
 cd helper
@@ -14,22 +18,24 @@ systemctl daemon-reload
 systemctl enable --now dockercopilot-helper.service
 ```
 
-Enable the Copilot socket mount explicitly:
+## 挂载套接字
 
-```bash
-docker compose \
-  -f docker/docker-compose.yml \
-  -f docker/docker-compose.daemon-helper.yml \
-  up -d
+编辑 `docker/docker-compose.yml`，在 `dockercopilot.volumes` 下增加一行：
+
+```yaml
+- /run/dockercopilot-helper.sock:/run/dockercopilot-helper.sock
 ```
 
-The helper accepts only fixed operations over `/run/dockercopilot-helper.sock`:
+然后重新创建容器：
 
-- Read daemon proxy status.
-- Update only `proxies.http-proxy`, `proxies.https-proxy`, and `proxies.no-proxy`.
-- Validate the daemon JSON and restart Docker with a fixed `systemctl restart docker` command.
-- Report the asynchronous restart result.
+```bash
+docker compose -f docker/docker-compose.yml up -d
+```
 
-The helper never accepts a filesystem path, shell command, or arbitrary daemon setting from the API. It backs up the previous configuration to `/var/lib/dockercopilot/daemon.json.bak` before an update. The page requires a dangerous confirmation for both writing the configuration and restarting Docker. Restarting Docker can interrupt Docker operations for every container on the host.
+辅助程序只允许更新 Docker 的以下代理配置：
 
-This helper is not supported for Docker Desktop, remote Docker daemons, rootless Docker, or Windows hosts. The default Compose file does not mount the helper socket, so the high-risk feature is disabled unless this override is explicitly used.
+- `proxies.http-proxy`
+- `proxies.https-proxy`
+- `proxies.no-proxy`
+
+它不会接受文件路径、Shell 命令或其他任意 Docker 配置。更新配置前会自动备份到 `/var/lib/dockercopilot/daemon.json.bak`。修改配置和重启 Docker 都需要在页面中确认，重启 Docker 可能会中断主机上所有容器的 Docker 操作。
