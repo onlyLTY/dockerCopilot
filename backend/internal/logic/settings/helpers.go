@@ -7,17 +7,14 @@ import (
 
 // AppSettingsData 聚合设置快照。
 type AppSettingsData struct {
-	UpdateCheck IntervalSettings `json:"updateCheck"`
-	AutoBackup  IntervalSettings `json:"autoBackup"`
-	LogLevel    LevelSettings    `json:"logLevel"`
-	Retention   int              `json:"retention"`
-	// PullTimeoutSec 拉取镜像超时（秒），0 表示未配置。
-	PullTimeoutSec             int                           `json:"pullTimeoutSec"`
-	HubURLs                    []string                      `json:"hubUrls"`
-	DefaultHubURLs             []string                      `json:"defaultHubUrls"`
-	Proxy                      settingstore.ProxySettings    `json:"proxy"`
-	DaemonProxyDraft           settingstore.DaemonProxyDraft `json:"daemonProxyDraft"`
-	DaemonProxyDraftConfigured bool                          `json:"daemonProxyDraftConfigured"`
+	UpdateCheck    IntervalSettings           `json:"updateCheck"`
+	AutoBackup     IntervalSettings           `json:"autoBackup"`
+	LogLevel       LevelSettings              `json:"logLevel"`
+	Retention      int                        `json:"retention"`
+	PullTimeoutSec int                        `json:"pullTimeoutSec"`
+	HubURLs        []string                   `json:"hubUrls"`
+	DefaultHubURLs []string                   `json:"defaultHubUrls"`
+	Proxy          settingstore.ProxySettings `json:"proxy"`
 }
 
 type IntervalSettings struct {
@@ -33,16 +30,14 @@ type LevelSettings struct {
 func SnapshotAppSettings() AppSettingsData {
 	s := settingstore.Snapshot()
 	return AppSettingsData{
-		UpdateCheck:                IntervalSettings{Interval: s.UpdateCheckInterval, Options: settingstore.UpdateCheckOptions()},
-		AutoBackup:                 IntervalSettings{Interval: s.AutoBackupInterval, Options: settingstore.AutoBackupOptions()},
-		LogLevel:                   LevelSettings{Level: s.LogLevel, Options: settingstore.LogLevelOptions()},
-		Retention:                  s.Retention,
-		PullTimeoutSec:             s.PullTimeoutSec,
-		HubURLs:                    append([]string(nil), s.HubURLs...),
-		DefaultHubURLs:             settingstore.DefaultHubURLList(),
-		Proxy:                      settingstore.ProxySettings{GithubProxy: s.GithubProxy, HTTPProxy: s.HTTPProxy, HTTPSProxy: s.HTTPSProxy, NoProxy: s.NoProxy},
-		DaemonProxyDraft:           s.DaemonProxyDraft,
-		DaemonProxyDraftConfigured: s.DaemonProxyConfigured,
+		UpdateCheck:    IntervalSettings{Interval: s.UpdateCheckInterval, Options: settingstore.UpdateCheckOptions()},
+		AutoBackup:     IntervalSettings{Interval: s.AutoBackupInterval, Options: settingstore.AutoBackupOptions()},
+		LogLevel:       LevelSettings{Level: s.LogLevel, Options: settingstore.LogLevelOptions()},
+		Retention:      s.Retention,
+		PullTimeoutSec: s.PullTimeoutSec,
+		HubURLs:        append([]string(nil), s.HubURLs...),
+		DefaultHubURLs: settingstore.DefaultHubURLList(),
+		Proxy:          settingstore.ProxySettings{GithubProxy: s.GithubProxy},
 	}
 }
 

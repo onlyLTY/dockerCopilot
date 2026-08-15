@@ -1,4 +1,0 @@
-services:
-  dockercopilot:
-    volumes:
-      - /run/dockercopilot-helper.sock:/run/dockercopilot-helper.sock

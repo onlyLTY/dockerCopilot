@@ -8,8 +8,7 @@ type UpdateAppSettingsPartial struct {
 	LogLevel            *string `json:"logLevel,optional"`
 	Retention           *int    `json:"retention,optional"`
 	// PullTimeoutSec 拉取镜像超时（秒），0 表示未配置。
-	PullTimeoutSec   *int                  `json:"pullTimeoutSec,optional"`
-	HubURLs          *[]string             `json:"hubUrls,optional"`
-	Proxy            *ProxySettingsData    `json:"proxy,optional"`
-	DaemonProxyDraft *DaemonProxyDraftData `json:"daemonProxyDraft,optional"`
+	PullTimeoutSec *int               `json:"pullTimeoutSec,optional"`
+	HubURLs        *[]string          `json:"hubUrls,optional"`
+	Proxy          *ProxySettingsData `json:"proxy,optional"`
 }

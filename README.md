@@ -11,7 +11,7 @@ Docker Copilot 是一个面向 Docker Engine 的 Web 管理平台，用于在浏
 - Compose 项目扫描、编辑、预览、部署和风险检查
 - 端口映射汇总与冲突检测
 - 后台任务进度、服务日志和自定义图标
-- 自动备份、更新检查、代理和应用设置
+- 自动备份、更新检查、GitHub 更新代理和应用设置
 - 支持 `linux/amd64` 与 `linux/arm64`
 
 ## 使用方法
@@ -31,35 +31,22 @@ Docker Copilot 需要访问 Docker socket，请仅在可信环境中使用，并
 
 ### 本地开发
 
-后端需要 Go 1.23+，前端需要 Node.js 22。先启动后端，再启动前端：
-
-
+后端需要 Go 1.23+，前端需要 Node.js 22。先从配置模板生成本地配置文件，再启动后端和前端：
 
 ```bash
-# 后端
+# 生成本地配置文件，并设置本地开发所需的登录密钥
+cp backend/etc/dockerCopilot.yaml backend/etc/dockerCopilot.local.yaml
+
+# 启动后端
 cd backend && go run dockercopilot.go -f etc/dockerCopilot.local.yaml
 
-# 前端
+# 另开一个终端启动前端
 cd frontend && npm start
 ```
-前端开发地址：<http://localhost:4200/manager>。后端默认监听 `127.0.0.1:12712`。
 
+如需修改监听地址、数据目录或 Compose 扫描目录，请编辑复制出来的 `backend/etc/dockerCopilot.local.yaml`。前端开发地址：<http://localhost:4200/manager>。后端默认监听 `127.0.0.1:12712`。
 
-### Docker daemon 代理（可选）
-
-Linux 本地 Docker Engine 可安装 helper辅助程序。安装后，在 `docker/docker-compose.yml` 的 `volumes` 下增加：
-
-```yaml
-- /run/dockercopilot-helper.sock:/run/dockercopilot-helper.sock
-```
-
-然后执行：
-
-```bash
-docker compose -f docker/docker-compose.yml up -d
-```
-
-## 环境变量
+### 环境变量
 
 以下变量可在启动前通过 `export` 设置，也可以写入本地 Compose 文件。默认值以 `docker/docker-compose.yml` 为准。
 
@@ -76,8 +63,5 @@ docker compose -f docker/docker-compose.yml up -d
 | `DOCKER_COMPOSE_DIR` | `../compose` | 否 | 映射到容器 `/compose`，作为 Compose 项目目录 |
 | `TZ` | `Asia/Shanghai` | 否 | 容器时区 |
 | `githubProxy` | 空 | 否 | GitHub 版本和更新下载地址的前缀代理 |
-| `HTTP_PROXY` | 空 | 否 | 应用 HTTP 客户端代理 |
-| `HTTPS_PROXY` | 空 | 否 | 应用 HTTPS 客户端代理 |
-| `NO_PROXY` | `localhost,127.0.0.1,::1` | 否 | 不使用代理的地址列表 |
 
-`HTTP_PROXY`、`HTTPS_PROXY` 和 `NO_PROXY` 只影响 Docker Copilot 自身的 HTTP 请求，不影响 Docker daemon 拉取镜像时使用的代理。Docker daemon 代理请使用上面的 helper 功能配置。
+`githubProxy` 只用于 Copilot 的 GitHub 版本检查和程序更新地址。Docker 镜像拉取使用 Docker Engine 自身的 daemon 配置。

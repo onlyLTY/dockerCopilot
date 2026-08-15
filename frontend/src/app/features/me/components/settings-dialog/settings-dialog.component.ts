@@ -1,12 +1,7 @@
-import { Component, DestroyRef, computed, effect, inject, output, signal } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import {
-  DaemonProxySettings,
-  DaemonRestartOperation,
-  SettingsService,
-} from '../../../../core/settings.service';
+import { SettingsService } from '../../../../core/settings.service';
 import { ToastService } from '../../../../core/toast.service';
-import { ConfirmService } from '../../../../core/confirm.service';
 import { FormExpansionComponent } from '../../../../shared/form-expansion/form-expansion.component';
 import { FormSelectComponent, FormSelectOption } from '../../../../shared/form-select/form-select.component';
 import { ModalHeadingComponent } from '../../../../shared/modal-heading/modal-heading.component';
@@ -21,17 +16,10 @@ import { ModalHeadingComponent } from '../../../../shared/modal-heading/modal-he
 export class SettingsDialogComponent {
   private readonly settings = inject(SettingsService);
   private readonly toast = inject(ToastService);
-  private readonly confirm = inject(ConfirmService);
-  private readonly destroyRef = inject(DestroyRef);
-
   readonly closed = output<void>();
-  readonly daemonProxy = signal<DaemonProxySettings | null>(null);
-  readonly daemonProxyLoading = signal(false);
-  readonly daemonProxyBusy = signal(false);
   readonly saving = signal(false);
   readonly settingsLoading = signal(true);
   readonly settingsLoadFailed = signal(false);
-  readonly daemonRestart = signal<DaemonRestartOperation | null>(null);
   readonly updateOptions = signal<string[]>([]);
   readonly backupOptions = signal<string[]>([]);
   readonly logOptions = signal<string[]>(['debug', 'info', 'warn', 'error']);
@@ -51,17 +39,13 @@ export class SettingsDialogComponent {
   retentionDraft = 10;
   pullTimeoutDraft = 0;
   hubUrlsDraft: string[] = [];
-  proxyDraft = { githubProxy: '', HTTP_PROXY: '', HTTPS_PROXY: '', NO_PROXY: '' };
-  daemonProxyDraft = { httpProxy: '', httpsProxy: '', noProxy: '' };
-  daemonProxyErrors = { httpProxy: '', httpsProxy: '', noProxy: '' };
+  proxyDraft = { githubProxy: '' };
 
   private defaultHubUrls: string[] = [
     'docker.1ms.run', 'docker.m.daocloud.io', 'docker.1panel.top', 'docker.1panel.live',
     'proxy.1panel.live', 'dockerproxy.1panel.live', 'docker.1panel.dev', 'docker.anye.in',
     'hub.rat.dev', 'docker.amingg.com',
   ];
-  private daemonProxyDraftConfigured = false;
-  private daemonProxyHash = '';
   private readonly updateLabels: Record<string, string> = {
     off: '关闭（仅手动检查）', '30m': '每 30 分钟', '1h': '每小时', '6h': '每 6 小时',
     '12h': '每 12 小时', '24h': '每天一次',
@@ -72,13 +56,6 @@ export class SettingsDialogComponent {
   };
 
   constructor() {
-    effect(() => {
-      const operation = this.settings.daemonOperation();
-      this.daemonRestart.set(operation);
-      if (operation && operation.status !== 'restarting') this.daemonProxyBusy.set(false);
-    });
-    this.settings.resumeDaemonOperation();
-    this.destroyRef.onDestroy(() => undefined);
     this.loadSettings();
   }
 
@@ -111,129 +88,11 @@ export class SettingsDialogComponent {
         if (data.defaultHubUrls?.length) this.defaultHubUrls = [...data.defaultHubUrls];
         this.hubUrlsDraft = [...(data.hubUrls ?? this.defaultHubUrls)];
         if (data.proxy) this.proxyDraft = { ...data.proxy };
-        if (data.daemonProxyDraftConfigured && data.daemonProxyDraft) {
-          this.daemonProxyDraftConfigured = true;
-          this.daemonProxyDraft = { ...this.daemonProxyDraft, ...data.daemonProxyDraft };
-        }
-        this.loadDaemonProxy();
       },
       error: () => {
         this.settingsLoading.set(false);
         this.settingsLoadFailed.set(true);
         this.toast.error('设置加载失败，请重试');
-      },
-    });
-  }
-
-  private loadDaemonProxy(): void {
-    this.daemonProxyLoading.set(true);
-    this.settings.getDaemonProxy().subscribe({
-      next: response => {
-        this.daemonProxyLoading.set(false);
-        if (response.code !== 200 || !response.data) {
-          this.toast.error(response.msg || '读取 Docker daemon 代理失败');
-          return;
-        }
-        const data = response.data;
-        this.daemonProxy.set(data);
-        this.daemonProxyHash = data.hash || '';
-        if (!this.daemonProxyDraftConfigured) {
-          const source = data.fileProxy || data.effectiveProxy;
-          this.daemonProxyDraft = { ...this.daemonProxyDraft, ...source };
-        }
-      },
-      error: error => {
-        this.daemonProxyLoading.set(false);
-        this.toast.error(error?.error?.msg || '读取 Docker daemon 代理失败');
-      },
-    });
-  }
-
-  private validateDaemonProxy(): boolean {
-    const errors = { httpProxy: '', httpsProxy: '', noProxy: '' };
-    for (const key of ['httpProxy', 'httpsProxy'] as const) {
-      const value = this.daemonProxyDraft[key];
-      if (!value) continue;
-      if (/\s|[\u0000-\u001f\u007f]/.test(value)) {
-        errors[key] = '不能包含空白或控制字符';
-        continue;
-      }
-      try {
-        const parsed = new URL(value);
-        if (!parsed.hostname || !['http:', 'https:', 'socks5:', 'socks5h:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error();
-      } catch {
-        errors[key] = '请输入有效的 http、https、socks5 或 socks5h 代理 URL，且不能包含账号密码';
-      }
-    }
-    if (/[\u0000-\u001f\u007f]/.test(this.daemonProxyDraft.noProxy)) errors.noProxy = '不能包含控制字符或换行';
-    this.daemonProxyErrors = errors;
-    return !Object.values(errors).some(Boolean);
-  }
-
-  updateDaemonProxyDraft(key: 'httpProxy' | 'httpsProxy' | 'noProxy', value: string): void {
-    this.daemonProxyDraft = { ...this.daemonProxyDraft, [key]: value };
-    this.validateDaemonProxy();
-  }
-
-  private daemonProxyDraftValue() {
-    return {
-      httpProxy: this.daemonProxyDraft.httpProxy.trim(),
-      httpsProxy: this.daemonProxyDraft.httpsProxy.trim(),
-      noProxy: this.daemonProxyDraft.noProxy.trim(),
-    };
-  }
-
-  async applyDaemonProxy(): Promise<void> {
-    if (!this.validateDaemonProxy()) {
-      this.toast.error('daemon 代理配置有误，请先修正标红字段');
-      return;
-    }
-    const confirmed = await this.confirm.open({
-      title: '覆写 Docker daemon 代理',
-      message: '这会修改宿主机全局 Docker daemon 配置，写入后需要重启才会生效。确认继续吗？',
-      confirmText: '确认覆写', danger: true, critical: true,
-    });
-    const daemon = this.daemonProxy();
-    if (!confirmed || this.daemonProxyBusy() || !daemon?.helperEnabled || !daemon.writable) return;
-    this.daemonProxyBusy.set(true);
-    this.settings.applyDaemonProxy({ ...this.daemonProxyDraftValue(), hash: this.daemonProxyHash }).subscribe({
-      next: response => {
-        this.daemonProxyBusy.set(false);
-        if (response.code !== 200 || !response.data) {
-          this.toast.error(response.msg || '覆写 daemon 代理失败');
-          return;
-        }
-        this.toast.success('daemon.json 已覆写，重启 Docker daemon 后生效');
-        this.loadDaemonProxy();
-      },
-      error: error => {
-        this.daemonProxyBusy.set(false);
-        this.toast.error(error?.error?.msg || '覆写 daemon 代理失败');
-      },
-    });
-  }
-
-  async restartDaemon(): Promise<void> {
-    const confirmed = await this.confirm.open({
-      title: '重启 Docker daemon',
-      message: '这会短暂中断宿主机上的 Docker 管理操作。确认重启吗？',
-      confirmText: '确认重启', danger: true, critical: true,
-    });
-    if (!confirmed || this.daemonProxyBusy()) return;
-    this.daemonProxyBusy.set(true);
-    this.settings.restartDaemon().subscribe({
-      next: response => {
-        if (response.code !== 202 || !response.data) {
-          this.daemonProxyBusy.set(false);
-          this.toast.error(response.msg || '启动 Docker daemon 重启失败');
-          return;
-        }
-        this.daemonRestart.set(response.data);
-        this.toast.info('Docker daemon 重启已提交', '状态会在后台继续更新');
-      },
-      error: error => {
-        this.daemonProxyBusy.set(false);
-        this.toast.error(error?.error?.msg || '启动 Docker daemon 重启失败');
       },
     });
   }
@@ -249,7 +108,6 @@ export class SettingsDialogComponent {
 
   saveSettings(): void {
     if (this.settingsLoading() || this.settingsLoadFailed()) { this.toast.error('设置尚未成功加载，暂时不能保存'); return; }
-    if (!this.validateDaemonProxy()) { this.toast.error('daemon 代理配置有误，请先修正标红字段'); return; }
     const value = Number(this.retentionDraft);
     if (!Number.isInteger(value) || value < 1 || value > 100) { this.toast.error('保留数量必须是 1-100 的整数'); return; }
     const pullTimeout = Number(this.pullTimeoutDraft);
@@ -258,13 +116,12 @@ export class SettingsDialogComponent {
     this.settings.saveAll({
       updateCheckInterval: this.updateDraft, autoBackupInterval: this.backupDraft, logLevel: this.logDraft,
       retention: value, pullTimeoutSec: pullTimeout, hubUrls: this.hubUrlsDraft.map(x => x.trim()).filter(Boolean),
-      proxy: this.proxyDraft, daemonProxyDraft: this.daemonProxyDraftValue(),
+      proxy: this.proxyDraft,
     }).subscribe({
       next: response => {
         if (response.code === 200 && response.data) {
           this.pullTimeoutDraft = response.data.pullTimeoutSec ?? pullTimeout;
           if (response.data.hubUrls) this.hubUrlsDraft = [...response.data.hubUrls];
-          if (response.data.daemonProxyDraftConfigured) this.daemonProxyDraftConfigured = true;
         }
         this.finishSave(value, response.code !== 200, response.msg);
       },

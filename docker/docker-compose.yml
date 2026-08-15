@@ -25,10 +25,6 @@ services:
       DOCKER_HOST: unix:///var/run/docker.sock
       # 可选：GitHub 下载前缀代理（程序更新/远程版本）
       # githubProxy: ${githubProxy:-}
-      # 可选：HTTP 客户端代理（不影响 Docker daemon 拉镜像代理）
-      # HTTP_PROXY: ${HTTP_PROXY:-}
-      # HTTPS_PROXY: ${HTTPS_PROXY:-}
-      # NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1}
     healthcheck:
       # /healthz 会 Ping Docker；引擎不可达时返回 503，编排可据此判定不健康
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:12712/healthz"]

@@ -20,32 +20,6 @@ export interface LogSettings {
 
 export interface ProxySettings {
   githubProxy: string;
-  HTTP_PROXY: string;
-  HTTPS_PROXY: string;
-  NO_PROXY: string;
-}
-
-export interface DaemonProxyDraft {
-  httpProxy: string;
-  httpsProxy: string;
-  noProxy: string;
-}
-
-export interface DaemonProxySettings {
-  helperEnabled: boolean;
-  fileExists: boolean;
-  writable: boolean;
-  hash: string;
-  fileProxy: DaemonProxyDraft;
-  effectiveProxy: DaemonProxyDraft;
-  restartRequired: boolean;
-  message?: string;
-}
-
-export interface DaemonRestartOperation {
-  operationID: string;
-  status: string;
-  message?: string;
 }
 export interface AppSettings {
   updateCheck: UpdateSettings;
@@ -57,8 +31,6 @@ export interface AppSettings {
   hubUrls: string[];
   /** 后端内置默认加速源，供「恢复默认」 */
   defaultHubUrls?: string[];
-  daemonProxyDraft: DaemonProxyDraft;
-  daemonProxyDraftConfigured: boolean;
   proxy: ProxySettings;
 }
 
@@ -70,7 +42,6 @@ export interface AppSettingsUpdate {
   pullTimeoutSec?: number;
   hubUrls?: string[];
   proxy?: ProxySettings;
-  daemonProxyDraft?: DaemonProxyDraft;
 }
 
 export interface RuntimeSettings {
@@ -97,10 +68,6 @@ export class SettingsService {
   private cacheVersion = 0;
   private settingsRequest$: Observable<ApiResponse<AppSettings>> | null = null;
   private readonly cacheTtlMs = 30_000;
-  private operationID = '';
-  readonly daemonOperation = signal<DaemonRestartOperation | null>(null);
-  private daemonPollTimer: ReturnType<typeof setTimeout> | null = null;
-  private daemonPollStartedAt = 0;
 
   constructor() {
     this.load();
@@ -172,64 +139,6 @@ export class SettingsService {
 
   setRuntime(value: Partial<RuntimeSettings>): void {
     this.runtime.update(current => ({ ...current, ...value }));
-  }
-
-  getDaemonProxy(): Observable<ApiResponse<DaemonProxySettings>> {
-    return this.http.get<ApiResponse<DaemonProxySettings>>('/api/settings/proxy/daemon');
-  }
-
-  applyDaemonProxy(settings: {
-    httpProxy: string;
-    httpsProxy: string;
-    noProxy: string;
-    hash: string;
-  }): Observable<ApiResponse<{ status: DaemonProxySettings; backupCreated: boolean }>> {
-    return this.http.post<ApiResponse<{ status: DaemonProxySettings; backupCreated: boolean }>>(
-      '/api/settings/proxy/daemon',
-      settings,
-    );
-  }
-
-  restartDaemon(): Observable<ApiResponse<DaemonRestartOperation>> {
-    return this.http.post<ApiResponse<DaemonRestartOperation>>('/api/daemon/restart', {}).pipe(
-      tap(response => {
-        if (response.code === 202 && response.data) {
-          this.operationID = response.data.operationID;
-          this.daemonOperation.set(response.data);
-          this.daemonPollStartedAt = Date.now();
-          this.pollDaemonOperation();
-        }
-      }),
-    );
-  }
-
-  resumeDaemonOperation(): void {
-    if (this.operationID && !this.daemonOperation()?.status?.match(/succeeded|failed/)) {
-      this.daemonPollStartedAt ||= Date.now();
-      this.pollDaemonOperation();
-    }
-  }
-
-  private pollDaemonOperation(): void {
-    if (!this.operationID || Date.now() - this.daemonPollStartedAt > 120_000) return;
-    this.getDaemonOperation(this.operationID).subscribe({
-      next: response => {
-        if (response.code !== 200 || !response.data) return;
-        this.daemonOperation.set(response.data);
-        if (response.data.status === 'restarting') {
-          this.daemonPollTimer = setTimeout(() => this.pollDaemonOperation(), 1500);
-        }
-      },
-      error: () => {
-        this.daemonPollTimer = setTimeout(() => this.pollDaemonOperation(), 2000);
-      },
-    });
-  }
-
-  getDaemonOperation(operationID: string): Observable<ApiResponse<DaemonRestartOperation>> {
-    return this.http.get<ApiResponse<DaemonRestartOperation>>(
-      '/api/daemon/restart/' + encodeURIComponent(operationID),
-    );
   }
 
   private applySnapshot(data: AppSettings): void {

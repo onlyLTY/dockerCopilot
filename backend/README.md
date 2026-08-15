@@ -125,7 +125,7 @@ go test ./...
 
 ### 设置与日志（已在 `.api` + gen routes）
 
-- `/api/settings` 及 update-check / auto-backup / log-level / proxy
+- `/api/settings` 及 update-check / auto-backup / log-level
 - `GET /api/logs`
 
 ### 健康检查

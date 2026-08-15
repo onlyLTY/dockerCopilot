@@ -78,15 +78,9 @@ type Settings struct {
 	IgnoredContainerUpdates []string `json:"ignoredContainerUpdates,omitempty"`
 	// HubURLs 官方 Docker Hub（docker.io）镜像检查更新时的加速源列表（仅 host，有序）。
 	// 未配置时 GetHubURLs 返回 DefaultHubURLs；用户保存后（含空列表）以持久化值为准。
-	HubURLs                 []string         `json:"hubUrls,omitempty"`
-	HubURLsConfigured       bool             `json:"hubUrlsConfigured,omitempty"`
-	GithubProxy             string           `json:"githubProxy,omitempty"`
-	HTTPProxy               string           `json:"HTTP_PROXY,omitempty"`
-	HTTPSProxy              string           `json:"HTTPS_PROXY,omitempty"`
-	NoProxy                 string           `json:"NO_PROXY,omitempty"`
-	ProxySettingsConfigured bool             `json:"proxySettingsConfigured,omitempty"`
-	DaemonProxyDraft        DaemonProxyDraft `json:"daemonProxyDraft,omitempty"`
-	DaemonProxyConfigured   bool             `json:"daemonProxyConfigured,omitempty"`
+	HubURLs           []string `json:"hubUrls,omitempty"`
+	HubURLsConfigured bool     `json:"hubUrlsConfigured,omitempty"`
+	GithubProxy       string   `json:"githubProxy,omitempty"`
 	// PullTimeoutSec 拉取镜像超时（秒）。0 表示未配置，运行时回退到配置文件/默认值。
 	PullTimeoutSec int `json:"pullTimeoutSec,omitempty"`
 }
@@ -117,15 +111,6 @@ func load() Settings {
 	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(content, &fields); err == nil {
-		_, hasGithubProxy := fields["githubProxy"]
-		_, hasHTTPProxy := fields["HTTP_PROXY"]
-		_, hasHTTPSProxy := fields["HTTPS_PROXY"]
-		_, hasNoProxy := fields["NO_PROXY"]
-		_, hasProxyMarker := fields["proxySettingsConfigured"]
-		stored.ProxySettingsConfigured = stored.ProxySettingsConfigured || hasGithubProxy || hasHTTPProxy || hasHTTPSProxy || hasNoProxy || hasProxyMarker
-		_, hasDaemonHTTPProxy := fields["daemonProxyDraft"]
-		_, hasDaemonProxyMarker := fields["daemonProxyConfigured"]
-		stored.DaemonProxyConfigured = stored.DaemonProxyConfigured || hasDaemonHTTPProxy || hasDaemonProxyMarker
 		_, hasHubURLs := fields["hubUrls"]
 		_, hasHubURLsMarker := fields["hubUrlsConfigured"]
 		stored.HubURLsConfigured = stored.HubURLsConfigured || hasHubURLs || hasHubURLsMarker
@@ -151,12 +136,6 @@ func load() Settings {
 		s.HubURLsConfigured = true
 	}
 	s.GithubProxy = stored.GithubProxy
-	s.HTTPProxy = stored.HTTPProxy
-	s.HTTPSProxy = stored.HTTPSProxy
-	s.NoProxy = stored.NoProxy
-	s.ProxySettingsConfigured = stored.ProxySettingsConfigured
-	s.DaemonProxyDraft = stored.DaemonProxyDraft
-	s.DaemonProxyConfigured = stored.DaemonProxyConfigured
 	return s
 }
 
@@ -209,7 +188,6 @@ type AppSettingsPatch struct {
 	PullTimeoutSec      *int
 	HubURLs             *[]string
 	Proxy               *ProxySettings
-	DaemonProxyDraft    *DaemonProxyDraft
 }
 
 // Snapshot returns one consistent settings snapshot for aggregate responses.
@@ -276,34 +254,7 @@ func ApplyPatch(patch AppSettingsPatch) (Settings, error) {
 		if err := validProxyURL(proxy.GithubProxy, "githubProxy"); err != nil {
 			return Settings{}, err
 		}
-		if err := validProxyURL(proxy.HTTPProxy, "HTTP_PROXY"); err != nil {
-			return Settings{}, err
-		}
-		if err := validProxyURL(proxy.HTTPSProxy, "HTTPS_PROXY"); err != nil {
-			return Settings{}, err
-		}
-		if err := validNoProxy(proxy.NoProxy); err != nil {
-			return Settings{}, err
-		}
 		s.GithubProxy = strings.TrimSpace(proxy.GithubProxy)
-		s.HTTPProxy = strings.TrimSpace(proxy.HTTPProxy)
-		s.HTTPSProxy = strings.TrimSpace(proxy.HTTPSProxy)
-		s.NoProxy = strings.TrimSpace(proxy.NoProxy)
-		s.ProxySettingsConfigured = true
-	}
-	if patch.DaemonProxyDraft != nil {
-		draft := *patch.DaemonProxyDraft
-		if err := validProxyURL(draft.HTTPProxy, "httpProxy"); err != nil {
-			return Settings{}, err
-		}
-		if err := validProxyURL(draft.HTTPSProxy, "httpsProxy"); err != nil {
-			return Settings{}, err
-		}
-		if err := validNoProxy(draft.NoProxy); err != nil {
-			return Settings{}, err
-		}
-		s.DaemonProxyDraft = DaemonProxyDraft{HTTPProxy: strings.TrimSpace(draft.HTTPProxy), HTTPSProxy: strings.TrimSpace(draft.HTTPSProxy), NoProxy: strings.TrimSpace(draft.NoProxy)}
-		s.DaemonProxyConfigured = true
 	}
 	if err := save(s); err != nil {
 		return Settings{}, err
@@ -653,56 +604,14 @@ func SetHubURLs(items []string) ([]string, error) {
 	return normalized, nil
 }
 
-// ProxySettings 返回应用出站请求使用的代理配置。
+// ProxySettings 返回 GitHub 更新地址前缀代理配置。
 type ProxySettings struct {
 	GithubProxy string `json:"githubProxy"`
-	HTTPProxy   string `json:"HTTP_PROXY"`
-	HTTPSProxy  string `json:"HTTPS_PROXY"`
-	NoProxy     string `json:"NO_PROXY"`
-}
-
-type DaemonProxyDraft struct {
-	HTTPProxy  string `json:"httpProxy"`
-	HTTPSProxy string `json:"httpsProxy"`
-	NoProxy    string `json:"noProxy"`
 }
 
 func GetProxySettings() ProxySettings {
 	s := load()
-	return ProxySettings{
-		GithubProxy: s.GithubProxy,
-		HTTPProxy:   s.HTTPProxy,
-		HTTPSProxy:  s.HTTPSProxy,
-		NoProxy:     s.NoProxy,
-	}
-}
-
-func GetDaemonProxyDraft() (DaemonProxyDraft, bool) {
-	s := load()
-	return s.DaemonProxyDraft, s.DaemonProxyConfigured
-}
-
-func SetDaemonProxyDraft(value DaemonProxyDraft) (DaemonProxyDraft, error) {
-	if err := validProxyURL(value.HTTPProxy, "httpProxy"); err != nil {
-		return DaemonProxyDraft{}, err
-	}
-	if err := validProxyURL(value.HTTPSProxy, "httpsProxy"); err != nil {
-		return DaemonProxyDraft{}, err
-	}
-	if err := validNoProxy(value.NoProxy); err != nil {
-		return DaemonProxyDraft{}, err
-	}
-	value.HTTPProxy = strings.TrimSpace(value.HTTPProxy)
-	value.HTTPSProxy = strings.TrimSpace(value.HTTPSProxy)
-	value.NoProxy = strings.TrimSpace(value.NoProxy)
-	if err := update(func(s *Settings) error {
-		s.DaemonProxyDraft = value
-		s.DaemonProxyConfigured = true
-		return nil
-	}); err != nil {
-		return DaemonProxyDraft{}, err
-	}
-	return value, nil
+	return ProxySettings{GithubProxy: s.GithubProxy}
 }
 
 func validProxyURL(value string, name string) error {
@@ -727,39 +636,14 @@ func validProxyURL(value string, name string) error {
 	return nil
 }
 
-func validNoProxy(value string) error {
-	for _, r := range value {
-		if unicode.IsControl(r) {
-			return fmt.Errorf("NO_PROXY 不能包含控制字符")
-		}
-	}
-	return nil
-}
-
-// SetProxySettings 校验并持久化应用出站请求的代理配置。
+// SetProxySettings 校验并持久化 GitHub 更新地址前缀代理。
 func SetProxySettings(value ProxySettings) (ProxySettings, error) {
 	if err := validProxyURL(value.GithubProxy, "githubProxy"); err != nil {
 		return ProxySettings{}, err
 	}
-	if err := validProxyURL(value.HTTPProxy, "HTTP_PROXY"); err != nil {
-		return ProxySettings{}, err
-	}
-	if err := validProxyURL(value.HTTPSProxy, "HTTPS_PROXY"); err != nil {
-		return ProxySettings{}, err
-	}
-	if err := validNoProxy(value.NoProxy); err != nil {
-		return ProxySettings{}, err
-	}
 	value.GithubProxy = strings.TrimSpace(value.GithubProxy)
-	value.HTTPProxy = strings.TrimSpace(value.HTTPProxy)
-	value.HTTPSProxy = strings.TrimSpace(value.HTTPSProxy)
-	value.NoProxy = strings.TrimSpace(value.NoProxy)
 	if err := update(func(s *Settings) error {
 		s.GithubProxy = value.GithubProxy
-		s.HTTPProxy = value.HTTPProxy
-		s.HTTPSProxy = value.HTTPSProxy
-		s.NoProxy = value.NoProxy
-		s.ProxySettingsConfigured = true
 		return nil
 	}); err != nil {
 		return ProxySettings{}, err
@@ -769,19 +653,8 @@ func SetProxySettings(value ProxySettings) (ProxySettings, error) {
 
 func ApplyProxySettings() error {
 	settings := load()
-	if !settings.ProxySettingsConfigured {
+	if settings.GithubProxy == "" {
 		return nil
 	}
-	values := map[string]string{
-		"githubProxy": settings.GithubProxy,
-		"HTTP_PROXY":  settings.HTTPProxy,
-		"HTTPS_PROXY": settings.HTTPSProxy,
-		"NO_PROXY":    settings.NoProxy,
-	}
-	for name, value := range values {
-		if err := os.Setenv(name, value); err != nil {
-			return err
-		}
-	}
-	return nil
+	return os.Setenv("githubProxy", settings.GithubProxy)
 }

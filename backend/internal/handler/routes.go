@@ -335,36 +335,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: settings.UpdateLogLevelSettingsHandler(serverCtx),
 			},
 			{
-				Method:  http.MethodGet,
-				Path:    "/settings/proxy",
-				Handler: settings.GetProxySettingsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/settings/proxy",
-				Handler: settings.UpdateProxySettingsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/settings/proxy/daemon",
-				Handler: settings.GetDaemonProxyHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/settings/proxy/daemon",
-				Handler: settings.ApplyDaemonProxyHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/daemon/restart",
-				Handler: settings.RestartDaemonHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/daemon/restart/:taskid",
-				Handler: settings.DaemonOperationHandler(serverCtx),
-			},
-			{
 				Method: http.MethodGet,
 				Path:   "/settings/update-check",
 

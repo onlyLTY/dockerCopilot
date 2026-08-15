@@ -4,10 +4,9 @@ on:
   pull_request:
     paths:
       - backend/**
-      - helper/**
       - frontend/**
       - .github/workflows/**
-      - docker-compose*.yml
+      - docker/**
       - backend/dockercopilot.api
 
 permissions:
@@ -21,9 +20,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.1'
-          cache-dependency-path: |
-            backend/go.sum
-            helper/go.sum
+          cache-dependency-path: backend/go.sum
+
       - name: Test backend
         run: |
           cd backend
@@ -31,11 +29,6 @@ jobs:
           go test -race ./...
           go vet ./...
           go build ./...
-      - name: Test helper
-        run: |
-          cd helper
-          go test ./...
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./...
       - name: Validate API spec when goctl is available
         run: |
           if command -v goctl >/dev/null 2>&1; then
@@ -60,4 +53,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate compose files
-        run: docker compose config
+        env:
+          secretKey: ci-compose-validation-key
+        run: docker compose -f docker/docker-compose.yml config

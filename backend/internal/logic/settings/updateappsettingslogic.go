@@ -33,10 +33,7 @@ func (l *UpdateAppSettingsLogic) UpdateAppSettings(body *types.UpdateAppSettings
 		HubURLs:             body.HubURLs,
 	}
 	if body.Proxy != nil {
-		patch.Proxy = &settingstore.ProxySettings{GithubProxy: body.Proxy.GithubProxy, HTTPProxy: body.Proxy.HTTPProxy, HTTPSProxy: body.Proxy.HTTPSProxy, NoProxy: body.Proxy.NoProxy}
-	}
-	if body.DaemonProxyDraft != nil {
-		patch.DaemonProxyDraft = &settingstore.DaemonProxyDraft{HTTPProxy: body.DaemonProxyDraft.HTTPProxy, HTTPSProxy: body.DaemonProxyDraft.HTTPSProxy, NoProxy: body.DaemonProxyDraft.NoProxy}
+		patch.Proxy = &settingstore.ProxySettings{GithubProxy: body.Proxy.GithubProxy}
 	}
 	before := settingstore.Snapshot()
 	stored, err := settingstore.ApplyPatch(patch)
@@ -63,13 +60,6 @@ func (l *UpdateAppSettingsLogic) UpdateAppSettings(body *types.UpdateAppSettings
 		}
 	}
 	msg := "success"
-	if body.Proxy != nil && body.DaemonProxyDraft != nil {
-		msg = "设置已保存；Copilot 代理需重启服务生效，daemon 代理草稿需单独确认覆写"
-	} else if body.Proxy != nil {
-		msg = "设置已保存，代理设置将在重启服务后生效"
-	} else if body.DaemonProxyDraft != nil {
-		msg = "daemon 代理草稿已保存，尚未覆写宿主机配置"
-	}
 	if len(warnings) > 0 {
 		msg = strings.Join(append([]string{msg}, warnings...), "；")
 	}

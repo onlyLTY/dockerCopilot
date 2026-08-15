@@ -103,10 +103,6 @@ type CancelProgressReq struct {
 	TaskId string `path:"taskid" validate:"required"`
 }
 
-type DaemonOperationReq struct {
-	OperationID string `path:"taskid" validate:"required"`
-}
-
 type IconDeleteReq struct {
 	ImageName string `form:"imageName" validate:"required"`
 }
@@ -141,24 +137,8 @@ type LoginReq struct {
 	SecretKey string `form:"secretKey" validate:"required"`
 }
 
-type DaemonProxyDraftData struct {
-	HTTPProxy  string `json:"httpProxy"`
-	HTTPSProxy string `json:"httpsProxy"`
-	NoProxy    string `json:"noProxy"`
-}
-
-type DaemonProxyApplyReq struct {
-	HTTPProxy  string `json:"httpProxy"`
-	HTTPSProxy string `json:"httpsProxy"`
-	NoProxy    string `json:"noProxy"`
-	Hash       string `json:"hash" validate:"required"`
-}
-
 type ProxySettingsData struct {
 	GithubProxy string `json:"githubProxy"`
-	HTTPProxy   string `json:"HTTP_PROXY"`
-	HTTPSProxy  string `json:"HTTPS_PROXY"`
-	NoProxy     string `json:"NO_PROXY"`
 }
 
 type RemoveContainerReq struct {
@@ -184,12 +164,11 @@ type Resp struct {
 }
 
 type UpdateAppSettingsReq struct {
-	UpdateCheckInterval string            `json:"updateCheckInterval,optional"`
-	AutoBackupInterval  string            `json:"autoBackupInterval,optional"`
-	LogLevel            string            `json:"logLevel,optional"`
-	Retention           int               `json:"retention,optional"`
-	HubURLs             []string          `json:"hubUrls,optional"`
-	Proxy               ProxySettingsData `json:"proxy,optional"`
+	UpdateCheckInterval string   `json:"updateCheckInterval,optional"`
+	AutoBackupInterval  string   `json:"autoBackupInterval,optional"`
+	LogLevel            string   `json:"logLevel,optional"`
+	Retention           int      `json:"retention,optional"`
+	HubURLs             []string `json:"hubUrls,optional"`
 }
 
 type UpdateBackupSettingsReq struct {

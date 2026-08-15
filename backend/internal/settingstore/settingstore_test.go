@@ -181,16 +181,11 @@ func TestProxySettingsPersistenceAndValidation(t *testing.T) {
 	path := filepath.Join(dir, "appSettings.json")
 	t.Setenv("APP_SETTINGS_PATH", path)
 
-	if got := GetProxySettings(); got.GithubProxy != "" || got.HTTPProxy != "" || got.HTTPSProxy != "" || got.NoProxy != "" {
+	if got := GetProxySettings(); got.GithubProxy != "" {
 		t.Fatalf("unexpected proxy defaults: %+v", got)
 	}
 
-	want := ProxySettings{
-		GithubProxy: "https://github-proxy.example/",
-		HTTPProxy:   "http://127.0.0.1:7890",
-		HTTPSProxy:  "http://127.0.0.1:7890",
-		NoProxy:     "localhost,127.0.0.1,::1",
-	}
+	want := ProxySettings{GithubProxy: "https://github-proxy.example/"}
 	got, err := SetProxySettings(want)
 	if err != nil {
 		t.Fatal(err)
@@ -203,69 +198,15 @@ func TestProxySettingsPersistenceAndValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal(content, &stored); err != nil || !stored.ProxySettingsConfigured {
-		t.Fatalf("proxy configuration marker was not persisted: %+v", stored)
+	if err := json.Unmarshal(content, &stored); err != nil || stored.GithubProxy != want.GithubProxy {
+		t.Fatalf("proxy setting was not persisted: %+v", stored)
 	}
 
 	for _, value := range []ProxySettings{
-		{HTTPProxy: "proxy.example:7890"},
-		{HTTPProxy: "http://user:password@proxy.example:7890"},
 		{GithubProxy: "ftp://github-proxy.example/"},
-		{NoProxy: "localhost\n127.0.0.1"},
 	} {
 		if _, err := SetProxySettings(value); err == nil {
 			t.Fatalf("invalid proxy settings accepted: %+v", value)
 		}
-	}
-}
-
-func TestDaemonProxyDraftPersistenceAndValidation(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "appSettings.json")
-	t.Setenv("APP_SETTINGS_PATH", path)
-
-	if draft, configured := GetDaemonProxyDraft(); configured || draft != (DaemonProxyDraft{}) {
-		t.Fatalf("unexpected daemon proxy defaults: %+v configured=%v", draft, configured)
-	}
-
-	want := DaemonProxyDraft{
-		HTTPProxy:  "http://127.0.0.1:7890",
-		HTTPSProxy: "socks5h://127.0.0.1:7891",
-		NoProxy:    "localhost,127.0.0.1",
-	}
-	got, err := SetDaemonProxyDraft(want)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got != want {
-		t.Fatalf("saved daemon proxy draft = %+v, want %+v", got, want)
-	}
-	if got, configured := GetDaemonProxyDraft(); !configured || got != want {
-		t.Fatalf("persisted daemon proxy draft = %+v configured=%v, want %+v true", got, configured, want)
-	}
-
-	for _, bad := range []DaemonProxyDraft{
-		{HTTPProxy: "proxy.example:7890"},
-		{HTTPProxy: "ftp://proxy.example:7890"},
-		{HTTPProxy: "http://user:pass@proxy.example:7890"},
-		{NoProxy: "localhost\n127.0.0.1"},
-	} {
-		if _, err := SetDaemonProxyDraft(bad); err == nil {
-			t.Fatalf("invalid daemon proxy draft accepted: %+v", bad)
-		}
-	}
-	if got, configured := GetDaemonProxyDraft(); !configured || got != want {
-		t.Fatalf("invalid update changed daemon proxy draft = %+v configured=%v", got, configured)
-	}
-
-	cleared, err := SetDaemonProxyDraft(DaemonProxyDraft{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cleared != (DaemonProxyDraft{}) {
-		t.Fatalf("cleared daemon proxy draft = %+v", cleared)
-	}
-	if got, configured := GetDaemonProxyDraft(); !configured || got != (DaemonProxyDraft{}) {
-		t.Fatalf("empty daemon proxy draft was not persisted: %+v configured=%v", got, configured)
 	}
 }
