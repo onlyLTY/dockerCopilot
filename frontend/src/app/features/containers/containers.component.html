@@ -131,9 +131,12 @@
             [matTooltip]="item.usingImage"
             >{{ item.usingImage }}</span
           >
-          <small class="d-block" [class.text-green]="isRunning(item)">{{
-            statusText(item)
-          }}</small>
+          <small class="d-block" [class.text-green]="isRunning(item)">
+            {{ statusText(item) }}
+            @if (isRunning(item) && item.cpuUsage && item.memoryUsage) {
+              · CPU {{ item.cpuUsage }} · RAM {{ item.memoryUsage }}
+            }
+          </small>
         </div>
         <div resource-card-actions>
           <button

@@ -13,6 +13,8 @@ export interface ContainerRow {
   createImage?: string;
   createTime: string;
   runningTime: string;
+  cpuUsage: string;
+  memoryUsage: string;
   haveUpdate: boolean;
   updateIgnored: boolean;
 }

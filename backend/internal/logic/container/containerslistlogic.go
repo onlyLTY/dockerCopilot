@@ -24,6 +24,8 @@ type Info struct {
 	CreateImage   string `json:"createImage"`
 	CreateTime    string `json:"createTime"`
 	RunningTime   string `json:"runningTime"`
+	CPUUsage      string `json:"cpuUsage"`
+	MemoryUsage   string `json:"memoryUsage"`
 	HaveUpdate    bool   `json:"haveUpdate"`
 	UpdateIgnored bool   `json:"updateIgnored"`
 }
@@ -52,8 +54,10 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 	type inspectResult struct {
 		idx         int
 		createImage string
+		usage       utiles.ContainerUsage
 	}
 	createImages := make([]string, len(list))
+	usages := make([]utiles.ContainerUsage, len(list))
 	jobs := make(chan int, len(list))
 	results := make(chan inspectResult, len(list))
 	workers := inspectWorkers
@@ -78,7 +82,15 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 				} else if containerInspect.Config != nil && containerInspect.Config.Image != "" {
 					createImage = containerInspect.Config.Image
 				}
-				results <- inspectResult{idx: i, createImage: createImage}
+				var usage utiles.ContainerUsage
+				if list[i].State == "running" {
+					var statsErr error
+					usage, statsErr = utiles.GetContainerUsage(l.ctx, l.svcCtx, list[i].ID)
+					if statsErr != nil {
+						l.Errorf("获取容器统计失败 id=%s: %v", list[i].ID, statsErr)
+					}
+				}
+				results <- inspectResult{idx: i, createImage: createImage, usage: usage}
 			}
 		}()
 	}
@@ -89,6 +101,7 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 	for range list {
 		r := <-results
 		createImages[r.idx] = r.createImage
+		usages[r.idx] = r.usage
 	}
 
 	containerInfoList := make([]Info, 0, len(list))
@@ -115,6 +128,8 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 		t := time.Unix(v.Created, 0)
 		containerInfo.CreateTime = t.Format("2006-01-02 15:04:05")
 		containerInfo.RunningTime = v.Status
+		containerInfo.CPUUsage = usages[i].CPUUsage
+		containerInfo.MemoryUsage = usages[i].MemoryUsage
 		containerInfo.UpdateIgnored = settingstore.IsContainerUpdateIgnored(containerInfo.Name)
 		containerInfo.HaveUpdate = v.Update && !containerInfo.UpdateIgnored
 		containerInfoList = append(containerInfoList, containerInfo)
