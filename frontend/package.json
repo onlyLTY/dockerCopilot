@@ -4,7 +4,9 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
+    "start:preview": "ng serve --host=127.0.0.1 --port=4209 --configuration=preview",
     "build": "ng build --configuration production",
+    "build:preview": "ng build --configuration preview",
     "watch": "ng build --watch --configuration development"
   },
   "private": true,

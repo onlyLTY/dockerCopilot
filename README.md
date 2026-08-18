@@ -46,6 +46,14 @@ cd frontend && npm start
 
 如需修改监听地址、数据目录或 Compose 扫描目录，请编辑复制出来的 `backend/etc/dockerCopilot.local.yaml`。前端开发地址：<http://localhost:4200/manager>。后端默认监听 `127.0.0.1:12712`。
 
+如果只需要检查前端真实页面、布局和交互，无需启动 Go 后端，可以使用 `subClash` 同样的预览构建模式：
+
+```bash
+cd frontend && npm run start:preview
+```
+
+然后访问 <http://127.0.0.1:4209/manager>。预览模式继续使用容器、镜像、Compose、备份、端口、任务和关于页面的现有 HTML 与样式，但通过本地 fixture 响应接口，不连接 Docker Engine；适合快速测试页面状态、弹窗、筛选和按钮交互。
+
 ### 环境变量
 
 以下变量可在启动前通过 `export` 设置，也可以写入本地 Compose 文件。默认值以 `docker/docker-compose.yml` 为准。

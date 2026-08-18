@@ -122,6 +122,10 @@
   background: var(--green-soft);
   color: var(--green);
 }
+.status-badge.restarting {
+  background: var(--red-soft);
+  color: var(--red);
+}
 .status-badge.stopped {
   background: var(--amber-soft);
   color: var(--amber);

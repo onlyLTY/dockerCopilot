@@ -6,15 +6,6 @@
   </div>
 </dc-page-heading>
 
-@if (data().warnings.length) {
-  <div class="alert warning-alert">⚠ {{ data().warnings.join('；') }}</div>
-}
-@if (data().conflicts.length) {
-  <div class="alert warning-alert">
-    ⚠ 发现 {{ data().conflicts.length }} 个端口冲突：{{ data().conflicts.join('、') }}
-  </div>
-}
-
 <dc-stats
   [items]="stats()"
   [columns]="2"

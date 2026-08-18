@@ -361,8 +361,9 @@ export class ContainersComponent {
     };
     return map[(state || "").toLowerCase()] || state || "未知";
   }
-  // 卡片上的一行：运行中显示 “运行：30分钟”，其余显示本地化状态
+  // 卡片上的一行：重启中优先显示明确状态，其余运行中显示时长
   statusText(x: ContainerRow): string {
+    if (x.status === "restarting") return "重启中";
     if (this.isRunning(x)) {
       const d = this.duration(x.runningTime);
       return d ? `运行：${d}` : "运行中";

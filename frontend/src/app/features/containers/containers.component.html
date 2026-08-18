@@ -131,9 +131,13 @@
             [matTooltip]="item.usingImage"
             >{{ item.usingImage }}</span
           >
-          <small class="d-block" [class.text-green]="isRunning(item)">
+          <small
+            class="d-block"
+            [class.text-green]="isRunning(item) && item.status !== 'restarting'"
+            [class.text-red]="item.status === 'restarting'"
+          >
             {{ statusText(item) }}
-            @if (isRunning(item) && item.cpuUsage && item.memoryUsage) {
+            @if (isRunning(item) && item.status !== 'restarting' && item.cpuUsage && item.memoryUsage) {
               · CPU {{ item.cpuUsage }} · RAM {{ item.memoryUsage }}
             }
           </small>
@@ -247,7 +251,8 @@
           </div>
           <small
             class="status-badge py-2 px-8 fs-10"
-            [class.using]="isRunning(item)"
+            [class.using]="isRunning(item) && item.status !== 'restarting'"
+            [class.restarting]="item.status === 'restarting'"
             [class.stopped]="!isRunning(item)"
             >{{ statusText(item) }}</small
           >

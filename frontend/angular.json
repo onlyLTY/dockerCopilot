@@ -23,7 +23,22 @@
           },
           "configurations": {
             "production": { "budgets": [{ "type": "initial", "maximumWarning": "1mb", "maximumError": "2mb" }], "outputHashing": "all" },
-            "development": { "optimization": false, "extractLicenses": false, "sourceMap": true }
+            "development": { "optimization": false, "extractLicenses": false, "sourceMap": true },
+            "preview": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/core/auth.service.ts",
+                  "with": "src/app/preview/auth.service.ts"
+                },
+                {
+                  "replace": "src/app/core/auth.interceptor.ts",
+                  "with": "src/app/preview/auth.interceptor.ts"
+                }
+              ],
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
           },
           "defaultConfiguration": "production"
         },
@@ -34,7 +49,8 @@
           },
           "configurations": {
             "production": { "buildTarget": "docker-copilot-angular:build:production" },
-            "development": { "buildTarget": "docker-copilot-angular:build:development" }
+            "development": { "buildTarget": "docker-copilot-angular:build:development" },
+            "preview": { "buildTarget": "docker-copilot-angular:build:preview" }
           },
           "defaultConfiguration": "development"
         }
