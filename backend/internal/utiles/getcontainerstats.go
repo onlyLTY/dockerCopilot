@@ -43,7 +43,7 @@ func GetContainerUsage(taskCtx context.Context, ctx *svc.ServiceContext, id stri
 	return usage, nil
 }
 
-// calcCPUPercent 参考 docker 官方 cli 的实现计算两个采样点之间的 CPU 使用率。
+// calcCPUPercent 计算容器占宿主机总 CPU 资源的比例，结果范围通常为 0% 到 100%。
 func calcCPUPercent(stats container.StatsResponse, osType string) string {
 	var cpuPercent float64
 	if osType == "windows" {
@@ -51,9 +51,9 @@ func calcCPUPercent(stats container.StatsResponse, osType string) string {
 			return ""
 		}
 		intervals := stats.Read.Sub(stats.PreRead).Nanoseconds() / 100
-		if intervals > 0 && stats.NumProcs > 0 {
+		if intervals > 0 {
 			cpuDelta := stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage
-			cpuPercent = float64(cpuDelta) / float64(intervals*int64(stats.NumProcs)) * 100.0
+			cpuPercent = float64(cpuDelta) / float64(intervals) * 100.0
 		}
 	} else {
 		if stats.CPUStats.CPUUsage.TotalUsage < stats.PreCPUStats.CPUUsage.TotalUsage ||
@@ -62,13 +62,12 @@ func calcCPUPercent(stats container.StatsResponse, osType string) string {
 		}
 		cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
 		systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
-		onlineCPUs := float64(stats.CPUStats.OnlineCPUs)
-		if onlineCPUs == 0 {
-			onlineCPUs = float64(len(stats.CPUStats.CPUUsage.PercpuUsage))
+		if systemDelta > 0 && cpuDelta > 0 {
+			cpuPercent = (cpuDelta / systemDelta) * 100.0
 		}
-		if systemDelta > 0 && cpuDelta > 0 && onlineCPUs > 0 {
-			cpuPercent = (cpuDelta / systemDelta) * onlineCPUs * 100.0
-		}
+	}
+	if cpuPercent > 100 {
+		cpuPercent = 100
 	}
 	return fmt.Sprintf("%.1f%%", cpuPercent)
 }
