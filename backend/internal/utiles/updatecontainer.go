@@ -3,8 +3,10 @@ package utiles
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/distribution/reference"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/onlyLTY/dockerCopilot/internal/config"
@@ -47,6 +49,37 @@ func UpdateContainerWithContext(taskCtx context.Context, serviceContext *svc.Ser
 	signal := "SIGINT"
 
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
+	oldTaskProgress.Message = "正在修改旧镜像标签"
+	oldTaskProgress.Percentage = 8
+	oldTaskProgress.DetailMsg = "正在修改旧镜像标签"
+	serviceContext.UpdateProgress(taskID, oldTaskProgress)
+	inspectedContainer, err := serviceContext.DockerClient.ContainerInspect(taskCtx, id)
+	if err != nil {
+		oldTaskProgress.Message = "获取旧容器信息失败"
+		oldTaskProgress.DetailMsg = err.Error()
+		oldTaskProgress.IsDone = true
+		serviceContext.UpdateProgress(taskID, oldTaskProgress)
+		return err
+	}
+	if inspectedContainer.Config == nil {
+		err = fmt.Errorf("旧容器镜像配置不可用")
+		oldTaskProgress.Message = "获取旧容器信息失败"
+		oldTaskProgress.DetailMsg = err.Error()
+		oldTaskProgress.IsDone = true
+		serviceContext.UpdateProgress(taskID, oldTaskProgress)
+		return err
+	}
+	oldImageTagName, tagErr := preserveOldImageTag(taskCtx, serviceContext.DockerClient, inspectedContainer.Image, inspectedContainer.Config.Image)
+	if tagErr != nil {
+		oldTaskProgress.Message = "旧镜像标签修改失败"
+		oldTaskProgress.DetailMsg = "：" + shortProgressError(tagErr)
+		serviceContext.UpdateProgress(taskID, oldTaskProgress)
+		logx.Errorf("保存旧镜像标签失败: %v", tagErr)
+	} else {
+		oldTaskProgress.Message = "旧镜像标签修改成功"
+		oldTaskProgress.DetailMsg = "：" + oldImageTagName
+		serviceContext.UpdateProgress(taskID, oldTaskProgress)
+	}
 	oldTaskProgress.Message = "正在拉取新镜像"
 	oldTaskProgress.Percentage = 10
 	oldTaskProgress.DetailMsg = "正在拉取新镜像"
@@ -95,7 +128,7 @@ func UpdateContainerWithContext(taskCtx context.Context, serviceContext *svc.Ser
 		Signal:  signal,
 		Timeout: &timeout,
 	}
-	err := serviceContext.DockerClient.ContainerStop(taskCtx, id, stopOptions)
+	err = serviceContext.DockerClient.ContainerStop(taskCtx, id, stopOptions)
 	if err != nil {
 		oldTaskProgress.Message = "停止容器失败"
 		oldTaskProgress.DetailMsg = "停止容器失败"
@@ -127,7 +160,7 @@ func UpdateContainerWithContext(taskCtx context.Context, serviceContext *svc.Ser
 	oldTaskProgress.Message = "正在创建新容器"
 	oldTaskProgress.DetailMsg = "正在创建新容器"
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
-	inspectedContainer, err := serviceContext.DockerClient.ContainerInspect(taskCtx, id)
+	inspectedContainer, err = serviceContext.DockerClient.ContainerInspect(taskCtx, id)
 	if err != nil {
 		oldTaskProgress.Message = "获取容器信息失败"
 		oldTaskProgress.DetailMsg = "获取容器信息失败"
@@ -187,6 +220,58 @@ func UpdateContainerWithContext(taskCtx context.Context, serviceContext *svc.Ser
 	oldTaskProgress.IsDone = true
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
 	return nil
+}
+
+func preserveOldImageTag(ctx context.Context, cli interface {
+	ImageTag(context.Context, string, string) error
+}, imageID, imageRef string) (string, error) {
+	oldTag, err := oldImageTag(imageID, imageRef)
+	if err != nil {
+		return "", err
+	}
+	if err := cli.ImageTag(ctx, imageID, oldTag); err != nil {
+		return oldTag, fmt.Errorf("保存旧镜像标签 %s 失败: %w", oldTag, err)
+	}
+	return oldTag, nil
+}
+
+func shortProgressError(err error) string {
+	if err == nil {
+		return "未知错误"
+	}
+	const maxLength = 80
+	text := strings.TrimSpace(err.Error())
+	if len([]rune(text)) > maxLength {
+		return string([]rune(text)[:maxLength]) + "..."
+	}
+	return text
+}
+
+func oldImageTag(imageID, imageRef string) (string, error) {
+	imageID = strings.TrimSpace(imageID)
+	imageRef = strings.TrimSpace(imageRef)
+	const digestPrefix = "sha256:"
+	if !strings.HasPrefix(imageID, digestPrefix) {
+		return "", fmt.Errorf("旧镜像 ID 无效: %s", imageID)
+	}
+	digest := strings.TrimPrefix(imageID, digestPrefix)
+	if len(digest) < 6 {
+		return "", fmt.Errorf("旧镜像 ID 太短: %s", imageID)
+	}
+
+	named, err := reference.ParseNormalizedNamed(imageRef)
+	if err != nil {
+		return "", fmt.Errorf("旧镜像引用无效: %s", imageRef)
+	}
+	repository := reference.FamiliarName(named)
+	tag := "latest"
+	if tagged, ok := named.(reference.NamedTagged); ok {
+		tag = tagged.Tag()
+	}
+	if repository == "" || tag == "" {
+		return "", fmt.Errorf("旧镜像引用缺少仓库或标签: %s", imageRef)
+	}
+	return fmt.Sprintf("%s:%s-old%s", repository, tag, digest[:6]), nil
 }
 
 func clearPullProgress(progress *svc.TaskProgress) {
