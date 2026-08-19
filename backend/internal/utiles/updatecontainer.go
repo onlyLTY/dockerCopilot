@@ -72,12 +72,12 @@ func UpdateContainerWithContext(taskCtx context.Context, serviceContext *svc.Ser
 	oldImageTagName, tagErr := preserveOldImageTag(taskCtx, serviceContext.DockerClient, inspectedContainer.Image, inspectedContainer.Config.Image)
 	if tagErr != nil {
 		oldTaskProgress.Message = "旧镜像标签修改失败"
-		oldTaskProgress.DetailMsg = "：" + shortProgressError(tagErr)
+		oldTaskProgress.DetailMsg = shortProgressError(tagErr)
 		serviceContext.UpdateProgress(taskID, oldTaskProgress)
 		logx.Errorf("保存旧镜像标签失败: %v", tagErr)
 	} else {
 		oldTaskProgress.Message = "旧镜像标签修改成功"
-		oldTaskProgress.DetailMsg = "：" + oldImageTagName
+		oldTaskProgress.DetailMsg = oldImageTagName
 		serviceContext.UpdateProgress(taskID, oldTaskProgress)
 	}
 	oldTaskProgress.Message = "正在拉取新镜像"
