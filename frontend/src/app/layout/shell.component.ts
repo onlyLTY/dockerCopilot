@@ -1,6 +1,6 @@
 import { Component, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../core/auth.service';
 import { VersionService } from '../core/version.service';
@@ -8,11 +8,12 @@ import { UiStateService } from '../core/ui-state.service';
 import { TaskService } from '../core/task.service';
 import { IconComponent } from '../shared/icon/icon.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'dc-shell',
   standalone: true,
-  imports: [IconComponent, MatTooltipModule],
+  imports: [IconComponent, MatTooltipModule, RouterLink],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
@@ -24,9 +25,29 @@ export class ShellComponent {
   private readonly versionService = inject(VersionService);
   open = false;
   readonly version = signal({ version: '', buildDate: '' });
+  readonly navigationLoading = signal(false);
+  private navigationTimer: ReturnType<typeof setTimeout> | null = null;
   /** 当前路由 path，用 signal 驱动无 zone 下菜单选中态刷新 */
   private readonly currentPath = signal(this.normalizePath(this.router.url));
   constructor() {
+    this.router.events
+      .pipe(takeUntilDestroyed())
+      .subscribe(event => {
+        if (event instanceof NavigationStart) {
+          if (this.navigationTimer) clearTimeout(this.navigationTimer);
+          this.navigationTimer = setTimeout(() => this.navigationLoading.set(true), 120);
+        } else if (
+          event instanceof NavigationEnd ||
+          event instanceof NavigationCancel ||
+          event instanceof NavigationError
+        ) {
+          if (this.navigationTimer) {
+            clearTimeout(this.navigationTimer);
+            this.navigationTimer = null;
+          }
+          this.navigationLoading.set(false);
+        }
+      });
     this.router.events
       .pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
@@ -47,10 +68,6 @@ export class ShellComponent {
         error: () => this.version.set({ version: '', buildDate: '' }),
       });
     });
-  }
-  navigate(path: string): void {
-    this.router.navigateByUrl(path);
-    this.closeMenu();
   }
   isActive(path: string): boolean {
     const current = this.currentPath();

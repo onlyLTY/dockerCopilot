@@ -108,6 +108,10 @@ type TaskProgress struct {
 	TimedOut       bool       `json:"timedOut"`
 	Refresh        bool       `json:"refresh"`
 	Steps          []TaskStep `json:"steps"`
+	// StartedAt、EndedAt 和 DurationMs 是任务生命周期时间（Unix 毫秒）。
+	StartedAt  int64 `json:"startedAt"`
+	EndedAt    int64 `json:"endedAt,omitempty"`
+	DurationMs int64 `json:"durationMs"`
 	// UpdatedAt 最近一次进度变更时间（Unix 毫秒）。用于按时间淘汰与前端展示。
 	UpdatedAt int64 `json:"updatedAt"`
 }
@@ -160,6 +164,10 @@ func NewServiceContext(c config.Config) *ServiceContext {
 			progress.DetailMsg = "后端服务在任务完成前重启，任务未继续执行"
 			progress.IsDone = true
 			progress.Failed = true
+			if progress.StartedAt > 0 {
+				progress.EndedAt = nowMs
+				progress.DurationMs = taskDuration(progress.StartedAt, progress.EndedAt)
+			}
 			if len(progress.Steps) > 0 && progress.Steps[len(progress.Steps)-1].EndedAt == 0 {
 				closeTaskStep(&progress.Steps[len(progress.Steps)-1], nowMs)
 				progress.Steps[len(progress.Steps)-1].Failed = true
@@ -330,6 +338,11 @@ func (ctx *ServiceContext) updateProgressLocked(taskID string, progress, previou
 	if progress.UpdatedAt == 0 || progress.UpdatedAt < previous.UpdatedAt {
 		progress.UpdatedAt = now
 	}
+	if previous.StartedAt > 0 {
+		progress.StartedAt = previous.StartedAt
+	} else if progress.StartedAt <= 0 {
+		progress.StartedAt = now
+	}
 	if progress.ResourceID == "" {
 		progress.ResourceID = previous.ResourceID
 	}
@@ -344,6 +357,15 @@ func (ctx *ServiceContext) updateProgressLocked(taskID string, progress, previou
 	}
 	if progress.IsDone {
 		progress.Failed = progressFailed(progress)
+		if previous.EndedAt > 0 {
+			progress.EndedAt = previous.EndedAt
+		} else if progress.EndedAt <= 0 {
+			progress.EndedAt = now
+		}
+		progress.DurationMs = taskDuration(progress.StartedAt, progress.EndedAt)
+	} else {
+		progress.EndedAt = previous.EndedAt
+		progress.DurationMs = previous.DurationMs
 	}
 	progress.Steps = append([]TaskStep(nil), previous.Steps...)
 	if progress.Message != "" {
@@ -394,8 +416,15 @@ func (ctx *ServiceContext) updateProgressLocked(taskID string, progress, previou
 
 func closeTaskStep(step *TaskStep, endedAt int64) {
 	step.EndedAt = endedAt
-	step.DurationMs = endedAt - step.StartedAt
+	step.DurationMs = taskDuration(step.StartedAt, endedAt)
 	step.IsDone = true
+}
+
+func taskDuration(startedAt, endedAt int64) int64 {
+	if startedAt <= 0 || endedAt <= 0 || endedAt < startedAt {
+		return 0
+	}
+	return endedAt - startedAt
 }
 
 // pruneProgressLocked 限制已完成任务数量与年龄，避免 taskProgress.json 无限增长。

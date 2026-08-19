@@ -198,6 +198,28 @@ nav a.active dc-icon {
   display: none;
 }
 
+/* ===== 路由切换反馈 ===== */
+.navigation-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 3px;
+  z-index: var(--layer-modal, 1000);
+  overflow: hidden;
+  background: var(--blue);
+}
+.navigation-progress::after {
+  content: '';
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: color-mix(in srgb, var(--blue) 55%, white);
+  animation: navigation-progress 1s ease-in-out infinite;
+}
+@keyframes navigation-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
 /* ===== 公共（未登录）外壳 ===== */
 .public-shell {
   overflow: auto;

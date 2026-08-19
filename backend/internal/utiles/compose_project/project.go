@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	composecli "github.com/compose-spec/compose-go/v2/cli"
 	composeTypes "github.com/compose-spec/compose-go/v2/types"
@@ -148,31 +149,71 @@ func ListPorts(ctx context.Context, svcCtx *svc.ServiceContext) (*appTypes.Ports
 	if err != nil {
 		return nil, err
 	}
+	type inspectResult struct {
+		index    int
+		ports    []appTypes.PortUsage
+		warnings []string
+	}
+	results := make([]inspectResult, len(containers))
+	jobs := make(chan int, len(containers))
+	workers := 8
+	if workers > len(containers) {
+		workers = len(containers)
+	}
+	if workers < 1 {
+		workers = 1
+	}
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for index := range jobs {
+				item := containers[index]
+				inspect, err := svcCtx.DockerClient.ContainerInspect(ctx, item.ID)
+				if err != nil {
+					results[index] = inspectResult{
+						index:    index,
+						warnings: []string{fmt.Sprintf("容器 %s 端口信息读取失败: %v", firstName(item.Names), err)},
+					}
+					continue
+				}
+				project := item.Labels["com.docker.compose.project"]
+				image := ""
+				if inspect.Config != nil {
+					image = inspect.Config.Image
+				}
+				ports := make([]appTypes.PortUsage, 0)
+				for _, port := range containerPorts(inspect) {
+					usage := appTypes.PortUsage{
+						Project: project, ContainerID: item.ID, ContainerName: firstName(item.Names),
+						Image: image, State: inspect.State.Status, HostIP: port.HostIP, HostPort: port.HostPort,
+						ContainerPort: port.ContainerPort, Protocol: port.Protocol, Published: port.Published,
+					}
+					if usage.Published {
+						usage.ConflictKey = strings.Join([]string{usage.HostIP, usage.HostPort, usage.Protocol}, ":")
+					}
+					ports = append(ports, usage)
+				}
+				results[index] = inspectResult{index: index, ports: ports}
+			}
+		}()
+	}
+	for index := range containers {
+		jobs <- index
+	}
+	close(jobs)
+	wg.Wait()
+
 	result := &appTypes.PortsResponse{Ports: make([]appTypes.PortUsage, 0), Conflicts: make([]string, 0), Warnings: make([]string, 0)}
 	counts := make(map[string]int)
-	for _, item := range containers {
-		inspect, err := svcCtx.DockerClient.ContainerInspect(ctx, item.ID)
-		if err != nil {
-			result.Warnings = append(result.Warnings, fmt.Sprintf("容器 %s 端口信息读取失败: %v", firstName(item.Names), err))
-			continue
-		}
-		project := item.Labels["com.docker.compose.project"]
-		ports := containerPorts(inspect)
-		image := ""
-		if inspect.Config != nil {
-			image = inspect.Config.Image
-		}
-		for _, port := range ports {
-			usage := appTypes.PortUsage{
-				Project: project, ContainerID: item.ID, ContainerName: firstName(item.Names),
-				Image: image, State: inspect.State.Status, HostIP: port.HostIP, HostPort: port.HostPort,
-				ContainerPort: port.ContainerPort, Protocol: port.Protocol, Published: port.Published,
-			}
+	for _, inspected := range results {
+		result.Warnings = append(result.Warnings, inspected.warnings...)
+		for _, usage := range inspected.ports {
+			result.Ports = append(result.Ports, usage)
 			if usage.Published {
-				usage.ConflictKey = strings.Join([]string{usage.HostIP, usage.HostPort, usage.Protocol}, ":")
 				counts[usage.ConflictKey]++
 			}
-			result.Ports = append(result.Ports, usage)
 		}
 	}
 	for key, count := range counts {

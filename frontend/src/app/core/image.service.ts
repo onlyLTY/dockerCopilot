@@ -28,6 +28,7 @@ export class ImageService {
   private readonly store = new CacheStore<ImageRow[]>(
     () => this.list(),
     "读取镜像失败",
+    { ttlMs: 0 },
   );
   readonly cache: CacheView<ImageRow[]> = this.store;
 

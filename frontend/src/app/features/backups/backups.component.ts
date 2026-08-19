@@ -78,7 +78,7 @@ export class BackupsComponent {
       onSuccess: (r) => {
         const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
         if (taskID)
-          this.tasks.track(taskID, `创建 ${t.toUpperCase()} 容器备份`, true);
+          this.tasks.track(taskID, `创建 ${t.toUpperCase()} 容器备份`, true, "", ["backups"]);
         else this.toast.error("创建备份失败：服务未返回任务编号");
       },
       onBizError: (r) => this.toast.error("创建备份失败", r.msg || "未知错误"),
@@ -100,7 +100,11 @@ export class BackupsComponent {
       request: this.service.restore(f),
       onSuccess: (r) => {
         const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
-        if (taskID) this.tasks.track(taskID, "恢复 " + this.date(f), true);
+        if (taskID) this.tasks.track(taskID, "恢复 " + this.date(f), true, "", [
+            "containers",
+            "images",
+            "ports",
+          ]);
         else this.toast.error("恢复失败：服务未返回任务编号");
       },
       onBizError: (r) => this.toast.error("恢复失败", r.msg || "未知错误"),
@@ -122,7 +126,7 @@ export class BackupsComponent {
       request: this.service.remove(f),
       onSuccess: (r) => {
         const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
-        if (taskID) this.tasks.track(taskID, "删除备份 " + f, true);
+        if (taskID) this.tasks.track(taskID, "删除备份 " + f, true, "", ["backups"]);
         else this.toast.error("删除备份失败：服务未返回任务编号");
       },
       onBizError: (r) => this.toast.error("删除失败", r.msg || "未知错误"),

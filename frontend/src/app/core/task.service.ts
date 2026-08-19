@@ -3,7 +3,7 @@ import { HttpClient } from "@angular/common/http";
 import { Subject } from "rxjs";
 import { ApiResponse } from "./compose.service";
 import { AuthService } from "./auth.service";
-import { CacheBus } from "./cache-bus";
+import { CacheBus, ResourceKey } from "./cache-bus";
 import { ToastService } from "./toast.service";
 
 /** 单个任务的进度快照 */
@@ -33,8 +33,12 @@ export interface TaskItem {
   canceled: boolean;
   timedOut: boolean;
   refresh: boolean; // 完成后是否需要联动刷新资源缓存
+  refreshKeys?: ResourceKey[]; // 完成后需要刷新的资源；旧任务缺省按 refresh 兼容处理
   createdAt: number; // 创建时间戳，用于排序/清理
   updatedAt: number; // 最近一次进度更新时间
+  startedAt?: number; // 后端记录的任务开始时间
+  endedAt?: number; // 后端记录的任务结束时间
+  durationMs?: number; // 后端固化的任务耗时
   resourceID?: string; // 关联资源 ID，例如容器更新对应的容器 ID
   steps: TaskStep[];
 }
@@ -58,6 +62,9 @@ interface ProgressData {
   canceled?: boolean;
   timedOut?: boolean;
   refresh?: boolean;
+  startedAt?: number;
+  endedAt?: number;
+  durationMs?: number;
   updatedAt?: number;
 }
 
@@ -71,6 +78,13 @@ const STORAGE_KEY = "dc-tasks";
 const POLL_INTERVAL = 1500; // 批量轮询间隔（毫秒）
 const DONE_KEEP = 60 * 60 * 1000; // 已完成任务保留 1 小时后可被清理
 const UNKNOWN_RETRY_LIMIT = 200;
+const LEGACY_REFRESH_KEYS: ResourceKey[] = [
+  "containers",
+  "ports",
+  "images",
+  "compose",
+  "backups",
+];
 
 /**
  * 任务服务：后端进度持久化在 taskProgress.json，前端 localStorage 保存展示元数据。
@@ -124,7 +138,13 @@ export class TaskService {
   }
 
   /** 登记一个异步任务并开始轮询；refresh 表示完成后要联动刷新资源缓存 */
-  track(taskID: string, title: string, refresh = false, resourceID = ""): void {
+  track(
+    taskID: string,
+    title: string,
+    refresh = false,
+    resourceID = "",
+    refreshKeys?: ResourceKey[],
+  ): void {
     if (!taskID || !this.auth.authenticated()) return;
     const now = Date.now();
     const existing = this.tasks().find((t) => t.taskID === taskID);
@@ -137,6 +157,9 @@ export class TaskService {
                 title: title || item.title,
                 resourceID: resourceID || item.resourceID,
                 refresh: refresh || item.refresh,
+                refreshKeys: refreshKeys?.length
+                  ? refreshKeys
+                  : item.refreshKeys,
               }
             : item,
         ),
@@ -156,8 +179,12 @@ export class TaskService {
       canceled: false,
       timedOut: false,
       refresh,
+      refreshKeys: refreshKeys?.length ? refreshKeys : undefined,
       createdAt: now,
       updatedAt: now,
+      startedAt: now,
+      endedAt: undefined,
+      durationMs: undefined,
       resourceID,
       steps: [],
     };
@@ -188,7 +215,10 @@ export class TaskService {
             local.delete(progress.taskID);
             const serverDone = progress.isDone;
             const activeDone = existing.isDone;
+            const hasServerSteps =
+              Array.isArray(progress.steps) && progress.steps.length > 0;
             const newer = serverUpdated >= (existing.updatedAt || 0);
+            const acceptServerSnapshot = newer || serverDone || hasServerSteps;
             return {
               ...existing,
               percentage: Math.max(
@@ -196,14 +226,15 @@ export class TaskService {
                 progress.percentage || 0,
               ),
               message:
-                newer && progress.message ? progress.message : existing.message,
+                acceptServerSnapshot && progress.message
+                  ? progress.message
+                  : existing.message,
               detailMsg:
-                newer && progress.detailMsg
+                acceptServerSnapshot && progress.detailMsg
                   ? progress.detailMsg
                   : existing.detailMsg,
               resourceID: progress.resourceID || existing.resourceID,
-              steps:
-                newer && progress.steps ? progress.steps : existing.steps || [],
+              steps: hasServerSteps ? progress.steps! : existing.steps || [],
               isDone: activeDone || serverDone,
               canceled: existing.canceled || !!progress.canceled,
               timedOut: existing.timedOut || !!progress.timedOut,
@@ -213,6 +244,19 @@ export class TaskService {
                 (serverDone && progress.percentage < 100),
               refresh:
                 existing.refresh || !!progress.refresh || !!progress.resourceID,
+              startedAt:
+                progress.startedAt && progress.startedAt > 0
+                  ? progress.startedAt
+                  : existing.startedAt,
+              endedAt:
+                progress.endedAt && progress.endedAt > 0
+                  ? progress.endedAt
+                  : existing.endedAt,
+              durationMs:
+                typeof progress.durationMs === "number" &&
+                progress.durationMs >= 0
+                  ? progress.durationMs
+                  : existing.durationMs,
               updatedAt: Math.max(existing.updatedAt || 0, serverUpdated),
             };
           }
@@ -235,6 +279,18 @@ export class TaskService {
                     progress.message || "",
                   ))),
             refresh: progress.refresh ?? !!progress.resourceID,
+            startedAt:
+              progress.startedAt && progress.startedAt > 0
+                ? progress.startedAt
+                : undefined,
+            endedAt:
+              progress.endedAt && progress.endedAt > 0
+                ? progress.endedAt
+                : undefined,
+            durationMs:
+              typeof progress.durationMs === "number" && progress.durationMs >= 0
+                ? progress.durationMs
+                : undefined,
             createdAt: serverUpdated,
             updatedAt: serverUpdated,
           };
@@ -246,14 +302,7 @@ export class TaskService {
         );
         this.tasks.set([...merged, ...local.values()]);
         for (const item of restoredDone) {
-          if (item.refresh)
-            this.bus.refresh([
-              "containers",
-              "ports",
-              "images",
-              "compose",
-              "backups",
-            ]);
+          if (item.refresh) this.bus.refresh(this.taskRefreshKeys(item));
           this.completed.next({
             taskID: item.taskID,
             resourceID: item.resourceID,
@@ -506,9 +555,18 @@ export class TaskService {
     }
   }
 
+  private taskRefreshKeys(task: Pick<TaskItem, "refresh" | "refreshKeys">): ResourceKey[] {
+    return task.refreshKeys?.length
+      ? task.refreshKeys
+      : task.refresh
+        ? LEGACY_REFRESH_KEYS
+        : [];
+  }
+
   private apply(taskID: string, d: ProgressData): void {
     let doneNow = false;
     let refreshNeeded = false;
+    let refreshKeys: ResourceKey[] = [];
     let failedNow = false;
     let canceledNow = false;
     let timedOutNow = false;
@@ -521,7 +579,13 @@ export class TaskService {
           typeof d.updatedAt === "number" && d.updatedAt > 0
             ? d.updatedAt
             : Date.now();
-        if (updatedAt < (t.updatedAt || 0)) return t;
+        const hasServerSteps = Array.isArray(d.steps) && d.steps.length > 0;
+        if (
+          updatedAt < (t.updatedAt || 0) &&
+          !d.isDone &&
+          !hasServerSteps
+        )
+          return t;
         const failed =
           d.failed ??
           (d.isDone &&
@@ -532,6 +596,7 @@ export class TaskService {
         if (d.isDone) {
           doneNow = true;
           refreshNeeded = t.refresh;
+          refreshKeys = this.taskRefreshKeys(t);
           failedNow = failed;
           canceledNow = !!d.canceled;
           timedOutNow = !!d.timedOut;
@@ -543,11 +608,23 @@ export class TaskService {
           percentage: Math.max(t.percentage, d.percentage || 0),
           message: d.message || t.message,
           detailMsg: d.detailMsg || t.detailMsg,
-          steps: d.steps || t.steps || [],
+          steps: hasServerSteps ? d.steps! : t.steps || [],
           isDone: d.isDone,
           canceled: !!d.canceled,
           timedOut: !!d.timedOut,
           failed,
+          startedAt:
+            typeof d.startedAt === "number" && d.startedAt > 0
+              ? d.startedAt
+              : t.startedAt,
+          endedAt:
+            typeof d.endedAt === "number" && d.endedAt > 0
+              ? d.endedAt
+              : t.endedAt,
+          durationMs:
+            typeof d.durationMs === "number" && d.durationMs >= 0
+              ? d.durationMs
+              : t.durationMs,
           updatedAt,
         };
       }),
@@ -573,14 +650,7 @@ export class TaskService {
       else if (failedNow)
         this.toast.error(failureTitle || "任务失败", failureMessage);
       else this.toast.success("任务完成", this.summaryMessage(failureMessage, failureTitle));
-      if (refreshNeeded)
-        this.bus.refresh([
-          "containers",
-          "ports",
-          "images",
-          "compose",
-          "backups",
-        ]);
+      if (refreshNeeded) this.bus.refresh(refreshKeys);
       this.completed.next({
         taskID,
         resourceID: this.tasks().find((t) => t.taskID === taskID)?.resourceID,
@@ -604,11 +674,13 @@ export class TaskService {
     if (attempts < UNKNOWN_RETRY_LIMIT) return;
     let changed = false;
     let refreshNeeded = false;
+    let refreshKeys: ResourceKey[] = [];
     this.tasks.update((list) =>
       list.map((t) => {
         if (t.taskID !== taskID || t.isDone) return t;
         changed = true;
         refreshNeeded = t.refresh;
+        refreshKeys = this.taskRefreshKeys(t);
         return {
           ...t,
           isDone: true,
@@ -627,6 +699,7 @@ export class TaskService {
         return next;
       });
       this.toast.error("任务失败", msg || "任务不存在或已过期");
+      if (refreshNeeded) this.bus.refresh(refreshKeys);
       this.completed.next({
         taskID,
         resourceID: this.tasks().find((t) => t.taskID === taskID)?.resourceID,

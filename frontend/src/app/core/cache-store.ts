@@ -2,8 +2,9 @@ import { computed, signal, Signal } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
 import { ApiResponse } from './compose.service';
 
-/** 默认缓存有效期（毫秒）：超过后即便有缓存也重新拉取，兜底防止长时间看到旧数据 */
-const DEFAULT_CACHE_TTL = 30_000;
+/** 容器列表的缓存有效期与页面自动刷新间隔（毫秒）。 */
+export const CONTAINER_REFRESH_INTERVAL_MS = 20_000;
+const DEFAULT_CACHE_TTL = CONTAINER_REFRESH_INTERVAL_MS;
 
 export interface CacheStoreOptions {
   /** 缓存 TTL（毫秒）。0 表示仅在 invalidate/refresh 时失效，适合图标等变更低频数据 */
@@ -91,6 +92,7 @@ export class CacheStore<T> {
           this.stale.set(false);
           this.error.set('');
         } else {
+          this.inflight = null;
           this.stale.set(this.settled());
           if (!this.settled()) this.error.set(this.withReason(r.msg || `业务错误码 ${r.code}`));
         }

@@ -41,14 +41,23 @@ export class TaskProgressComponent implements OnDestroy {
   }
 
   taskDuration(task: TaskItem): string {
+    if (task.isDone && typeof task.durationMs === 'number' && task.durationMs >= 0) {
+      return this.duration(task.durationMs);
+    }
+    const startedAt = task.startedAt || (task.steps || [])[0]?.startedAt;
+    if (startedAt) {
+      const endedAt = task.isDone
+        ? task.endedAt || task.updatedAt
+        : this.now();
+      return this.duration(Math.max(0, endedAt - startedAt));
+    }
     const steps = task.steps || [];
     if (steps.length) {
-      const startedAt = steps[0].startedAt;
       const lastStep = steps[steps.length - 1];
       const endedAt = task.isDone
         ? lastStep.endedAt || task.updatedAt
         : this.now();
-      return this.duration(Math.max(0, endedAt - startedAt));
+      return this.duration(Math.max(0, endedAt - steps[0].startedAt));
     }
     const endedAt = task.isDone ? task.updatedAt : this.now();
     return this.duration(Math.max(0, endedAt - task.createdAt));

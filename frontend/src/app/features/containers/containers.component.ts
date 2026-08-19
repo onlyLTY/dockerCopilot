@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { from, forkJoin, Observable, of } from "rxjs";
 import { catchError, map, mergeMap, tap, toArray } from "rxjs/operators";
 import { ContainerService, ContainerRow } from "../../core/container.service";
+import { CONTAINER_REFRESH_INTERVAL_MS } from "../../core/cache-store";
 import { IconService } from "../../core/icon.service";
 import { ToastService } from "../../core/toast.service";
 import { TaskService } from "../../core/task.service";
@@ -160,7 +161,7 @@ export class ContainersComponent {
         }
       });
     this.softRefresh = startSoftRefresh({
-      intervalMs: 20_000,
+      intervalMs: CONTAINER_REFRESH_INTERVAL_MS,
       refresh: () => this.service.refresh(),
       shouldSkip: () => this.busy() || this.checking() || this.loading(),
     });
@@ -182,7 +183,7 @@ export class ContainersComponent {
       onFinally: () => {},
       onSuccess: (r) => {
         const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
-        if (taskID) this.tasks.track(String(taskID), "检查更新", true);
+        if (taskID) this.tasks.track(String(taskID), "检查更新", true, "", ["containers"]);
         else {
           this.toast.error("检查更新失败：服务未返回任务编号");
           this.checking.set(false);
@@ -273,7 +274,12 @@ export class ContainersComponent {
       onSuccess: (r: any) => {
         const taskID = r.data?.taskID;
         if (taskID) {
-          this.tasks.track(String(taskID), "更新 " + name, true, x.id);
+          this.tasks.track(String(taskID), "更新 " + name, true, x.id, [
+            "containers",
+            "images",
+            "compose",
+            "ports",
+          ]);
           this.detail.set(undefined);
         } else {
           this.detailUpdateBusy.set(false);
@@ -497,7 +503,12 @@ export class ContainersComponent {
       onSuccess: (r: any) => {
         const taskID = r.data?.taskID;
         if (taskID)
-          this.tasks.track(String(taskID), "更新 " + x.name, true, x.id);
+          this.tasks.track(String(taskID), "更新 " + x.name, true, x.id, [
+            "containers",
+            "images",
+            "compose",
+            "ports",
+          ]);
         else {
           this.markUpdateInactive(x.id);
           this.toast.error(`${x.name} 更新失败：服务未返回任务编号`);
@@ -649,7 +660,12 @@ export class ContainersComponent {
         const taskID = (r.data as { taskID?: string } | undefined)?.taskID;
         if (taskID) {
           this.pendingBatchTasks.add(String(taskID));
-          this.tasks.track(taskID, "批量删除容器", true);
+          this.tasks.track(taskID, "批量删除容器", true, "", [
+            "containers",
+            "images",
+            "compose",
+            "ports",
+          ]);
         } else {
           this.busy.set(false);
           this.bulkAction.set(null);
@@ -722,6 +738,7 @@ export class ContainersComponent {
                     "更新 " + x.name,
                     true,
                     x.id,
+                    ["containers", "images", "compose", "ports"],
                   );
                 }
               }),

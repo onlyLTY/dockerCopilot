@@ -139,7 +139,7 @@ export class ContainerService {
       tap((r) => {
         if (r.code === 200) {
           this.store.refresh();
-          this.bus.invalidate(["ports", "images"]);
+          this.bus.invalidate(["ports", "images", "compose"]);
         }
       }),
     );

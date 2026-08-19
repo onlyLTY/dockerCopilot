@@ -278,6 +278,56 @@ func TestProgressResourceIDIsInherited(t *testing.T) {
 	}
 }
 
+func TestProgressTaskTimingLifecycle(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", Message: "开始"})
+	first, ok := ctx.GetProgress("task")
+	if !ok || first.StartedAt <= 0 || first.EndedAt != 0 || first.DurationMs != 0 {
+		t.Fatalf("unexpected active task timing: %+v", first)
+	}
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", Message: "执行中"})
+	active, _ := ctx.GetProgress("task")
+	if active.StartedAt != first.StartedAt {
+		t.Fatalf("task start time changed: first=%+v active=%+v", first, active)
+	}
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", Percentage: 100, Message: "完成", IsDone: true})
+	done, ok := ctx.GetProgress("task")
+	if !ok || !done.IsDone || done.EndedAt < done.StartedAt || done.DurationMs != done.EndedAt-done.StartedAt {
+		t.Fatalf("unexpected completed task timing: %+v", done)
+	}
+
+	endedAt := done.EndedAt
+	duration := done.DurationMs
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", Percentage: 100, Message: "错误更新", IsDone: true})
+	after, _ := ctx.GetProgress("task")
+	if after.EndedAt != endedAt || after.DurationMs != duration || after.Message != done.Message {
+		t.Fatalf("completed task was changed: before=%+v after=%+v", done, after)
+	}
+}
+
+func TestProgressTaskTimingOnCancel(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	ctx := &ServiceContext{ProgressStore: make(ProgressStoreType), progressPath: path}
+	ctx.UpdateProgress("task", TaskProgress{TaskID: "task", Message: "执行中"})
+	if !ctx.MarkTaskCanceled("task", "用户取消") {
+		t.Fatal("expected active task to be canceled")
+	}
+	progress, ok := ctx.GetProgress("task")
+	if !ok || !progress.IsDone || !progress.Canceled || progress.EndedAt <= 0 || progress.DurationMs != progress.EndedAt-progress.StartedAt {
+		t.Fatalf("unexpected canceled task timing: %+v", progress)
+	}
+}
+
+func TestTaskDurationNeverNegative(t *testing.T) {
+	if got := taskDuration(20, 10); got != 0 {
+		t.Fatalf("expected negative duration to clamp to zero, got %d", got)
+	}
+	if got := taskDuration(0, 10); got != 0 {
+		t.Fatalf("expected missing start time to return zero, got %d", got)
+	}
+}
 func TestContainerUpdateSlotLimitsAndReleases(t *testing.T) {
 	ctx := &ServiceContext{updateSlots: make(chan struct{}, 2)}
 	ctx.AcquireContainerUpdateSlot()

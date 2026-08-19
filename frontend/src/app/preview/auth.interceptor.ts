@@ -33,6 +33,9 @@ interface PreviewProgress {
   canceled?: boolean;
   timedOut?: boolean;
   refresh?: boolean;
+  startedAt: number;
+  endedAt?: number;
+  durationMs?: number;
   updatedAt: number;
 }
 
@@ -46,10 +49,10 @@ let sequence = 1;
 
 const seededProgress: PreviewProgress[] = [
   {
-    taskID: 'preview-task-001', percentage: 72, message: '正在检查镜像层', name: '更新 edge-proxy', detailMsg: '预览任务仍在运行中', resourceID: 'preview-nginx-001', isDone: false, refresh: true, updatedAt: Date.now(),
+    taskID: 'preview-task-001', percentage: 72, message: '正在检查镜像层', name: '更新 edge-proxy', detailMsg: '预览任务仍在运行中', resourceID: 'preview-nginx-001', isDone: false, refresh: true, startedAt: Date.now() - 45000, updatedAt: Date.now(),
   },
   {
-    taskID: 'preview-task-002', percentage: 100, message: '备份已完成', name: '创建 YAML 容器备份', detailMsg: '已写入本地预览数据', isDone: true, refresh: true, updatedAt: Date.now() - 60000,
+    taskID: 'preview-task-002', percentage: 100, message: '备份已完成', name: '创建 YAML 容器备份', detailMsg: '已写入本地预览数据', isDone: true, refresh: true, startedAt: Date.now() - 68000, endedAt: Date.now() - 60000, durationMs: 8000, updatedAt: Date.now() - 60000,
   },
 ];
 for (const item of seededProgress) progress.set(item.taskID, item);
@@ -60,9 +63,11 @@ function response<T>(data: T, msg = ''): HttpResponse<PreviewResponse<T>> {
 
 function task(title: string, refresh = true, resourceID?: string): { taskID: string } {
   const taskID = `preview-task-${String(++sequence).padStart(3, '0')}`;
+  const startedAt = Date.now();
+  const endedAt = startedAt;
   progress.set(taskID, {
     taskID, percentage: 100, message: '预览任务已完成', name: title, detailMsg: '本地预览模式不会执行 Docker 操作',
-    resourceID, isDone: true, refresh, updatedAt: Date.now(),
+    resourceID, isDone: true, refresh, startedAt, endedAt, durationMs: 0, updatedAt: endedAt,
   });
   return { taskID };
 }
@@ -152,7 +157,9 @@ function handle(req: HttpRequest<unknown>): HttpResponse<PreviewResponse<unknown
       item.isDone = true;
       item.canceled = true;
       item.message = '预览任务已取消';
-      item.updatedAt = Date.now();
+      item.endedAt = Date.now();
+      item.durationMs = Math.max(0, item.endedAt - item.startedAt);
+      item.updatedAt = item.endedAt;
     }
     return response({});
   }
@@ -272,6 +279,6 @@ export function previewTaskSnapshot(): TaskItem[] {
   return progressList().map(item => ({
     taskID: item.taskID, title: item.name, percentage: item.percentage, message: item.message, detailMsg: item.detailMsg,
     isDone: item.isDone, failed: !!item.failed, canceled: !!item.canceled, timedOut: !!item.timedOut, refresh: !!item.refresh,
-    createdAt: item.updatedAt, updatedAt: item.updatedAt, resourceID: item.resourceID, steps: [],
+    createdAt: item.startedAt, updatedAt: item.updatedAt, startedAt: item.startedAt, endedAt: item.endedAt, durationMs: item.durationMs, resourceID: item.resourceID, steps: [],
   }));
 }

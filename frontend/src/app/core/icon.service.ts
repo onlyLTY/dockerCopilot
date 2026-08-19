@@ -53,7 +53,6 @@ export class IconService {
       tap(r => {
         if (r.code === 200) {
           this.store.refresh();
-          this.bus.invalidate(['containers', 'images', 'ports']);
         }
       }),
     );

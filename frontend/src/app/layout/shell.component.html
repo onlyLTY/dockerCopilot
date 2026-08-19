@@ -20,58 +20,58 @@
       <nav class="d-grid gap-6">
         <a
           class="d-flex items-center gap-12"
-          href="#/containers"
+          [routerLink]="'/containers'"
           title="容器"
           [class.active]="isActive('/containers')"
-          (click)="navigate('/containers')"
+          (click)="closeMenu()"
           ><dc-icon class="icon-22" name="containers"></dc-icon><span>容器</span></a
         >
         <a
           class="d-flex items-center gap-12"
-          href="#/images"
+          [routerLink]="'/images'"
           title="镜像"
           [class.active]="isActive('/images')"
-          (click)="navigate('/images')"
+          (click)="closeMenu()"
           ><dc-icon class="icon-22" name="images"></dc-icon><span>镜像</span></a
         >
         <a
           class="d-flex items-center gap-12"
-          href="#/compose"
+          [routerLink]="'/compose'"
           title="项目"
           [class.active]="isActive('/compose')"
-          (click)="navigate('/compose')"
+          (click)="closeMenu()"
           ><dc-icon class="icon-22" name="compose"></dc-icon><span>项目</span></a
         >
         <a
           class="d-flex items-center gap-12"
-          href="#/backups"
+          [routerLink]="'/backups'"
           title="备份"
           [class.active]="isActive('/backups')"
-          (click)="navigate('/backups')"
+          (click)="closeMenu()"
           ><dc-icon class="icon-22" name="storage"></dc-icon><span>备份</span></a
         >
         <a
           class="d-flex items-center gap-12"
-          href="#/icons"
+          [routerLink]="'/icons'"
           title="图标"
           [class.active]="isActive('/icons')"
-          (click)="navigate('/icons')"
+          (click)="closeMenu()"
           ><dc-icon class="icon-22" name="icons"></dc-icon><span>图标</span></a
         >
         <a
           class="d-flex items-center gap-12"
-          href="#/ports"
+          [routerLink]="'/ports'"
           title="端口"
           [class.active]="isActive('/ports')"
-          (click)="navigate('/ports')"
+          (click)="closeMenu()"
           ><dc-icon class="icon-22" name="ports"></dc-icon><span>端口</span></a
         >
         <a
           class="d-flex items-center gap-12"
-          href="#/tasks"
+          [routerLink]="'/tasks'"
           title="任务"
           [class.active]="isActive('/tasks')"
-          (click)="navigate('/tasks')"
+          (click)="closeMenu()"
           ><dc-icon class="icon-22" name="tasks"></dc-icon><span>任务</span>
           @if (tasks.activeCount()) {
             <em
@@ -82,10 +82,10 @@
         </a>
         <a
           class="d-flex items-center gap-12"
-          href="#/about"
+          [routerLink]="'/about'"
           title="关于"
           [class.active]="isActive('/about')"
-          (click)="navigate('/about')"
+          (click)="closeMenu()"
           ><dc-icon class="icon-22" name="about"></dc-icon><span>关于</span></a
         >
       </nav>
@@ -132,6 +132,9 @@
   }
   @if (open && auth.isAuthenticated()) {
     <button class="sidebar-overlay" (click)="closeMenu()" aria-label="关闭菜单"></button>
+  }
+  @if (navigationLoading()) {
+    <div class="navigation-progress" aria-hidden="true"></div>
   }
   <div class="content-wrap flex-1 min-w-0">
     @if (auth.isAuthenticated()) {

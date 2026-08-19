@@ -15,7 +15,9 @@ export interface PortsData {
 export class PortService {
   private readonly http = inject(HttpClient);
   private readonly bus = inject(CacheBus);
-  private readonly store = new CacheStore<PortsData>(() => this.list(), '读取端口失败');
+  private readonly store = new CacheStore<PortsData>(() => this.list(), '读取端口失败', {
+    ttlMs: 0,
+  });
   readonly cache: CacheView<PortsData> = this.store;
 
   constructor() {

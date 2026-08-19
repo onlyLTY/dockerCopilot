@@ -17,10 +17,12 @@ export class BackupService {
   private readonly store = new CacheStore<string[]>(
     () => this.list(),
     "读取备份失败",
+    { ttlMs: 0 },
   );
   private readonly settingsStore = new CacheStore<BackupSettings>(
     () => this.settings(),
     "读取备份设置失败",
+    { ttlMs: 0 },
   );
   private readonly runtimeSettings = inject(SettingsService);
   readonly cache: CacheView<string[]> = this.store;

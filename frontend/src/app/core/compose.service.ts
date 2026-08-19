@@ -73,6 +73,7 @@ export class ComposeService {
   private readonly store = new CacheStore<ProjectsData>(
     () => this.projects(),
     "读取项目失败",
+    { ttlMs: 0 },
   );
   readonly cache: CacheView<ProjectsData> = this.store;
 
@@ -108,7 +109,6 @@ export class ComposeService {
         tap((r) => {
           if (r.code === 200) {
             this.store.refresh();
-            this.bus.invalidate(["containers", "ports", "images"]);
           }
         }),
       );

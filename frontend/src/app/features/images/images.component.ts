@@ -3,7 +3,6 @@ import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ImageRow, ImageService } from "../../core/image.service";
 import { IconService } from "../../core/icon.service";
 import { ToastService } from "../../core/toast.service";
-import { SoftRefreshHandle, startSoftRefresh } from "../../core/soft-refresh";
 import {
   actionErrorMessage,
   actionLabel,
@@ -37,8 +36,6 @@ export class ImagesComponent {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly tasks = inject(TaskService);
-  private readonly destroyRef = inject(DestroyRef);
-  private softRefresh: SoftRefreshHandle | null = null;
   readonly images = computed(() => this.service.cache.data() || []);
   readonly loading = this.service.cache.loading;
   readonly error = this.service.cache.error;
@@ -90,12 +87,6 @@ export class ImagesComponent {
       if (!this.pendingCleanupTasks.delete(taskID)) return;
       this.cleaning.set(this.pendingCleanupTasks.size > 0);
     });
-    this.softRefresh = startSoftRefresh({
-      intervalMs: 30_000,
-      refresh: () => this.service.refresh(),
-      shouldSkip: () => this.cleaning() || this.loading(),
-    });
-    this.destroyRef.onDestroy(() => this.softRefresh?.stop());
   }
   refresh() {
     this.service.refresh();
@@ -129,7 +120,7 @@ export class ImagesComponent {
         if (taskID) {
           this.pendingCleanupTasks.add(taskID);
           this.cleaning.set(true);
-          this.tasks.track(taskID, `清理${label}镜像`, true);
+          this.tasks.track(taskID, `清理${label}镜像`, true, "", ["images"]);
         } else {
           this.cleaning.set(false);
           this.toast.error("镜像清理失败：服务未返回任务编号");
