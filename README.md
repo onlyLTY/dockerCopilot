@@ -18,7 +18,16 @@ Docker Copilot 是一个面向 Docker Engine 的 Web 管理平台，用于在浏
 
 ### Docker 部署
 
-需要 Docker Engine 和 Docker Compose。将以下内容保存为环境变量后启动：
+Docker 构建配置位于 [`docker/`](docker/)：
+
+- `docker/Dockerfile`：多架构运行镜像
+- `docker/docker-compose.yml`：生产 Compose 配置
+- `docker/docker-compose.local.yml`：本地开发 Compose 配置
+- `backend/start.sh`：容器启动脚本
+
+本仓库的 `latest` 分支由 `docker-public` 的 `dockercopilot-build.yml` 工作流检出，构建并推送到 `${DOCKER_USERNAME}/myown`，固定标签为 `dc-xia`，版本标签格式为 `dc-<version>`。构建产物临时写入 `build/docker/`，不会提交。
+
+生产 Compose 要求设置 `secretKey`，至少 8 位且不能为纯数字；默认只将管理端口绑定到 `127.0.0.1`。Compose 文件中的 `../data`、`../logs`、`../compose` 相对路径均相对于 `docker/` 目录，分别对应仓库根目录的持久化目录。
 
 ```bash
 export secretKey='替换为至少 8 位的强密码'
