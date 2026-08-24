@@ -39,7 +39,7 @@ services:
     image: 0nlylty/dockercopilot:latest
 ```
 
-`privileged` 不是必需项；请只挂载 Docker Socket，并限制管理端口的网络访问。注意：挂载 Docker Socket 实际上授予了主机级管理权限，因此不要把管理端口直接暴露到公网。生产环境建议通过反向代理启用 HTTPS，或同时设置 `TLS_CERT_FILE` 与 `TLS_KEY_FILE`。`secretKey` 完全由用户决定；短密码和纯数字不会阻止启动，但程序会输出安全建议。为降低口令猜测风险，仍建议使用不少于 32 个字符的随机密码。备份默认使用 `secretKey` 加密，修改加密密钥后旧备份将无法解密。
+`privileged` 不是必需项；请只挂载 Docker Socket，并限制管理端口的网络访问。注意：挂载 Docker Socket 实际上授予了主机级管理权限，因此不要把管理端口直接暴露到公网。生产环境建议通过反向代理启用 HTTPS，或同时设置 `TLS_CERT_FILE` 与 `TLS_KEY_FILE`。`secretKey` 完全由用户决定；短密码和纯数字不会阻止启动，也不会在普通运行日志中反复提示。为降低口令猜测风险，仍建议使用不少于 32 个字符的随机密码。备份默认使用 `secretKey` 加密，修改加密密钥后旧备份将无法解密。
 
 可选安全配置：
 

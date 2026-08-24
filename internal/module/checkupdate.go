@@ -81,7 +81,7 @@ func expandImageReferences(imageList []types.Image) []types.Image {
 			parsed, err := imageref.ParseTagged(value)
 			if err != nil {
 				if isDigestOnlyReference(value) {
-					logx.Infof("跳过 digest 固定镜像引用 %q：未配置 tag，无法检查更新", value)
+					logx.Debugf("跳过 digest 固定镜像引用 %q：未配置 tag，无法检查更新", value)
 				} else {
 					logx.Errorf("跳过无法解析的镜像引用 %q: %v", value, err)
 				}

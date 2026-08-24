@@ -56,7 +56,7 @@ func main() {
 		os.Exit(1)
 	}
 	for _, warning := range runtimeSecurityWarnings(c) {
-		logx.Infof("安全提示（不阻止启动）: %s", warning)
+		logx.Debugf("安全提示（不阻止启动）: %s", warning)
 	}
 	serverOptions := []rest.RunOption{rest.WithUnauthorizedCallback(
 		func(w http.ResponseWriter, r *http.Request, err error) {
