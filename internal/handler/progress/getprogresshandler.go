@@ -13,16 +13,14 @@ func GetProgressHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.GetProgressReq
 		if err := httpx.Parse(r, &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.WriteJson(w, http.StatusBadRequest, types.Resp{
+				Code: http.StatusBadRequest, Msg: "请求参数错误", Data: map[string]interface{}{},
+			})
 			return
 		}
 
 		l := progress.NewGetProgressLogic(r.Context(), svcCtx)
-		resp, err := l.GetProgress(&req)
-		if err != nil {
-			httpx.WriteJson(w, resp.Code, resp)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
-		}
+		resp, _ := l.GetProgress(&req)
+		httpx.WriteJson(w, resp.Code, resp)
 	}
 }

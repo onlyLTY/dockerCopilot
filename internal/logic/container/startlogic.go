@@ -25,7 +25,12 @@ func NewStartLogic(ctx context.Context, svcCtx *svc.ServiceContext) *StartLogic 
 
 func (l *StartLogic) Start(req *types.IdReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	err = utiles.StartContainer(l.svcCtx, req.Id)
+	containerID, err := beginContainerOperation(l.svcCtx, resp, req.Id, "start")
+	if err != nil {
+		return resp, err
+	}
+	defer l.svcCtx.EndContainerOperation(containerID)
+	err = utiles.StartContainer(l.svcCtx, containerID)
 	if err != nil {
 		resp.Code = 400
 		resp.Msg = err.Error()

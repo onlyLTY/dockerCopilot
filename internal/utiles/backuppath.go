@@ -18,6 +18,10 @@ func BackupDir() string {
 	return backupDir
 }
 
+func backupDirectoryPath() (string, error) {
+	return filepath.Abs(filepath.Clean(BackupDir()))
+}
+
 func ResolveBackupPath(filename string, allowedExts ...string) (string, error) {
 	name := strings.TrimSpace(filename)
 	if name == "" {
@@ -44,7 +48,10 @@ func ResolveBackupPath(filename string, allowedExts ...string) (string, error) {
 		}
 	}
 
-	base := filepath.Clean(BackupDir())
+	base, err := backupDirectoryPath()
+	if err != nil {
+		return "", fmt.Errorf("备份目录无效: %w", err)
+	}
 	fullPath := filepath.Clean(filepath.Join(base, name))
 	basePrefix := base + string(os.PathSeparator)
 	if fullPath != base && !strings.HasPrefix(fullPath, basePrefix) {
@@ -52,4 +59,18 @@ func ResolveBackupPath(filename string, allowedExts ...string) (string, error) {
 	}
 
 	return fullPath, nil
+}
+
+// ReadBackupDownload returns an authenticated download payload while reusing
+// the same filename, symlink and size checks as restore operations.
+func ReadBackupDownload(filename string) ([]byte, string, error) {
+	fullPath, err := ResolveBackupPath(filename, ".json", ".yaml", ".yml")
+	if err != nil {
+		return nil, "", err
+	}
+	content, err := readBackupFile(fullPath)
+	if err != nil {
+		return nil, "", err
+	}
+	return content, filepath.Base(fullPath), nil
 }

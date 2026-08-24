@@ -28,18 +28,24 @@ func NewVersionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *VersionLo
 func (l *VersionLogic) Version(req *types.VersionReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	if req.Type == "local" {
+		updateMode := "binary"
+		if utiles.BinarySelfUpdateDisabled() {
+			updateMode = "container"
+		}
 		resp.Code = 200
 		resp.Msg = "success"
 		resp.Data = map[string]string{
-			"version":   config.Version,
-			"buildDate": config.BuildDate,
+			"version":    config.Version,
+			"buildDate":  config.BuildDate,
+			"updateMode": updateMode,
 		}
 		return resp, nil
 	} else if req.Type == "remote" {
-		remoteVersion, err := utiles.GetRemoteVersion()
+		remoteVersion, err := utiles.GetRemoteVersion(l.ctx)
 		if err != nil {
-			resp.Code = 50001
-			resp.Msg = "获取版本错误" + err.Error()
+			l.Errorf("获取远端版本失败: %v", err)
+			resp.Code = 502
+			resp.Msg = "获取远端版本失败"
 			resp.Data = map[string]string{
 				"remoteVersion": config.Version,
 			}

@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
+
+var errRestoreInProgress = errors.New("已有恢复任务正在执行")
 
 type RestoreLogic struct {
 	logx.Logger
@@ -46,11 +49,26 @@ func (l *RestoreLogic) Restore(req *types.ContainerRestoreReq) (resp *types.Resp
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
+	if !l.svcCtx.BeginRestore() {
+		resp.Code = 409
+		resp.Msg = errRestoreInProgress.Error()
+		resp.Data = map[string]interface{}{}
+		return resp, errRestoreInProgress
+	}
+	l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{
+		TaskID: taskID, Name: "恢复容器", Message: "任务已创建",
+		DetailMsg: "等待开始恢复", Status: svc.TaskStatusRunning,
+	})
 	go func() {
+		defer l.svcCtx.EndRestore()
 		// Catch any panic and log the error
 		defer func() {
 			if r := recover(); r != nil {
 				l.Errorf("Recovered from panic in restoreContainer: %v", r)
+				l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{
+					TaskID: taskID, Name: "恢复容器", Message: "恢复任务异常终止",
+					DetailMsg: fmt.Sprint(r), IsDone: true, Status: svc.TaskStatusFailed,
+				})
 			}
 		}()
 		err := utiles.RestoreContainer(l.svcCtx, fileName, taskID)

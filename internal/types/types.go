@@ -16,6 +16,7 @@ type ContainerUpdateReq struct {
 	IdReq
 	ImageNameAndTag string `form:"imageNameAndTag"`
 	ContainerName   string `form:"containerName"`
+	DelOldContainer bool   `form:"delOldContainer,default=true"`
 }
 
 type CreateContainerReq struct {

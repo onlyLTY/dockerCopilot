@@ -1,22 +1,30 @@
 package icons
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
+	"github.com/onlyLTY/dockerCopilot/internal/imageref"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-var imageNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/:-]*$`)
+const (
+	maxImageFileSize     int64 = 2 << 20
+	maxUploadRequestSize int64 = maxImageFileSize + (1 << 20)
+	maxImageNameLength         = 255
+)
+
+var imageLogosMu sync.Mutex
 
 var allowedImageTypes = map[string]string{
 	".png":  "image/png",
@@ -28,12 +36,19 @@ var allowedImageTypes = map[string]string{
 
 func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// 1. 解析 Multipart 表单
-		err := r.ParseMultipartForm(10 << 20) // 10MB 限制
+		r.Body = http.MaxBytesReader(w, r.Body, maxUploadRequestSize)
+		// #nosec G120 -- MaxBytesReader enforces a strict limit on the complete request body.
+		err := r.ParseMultipartForm(1 << 20)
 		if err != nil {
+			var maxBytesError *http.MaxBytesError
+			if errors.As(err, &maxBytesError) {
+				writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 2MB limit")
+				return
+			}
 			writeUploadError(w, http.StatusBadRequest, "failed to parse form")
 			return
 		}
+		defer r.MultipartForm.RemoveAll()
 
 		// 2. 获取文件和 Key
 		file, handler, err := r.FormFile("file")
@@ -42,6 +57,10 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 		defer file.Close()
+		if handler.Size > maxImageFileSize {
+			writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 2MB limit")
+			return
+		}
 
 		imageNameKey := r.FormValue("imageName")
 		if err := validateImageName(imageNameKey); err != nil {
@@ -51,10 +70,16 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		// 3. 确保目录存在 (防御性编程)
 		dataPath := imageUploadDir
-		if err := os.MkdirAll(dataPath, 0o755); err != nil {
+		if err := os.MkdirAll(dataPath, 0o700); err != nil {
 			writeUploadError(w, http.StatusInternalServerError, "failed to prepare upload dir")
 			return
 		}
+		dataRoot, err := os.OpenRoot(dataPath)
+		if err != nil {
+			writeUploadError(w, http.StatusInternalServerError, "failed to open upload dir")
+			return
+		}
+		defer dataRoot.Close()
 
 		// 4. 确定文件名
 		filename, err := generateStoredFilename(file, handler)
@@ -63,25 +88,47 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
-		dstPath := filepath.Join(dataPath, filename)
-		dst, err := os.Create(dstPath)
+		dst, err := dataRoot.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if err != nil {
 			writeUploadError(w, http.StatusInternalServerError, "failed to create file on server")
 			return
 		}
-		defer dst.Close()
+		copySucceeded := false
+		defer func() {
+			_ = dst.Close()
+			if !copySucceeded {
+				_ = dataRoot.Remove(filename)
+			}
+		}()
 
-		if _, err := io.Copy(dst, file); err != nil {
+		written, err := io.Copy(dst, io.LimitReader(file, maxImageFileSize+1))
+		if err != nil || written > maxImageFileSize {
+			if written > maxImageFileSize {
+				writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 2MB limit")
+				return
+			}
 			writeUploadError(w, http.StatusInternalServerError, "failed to copy file content")
 			return
 		}
+		if err := dst.Sync(); err != nil {
+			writeUploadError(w, http.StatusInternalServerError, "failed to persist file content")
+			return
+		}
+		if err := dst.Close(); err != nil {
+			writeUploadError(w, http.StatusInternalServerError, "failed to close file")
+			return
+		}
+		copySucceeded = true
 
-		// 5. 更新 imageLogos.js
-		jsPath := imageLogosPath
-		if err := updateImageLogosJS(jsPath, imageNameKey, filename); err != nil {
-			_ = os.Remove(dstPath)
+		// 5. 更新 JSON 映射，并清理被替换的旧文件。
+		oldFilename, err := updateImageLogoMapping(imageNameKey, filename)
+		if err != nil {
+			_ = dataRoot.Remove(filename)
 			writeUploadError(w, http.StatusInternalServerError, "failed to update config")
 			return
+		}
+		if oldFilename != "" && oldFilename != filename {
+			_ = dataRoot.Remove(oldFilename)
 		}
 
 		httpx.OkJsonCtx(r.Context(), w, types.Resp{
@@ -93,10 +140,11 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 }
 
 func validateImageName(imageName string) error {
-	if imageName == "" {
+	imageName = strings.TrimSpace(imageName)
+	if imageName == "" || len(imageName) > maxImageNameLength {
 		return fmt.Errorf("imageName is required")
 	}
-	if !imageNamePattern.MatchString(imageName) {
+	if _, err := imageref.RepositoryKey(imageName); err != nil {
 		return fmt.Errorf("invalid imageName")
 	}
 	return nil
@@ -132,41 +180,4 @@ func writeUploadError(w http.ResponseWriter, statusCode int, msg string) {
 		Msg:  msg,
 		Data: map[string]interface{}{},
 	})
-}
-
-func updateImageLogosJS(filePath, imageName, filename string) error {
-	// 读取文件
-	contentBytes, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-	content := string(contentBytes)
-
-	// 前端使用的容器路径
-	containerPath := fmt.Sprintf("/src/config/image/%s", filename)
-
-	if strings.Contains(content, fmt.Sprintf(`"%s"`, imageName)) {
-		// 更新现有行
-		re := regexp.MustCompile(fmt.Sprintf(`"%s"\s*:\s*".*"`, regexp.QuoteMeta(imageName)))
-		content = re.ReplaceAllString(content, fmt.Sprintf(`"%s": "%s"`, imageName, containerPath))
-	} else {
-		// 插入新行
-		// 查找 `export const customImageLogos = {`
-		startIdx := strings.Index(content, "export const customImageLogos = {")
-		if startIdx == -1 {
-			return fmt.Errorf("invalid config format")
-		}
-		// 尝试查找右大括号。这里假设它是最后一个右大括号逻辑或者是文件末尾。
-		// 一个简单的启发式方法：插入到最后一个 `}` 或 `};` 之前。
-		lastBraceIdx := strings.LastIndex(content, "}")
-		if lastBraceIdx == -1 || lastBraceIdx < startIdx {
-			return fmt.Errorf("invalid config format, no closing brace")
-		}
-
-		newLine := fmt.Sprintf(`  "%s": "%s",`, imageName, containerPath)
-		// 插入到最后一个大括号之前
-		content = content[:lastBraceIdx] + newLine + "\n" + content[lastBraceIdx:]
-	}
-
-	return os.WriteFile(filePath, []byte(content), 0644)
 }

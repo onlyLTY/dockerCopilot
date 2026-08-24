@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
@@ -34,7 +35,15 @@ func (l *DelRestoreLogic) DelRestore(req *types.DelContainerBackupReq) (resp *ty
 		resp.Data = map[string]interface{}{}
 		return resp, nil
 	}
-	err = os.Remove(fullPath)
+	backupRoot, openErr := os.OpenRoot(filepath.Dir(fullPath))
+	if openErr != nil {
+		resp.Code = 500
+		resp.Msg = "删除失败"
+		resp.Data = map[string]interface{}{}
+		return resp, nil
+	}
+	defer backupRoot.Close()
+	err = backupRoot.Remove(filepath.Base(fullPath))
 	if err != nil {
 		resp.Code = 400
 		resp.Msg = "删除失败"

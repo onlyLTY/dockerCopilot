@@ -2,11 +2,11 @@ package image
 
 import (
 	"context"
-	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 	"strings"
 
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
+	"github.com/onlyLTY/dockerCopilot/internal/utiles"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -27,11 +27,8 @@ func NewRemoveLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RemoveLogi
 
 func (l *RemoveLogic) Remove(req *types.RemoveImageReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	var imageId = req.Id
-	if strings.HasPrefix(imageId, "sha256:") {
-		imageId = strings.TrimPrefix(imageId, "sha256:")
-	}
-	err = utiles.RemoveImage(l.svcCtx, req.Id, req.Force)
+	imageID := strings.TrimPrefix(req.Id, "sha256:")
+	err = utiles.RemoveImage(l.svcCtx, imageID, req.Force)
 	if err != nil {
 		resp.Code = 409
 		resp.Msg = err.Error()

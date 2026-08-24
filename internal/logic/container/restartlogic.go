@@ -26,7 +26,12 @@ func NewRestartLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RestartLo
 
 func (l *RestartLogic) Restart(req *types.IdReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	err = utiles.RestartContainer(l.svcCtx, req.Id)
+	containerID, err := beginContainerOperation(l.svcCtx, resp, req.Id, "restart")
+	if err != nil {
+		return resp, err
+	}
+	defer l.svcCtx.EndContainerOperation(containerID)
+	err = utiles.RestartContainer(l.svcCtx, containerID)
 	if err != nil {
 		resp.Code = 400
 		resp.Msg = err.Error()

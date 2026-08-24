@@ -26,7 +26,12 @@ func NewStopLogic(ctx context.Context, svcCtx *svc.ServiceContext) *StopLogic {
 
 func (l *StopLogic) Stop(req *types.IdReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	err = utiles.StopContainer(l.svcCtx, req.Id)
+	containerID, err := beginContainerOperation(l.svcCtx, resp, req.Id, "stop")
+	if err != nil {
+		return resp, err
+	}
+	defer l.svcCtx.EndContainerOperation(containerID)
+	err = utiles.StopContainer(l.svcCtx, containerID)
 	if err != nil {
 		resp.Code = 400
 		resp.Msg = err.Error()

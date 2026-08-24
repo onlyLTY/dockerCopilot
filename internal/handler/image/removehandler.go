@@ -13,16 +13,14 @@ func RemoveHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.RemoveImageReq
 		if err := httpx.Parse(r, &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.WriteJson(w, http.StatusBadRequest, types.Resp{
+				Code: http.StatusBadRequest, Msg: "请求参数错误", Data: map[string]interface{}{},
+			})
 			return
 		}
 
 		l := image.NewRemoveLogic(r.Context(), svcCtx)
-		resp, err := l.Remove(&req)
-		if err != nil {
-			httpx.WriteJson(w, resp.Code, resp)
-		} else {
-			httpx.WriteJson(w, resp.Code, resp)
-		}
+		resp, _ := l.Remove(&req)
+		httpx.WriteJson(w, resp.Code, resp)
 	}
 }
