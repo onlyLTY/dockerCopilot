@@ -18,9 +18,9 @@ jobs:
       - name: Checkout frontend code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          repository: dongshull/Docker-Copilot-React
+          repository: autunn/Docker-Copilot-React
           path: './frontend'
-          ref: '263766c39566a356d916fc2167945cfb8aaffd38'
+          ref: '796fd94d38a272e135b471d487d83413ed69e553'
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
