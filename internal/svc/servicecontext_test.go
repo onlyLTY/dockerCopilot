@@ -19,6 +19,24 @@ func TestContainerUpdateLock(t *testing.T) {
 	}
 }
 
+func TestRestoreAndContainerOperationsAreMutuallyExclusive(t *testing.T) {
+	ctx := &ServiceContext{}
+	if !ctx.BeginContainerOperation("container", "rename") {
+		t.Fatal("first operation should acquire the lock")
+	}
+	if ctx.BeginRestore() {
+		t.Fatal("restore must not start while a container operation is active")
+	}
+	ctx.EndContainerOperation("container")
+	if !ctx.BeginRestore() {
+		t.Fatal("restore should start after operations finish")
+	}
+	if ctx.BeginContainerOperation("other", "start") {
+		t.Fatal("container operation must not start while restore is active")
+	}
+	ctx.EndRestore()
+}
+
 func TestCleanupProgressRemovesOnlyExpiredCompletedTasks(t *testing.T) {
 	ctx := &ServiceContext{ProgressStore: ProgressStoreType{
 		"expired": {IsDone: true, UpdatedAt: time.Now().Add(-2 * time.Hour)},

@@ -8,20 +8,18 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/onlyLTY/dockerCopilot/internal/imageref"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-var imageNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/:-]*$`)
-
 const (
-	maxImageFileSize     int64 = 10 << 20
+	maxImageFileSize     int64 = 2 << 20
 	maxUploadRequestSize int64 = maxImageFileSize + (1 << 20)
 	maxImageNameLength         = 255
 )
@@ -44,7 +42,7 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		if err != nil {
 			var maxBytesError *http.MaxBytesError
 			if errors.As(err, &maxBytesError) {
-				writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 10MB limit")
+				writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 2MB limit")
 				return
 			}
 			writeUploadError(w, http.StatusBadRequest, "failed to parse form")
@@ -60,7 +58,7 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 		defer file.Close()
 		if handler.Size > maxImageFileSize {
-			writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 10MB limit")
+			writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 2MB limit")
 			return
 		}
 
@@ -106,7 +104,7 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		written, err := io.Copy(dst, io.LimitReader(file, maxImageFileSize+1))
 		if err != nil || written > maxImageFileSize {
 			if written > maxImageFileSize {
-				writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 10MB limit")
+				writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 2MB limit")
 				return
 			}
 			writeUploadError(w, http.StatusInternalServerError, "failed to copy file content")
@@ -122,12 +120,15 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 		copySucceeded = true
 
-		// 5. 更新 imageLogos.js
-		jsPath := imageLogosPath
-		if err := updateImageLogosJS(jsPath, imageNameKey, filename); err != nil {
+		// 5. 更新 JSON 映射，并清理被替换的旧文件。
+		oldFilename, err := updateImageLogoMapping(imageNameKey, filename)
+		if err != nil {
 			_ = dataRoot.Remove(filename)
 			writeUploadError(w, http.StatusInternalServerError, "failed to update config")
 			return
+		}
+		if oldFilename != "" && oldFilename != filename {
+			_ = dataRoot.Remove(oldFilename)
 		}
 
 		httpx.OkJsonCtx(r.Context(), w, types.Resp{
@@ -139,10 +140,11 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 }
 
 func validateImageName(imageName string) error {
+	imageName = strings.TrimSpace(imageName)
 	if imageName == "" || len(imageName) > maxImageNameLength {
 		return fmt.Errorf("imageName is required")
 	}
-	if !imageNamePattern.MatchString(imageName) {
+	if _, err := imageref.RepositoryKey(imageName); err != nil {
 		return fmt.Errorf("invalid imageName")
 	}
 	return nil
@@ -178,73 +180,4 @@ func writeUploadError(w http.ResponseWriter, statusCode int, msg string) {
 		Msg:  msg,
 		Data: map[string]interface{}{},
 	})
-}
-
-func updateImageLogosJS(filePath, imageName, filename string) error {
-	imageLogosMu.Lock()
-	defer imageLogosMu.Unlock()
-	configDir, err := filepath.Abs(filepath.Dir(filePath))
-	if err != nil {
-		return err
-	}
-	configRoot, err := os.OpenRoot(configDir)
-	if err != nil {
-		return err
-	}
-	defer configRoot.Close()
-	configName := filepath.Base(filePath)
-	contentBytes, err := readImageLogosConfig(filePath)
-	if err != nil {
-		return err
-	}
-	content := string(contentBytes)
-
-	// 前端使用的容器路径
-	containerPath := fmt.Sprintf("/src/config/image/%s", filename)
-
-	if strings.Contains(content, fmt.Sprintf(`"%s"`, imageName)) {
-		// 更新现有行
-		re := regexp.MustCompile(fmt.Sprintf(`"%s"\s*:\s*".*"`, regexp.QuoteMeta(imageName)))
-		content = re.ReplaceAllString(content, fmt.Sprintf(`"%s": "%s"`, imageName, containerPath))
-	} else {
-		// 插入新行
-		// 查找 `export const customImageLogos = {`
-		startIdx := strings.Index(content, "export const customImageLogos = {")
-		if startIdx == -1 {
-			return fmt.Errorf("invalid config format")
-		}
-		// 尝试查找右大括号。这里假设它是最后一个右大括号逻辑或者是文件末尾。
-		// 一个简单的启发式方法：插入到最后一个 `}` 或 `};` 之前。
-		lastBraceIdx := strings.LastIndex(content, "}")
-		if lastBraceIdx == -1 || lastBraceIdx < startIdx {
-			return fmt.Errorf("invalid config format, no closing brace")
-		}
-
-		newLine := fmt.Sprintf(`  "%s": "%s",`, imageName, containerPath)
-		// 插入到最后一个大括号之前
-		content = content[:lastBraceIdx] + newLine + "\n" + content[lastBraceIdx:]
-	}
-
-	temporary, err := os.CreateTemp(configDir, ".image-logos-*")
-	if err != nil {
-		return err
-	}
-	temporaryName := filepath.Base(temporary.Name())
-	defer func() {
-		_ = temporary.Close()
-		_ = configRoot.Remove(temporaryName)
-	}()
-	if err := temporary.Chmod(0o600); err != nil {
-		return err
-	}
-	if _, err := temporary.WriteString(content); err != nil {
-		return err
-	}
-	if err := temporary.Sync(); err != nil {
-		return err
-	}
-	if err := temporary.Close(); err != nil {
-		return err
-	}
-	return configRoot.Rename(temporaryName, configName)
 }

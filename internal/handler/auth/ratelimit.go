@@ -3,6 +3,8 @@ package auth
 import (
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -93,12 +95,59 @@ func (l *loginAttemptLimiter) cleanup(now time.Time) {
 }
 
 func loginClientKey(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil && host != "" {
-		return host
+	directIP := remoteIP(r.RemoteAddr)
+	if directIP == nil {
+		if r.RemoteAddr == "" {
+			return "unknown"
+		}
+		return r.RemoteAddr
 	}
-	if r.RemoteAddr == "" {
-		return "unknown"
+	trustedProxies := parseTrustedProxyCIDRs(os.Getenv("TRUSTED_PROXY_CIDRS"))
+	if !ipInNetworks(directIP, trustedProxies) {
+		return directIP.String()
 	}
-	return r.RemoteAddr
+
+	forwarded := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+	for index := len(forwarded) - 1; index >= 0; index-- {
+		candidate := net.ParseIP(strings.TrimSpace(forwarded[index]))
+		if candidate == nil {
+			return directIP.String()
+		}
+		if !ipInNetworks(candidate, trustedProxies) {
+			return candidate.String()
+		}
+	}
+	return directIP.String()
+}
+
+func remoteIP(remoteAddress string) net.IP {
+	host, _, err := net.SplitHostPort(remoteAddress)
+	if err == nil {
+		return net.ParseIP(host)
+	}
+	return net.ParseIP(strings.Trim(remoteAddress, "[]"))
+}
+
+func parseTrustedProxyCIDRs(raw string) []*net.IPNet {
+	var networks []*net.IPNet
+	for _, value := range strings.Split(raw, ",") {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		_, network, err := net.ParseCIDR(value)
+		if err == nil {
+			networks = append(networks, network)
+		}
+	}
+	return networks
+}
+
+func ipInNetworks(ip net.IP, networks []*net.IPNet) bool {
+	for _, network := range networks {
+		if network.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }

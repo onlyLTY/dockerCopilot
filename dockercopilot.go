@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,8 +45,19 @@ type UnauthorizedResponse struct {
 
 func main() {
 	flag.Parse()
+	var c config.Config
+	err := conf.Load(*configFile, &c, conf.UseEnv())
 	if *healthCheckOnly {
-		if err := checkTCPHealth("127.0.0.1:12712", 2*time.Second); err != nil {
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "health check cannot load configuration: %v\n", err)
+			os.Exit(1)
+		}
+		address, err := healthCheckAddress(c)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if err := checkTCPHealth(address, 2*time.Second); err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
@@ -60,8 +72,6 @@ func main() {
 	}
 	logx.SetLevel(logx.InfoLevel)
 
-	var c config.Config
-	err := conf.Load(*configFile, &c, conf.UseEnv())
 	if err != nil {
 		logx.Errorf("无法加载配置文件出错: %v", err)
 		logx.Errorf("请确认 secretKey 环境变量已设置且配置文件格式正确")
@@ -116,21 +126,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	imageLogosPath := "/data/config/imageLogos.js"
-	if _, err := os.Stat(imageLogosPath); os.IsNotExist(err) {
-		defaultConfig := []byte(`// 自定义镜像logo配置
-export const customImageLogos = {
-};
-`)
-		if err := os.WriteFile(imageLogosPath, defaultConfig, 0600); err != nil {
-			logx.Errorf("Failed to create default imageLogos.js: %v", err)
-			os.Exit(1)
-		}
-	} else if err != nil {
-		logx.Errorf("Failed to inspect imageLogos.js: %v", err)
-		os.Exit(1)
-	}
-
 	if list, err := utiles.GetImagesList(ctx); err != nil {
 		logx.Errorf("首次获取镜像列表失败，将在定时任务中重试: %v", err)
 	} else {
@@ -173,6 +168,17 @@ export const customImageLogos = {
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	logx.Info("程序版本" + config.Version)
 	server.Start()
+}
+
+func healthCheckAddress(c config.Config) (string, error) {
+	if c.Port <= 0 || c.Port > 65535 {
+		return "", fmt.Errorf("health check port is invalid: %d", c.Port)
+	}
+	host := "127.0.0.1"
+	if strings.Contains(c.Host, ":") {
+		host = "::1"
+	}
+	return net.JoinHostPort(host, strconv.Itoa(c.Port)), nil
 }
 
 func checkTCPHealth(address string, timeout time.Duration) error {

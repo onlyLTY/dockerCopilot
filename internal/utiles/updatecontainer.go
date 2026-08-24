@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	dockerMsgType "github.com/docker/docker/pkg/jsonmessage"
+	"github.com/onlyLTY/dockerCopilot/internal/module"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -27,6 +28,8 @@ type containerUpdateClient interface {
 	ImagePull(context.Context, string, image.PullOptions) (io.ReadCloser, error)
 	ContainerInspect(context.Context, string) (container.InspectResponse, error)
 	ContainerStop(context.Context, string, container.StopOptions) error
+	ContainerPause(context.Context, string) error
+	ContainerUnpause(context.Context, string) error
 	ContainerRename(context.Context, string, string) error
 	ContainerCreate(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, *ocispec.Platform, string) (container.CreateResponse, error)
 	ContainerStart(context.Context, string, container.StartOptions) error
@@ -67,7 +70,11 @@ func updateContainer(ctx context.Context, serviceContext *svc.ServiceContext, do
 	serviceContext.UpdateProgress(taskID, progress)
 
 	update(10, "正在拉取新镜像", "正在拉取新镜像")
-	reader, err := dockerClient.ImagePull(ctx, imageNameAndTag, image.PullOptions{})
+	registryAuth, err := module.RegistryAuthForReference(imageNameAndTag)
+	if err != nil {
+		return fail("读取镜像仓库凭据失败", err)
+	}
+	reader, err := dockerClient.ImagePull(ctx, imageNameAndTag, image.PullOptions{RegistryAuth: registryAuth})
 	if err != nil {
 		return fail("拉取镜像失败", err)
 	}
@@ -88,24 +95,35 @@ func updateContainer(ctx context.Context, serviceContext *svc.ServiceContext, do
 	if actualName == "" || actualName != name {
 		return fail("容器名称已变化，请刷新后重试", errors.New("请求中的容器名称与 Docker 当前状态不一致"))
 	}
-	wasRunning := inspectedContainer.State != nil && inspectedContainer.State.Running
+	wasPaused := inspectedContainer.State != nil && inspectedContainer.State.Paused
+	wasRunning := inspectedContainer.State != nil && (inspectedContainer.State.Running || wasPaused)
 	clearGeneratedHostname(inspectedContainer.Config, inspectedContainer.ID)
 	inspectedContainer.Config.Image = imageNameAndTag
 	config := inspectedContainer.Config
 	hostConfig := inspectedContainer.HostConfig
-	networkingConfig := &network.NetworkingConfig{EndpointsConfig: inspectedContainer.NetworkSettings.Networks}
+	networkingConfig := networkingConfigForRecreate(inspectedContainer)
 
 	stopTimeout := 10
-	update(40, "正在停止旧容器", "正在停止旧容器")
-	if err := dockerClient.ContainerStop(ctx, id, container.StopOptions{Signal: "SIGINT", Timeout: &stopTimeout}); err != nil {
-		return fail("停止容器失败", err)
+	if wasRunning {
+		if wasPaused {
+			update(35, "正在解除旧容器暂停", "需要先解除暂停才能停止容器")
+			if err := dockerClient.ContainerUnpause(ctx, id); err != nil {
+				return fail("解除旧容器暂停失败", err)
+			}
+		}
+		update(40, "正在停止旧容器", "正在停止旧容器")
+		if err := dockerClient.ContainerStop(ctx, id, container.StopOptions{Timeout: &stopTimeout}); err != nil {
+			return fail("停止容器失败", err)
+		}
+	} else {
+		update(40, "旧容器已停止", "将保持容器的停止状态")
 	}
 
 	backupName := fmt.Sprintf("%s-%s", name, time.Now().Format("2006-01-02-15-04-05.000000000"))
 	update(50, "正在保留旧容器", "正在重命名旧容器")
 	if err := dockerClient.ContainerRename(ctx, id, backupName); err != nil {
 		rollbackErr := runContainerRecovery(func(recoveryCtx context.Context) error {
-			return restartOldContainer(recoveryCtx, dockerClient, id, wasRunning)
+			return restoreOldContainerState(recoveryCtx, dockerClient, id, wasRunning, wasPaused)
 		})
 		return fail("重命名旧容器失败", errors.Join(err, rollbackErr))
 	}
@@ -113,7 +131,7 @@ func updateContainer(ctx context.Context, serviceContext *svc.ServiceContext, do
 	newContainerID := ""
 	rollback := func(cause error) error {
 		rollbackErr := runContainerRecovery(func(recoveryCtx context.Context) error {
-			return rollbackContainerUpdate(recoveryCtx, dockerClient, id, name, newContainerID, renamed, wasRunning)
+			return rollbackContainerUpdate(recoveryCtx, dockerClient, id, name, newContainerID, renamed, wasRunning, wasPaused)
 		})
 		return errors.Join(cause, rollbackErr)
 	}
@@ -128,9 +146,19 @@ func updateContainer(ctx context.Context, serviceContext *svc.ServiceContext, do
 		return fail("创建新容器失败，已尝试恢复旧容器", rollback(errors.New("docker 未返回新容器 ID")))
 	}
 
-	update(85, "正在启动新容器", "正在启动新容器")
-	if err := dockerClient.ContainerStart(ctx, newContainerID, container.StartOptions{}); err != nil {
-		return fail("启动新容器失败，已尝试恢复旧容器", rollback(err))
+	if wasRunning {
+		update(85, "正在启动新容器", "正在启动新容器")
+		if err := dockerClient.ContainerStart(ctx, newContainerID, container.StartOptions{}); err != nil {
+			return fail("启动新容器失败，已尝试恢复旧容器", rollback(err))
+		}
+		if wasPaused {
+			update(90, "正在恢复暂停状态", "旧容器在更新前处于暂停状态")
+			if err := dockerClient.ContainerPause(ctx, newContainerID); err != nil {
+				return fail("暂停新容器失败，已尝试恢复旧容器", rollback(err))
+			}
+		}
+	} else {
+		update(85, "新容器保持停止", "旧容器更新前处于停止状态")
 	}
 
 	detail := "更新成功"
@@ -152,13 +180,70 @@ func updateContainer(ctx context.Context, serviceContext *svc.ServiceContext, do
 	return nil
 }
 
+func networkingConfigForRecreate(inspected container.InspectResponse) *network.NetworkingConfig {
+	result := &network.NetworkingConfig{EndpointsConfig: make(map[string]*network.EndpointSettings)}
+	if inspected.NetworkSettings == nil {
+		return result
+	}
+	containerName := strings.TrimPrefix(inspected.Name, "/")
+	for networkName, endpoint := range inspected.NetworkSettings.Networks {
+		if endpoint == nil {
+			continue
+		}
+		aliases := make([]string, 0, len(endpoint.Aliases))
+		for _, alias := range endpoint.Aliases {
+			alias = strings.TrimSpace(alias)
+			generatedIDAlias := inspected.ID != "" && (strings.HasPrefix(inspected.ID, alias) || strings.HasPrefix(alias, inspected.ID))
+			if alias == "" || alias == containerName || generatedIDAlias {
+				continue
+			}
+			aliases = append(aliases, alias)
+		}
+		var ipamConfig *network.EndpointIPAMConfig
+		if endpoint.IPAMConfig != nil {
+			ipamConfig = endpoint.IPAMConfig.Copy()
+		}
+		clean := &network.EndpointSettings{
+			IPAMConfig: ipamConfig,
+			Links:      append([]string(nil), endpoint.Links...),
+			Aliases:    aliases,
+			DriverOpts: cloneStringMap(endpoint.DriverOpts),
+			GwPriority: endpoint.GwPriority,
+		}
+		if configuredMAC := legacyConfiguredMAC(inspected.Config); configuredMAC != "" {
+			clean.MacAddress = configuredMAC
+		}
+		result.EndpointsConfig[networkName] = clean
+	}
+	return result
+}
+
+func legacyConfiguredMAC(config *container.Config) string {
+	if config == nil {
+		return ""
+	}
+	//lint:ignore SA1019 Preserve MAC addresses from containers created through Docker API < 1.44.
+	return config.MacAddress
+}
+
+func cloneStringMap(source map[string]string) map[string]string {
+	if len(source) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(source))
+	for key, value := range source {
+		result[key] = value
+	}
+	return result
+}
+
 func runContainerRecovery(recoverOperation func(context.Context) error) error {
 	recoveryCtx, cancel := context.WithTimeout(context.Background(), containerRecoveryTimeout)
 	defer cancel()
 	return recoverOperation(recoveryCtx)
 }
 
-func rollbackContainerUpdate(ctx context.Context, dockerClient containerUpdateClient, oldID, originalName, newID string, renamed, wasRunning bool) error {
+func rollbackContainerUpdate(ctx context.Context, dockerClient containerUpdateClient, oldID, originalName, newID string, renamed, wasRunning, wasPaused bool) error {
 	var rollbackErrors []error
 	if newID != "" {
 		if err := dockerClient.ContainerRemove(ctx, newID, container.RemoveOptions{Force: true}); err != nil {
@@ -170,10 +255,22 @@ func rollbackContainerUpdate(ctx context.Context, dockerClient containerUpdateCl
 			rollbackErrors = append(rollbackErrors, fmt.Errorf("恢复旧容器名称: %w", err))
 		}
 	}
-	if err := restartOldContainer(ctx, dockerClient, oldID, wasRunning); err != nil {
+	if err := restoreOldContainerState(ctx, dockerClient, oldID, wasRunning, wasPaused); err != nil {
 		rollbackErrors = append(rollbackErrors, err)
 	}
 	return errors.Join(rollbackErrors...)
+}
+
+func restoreOldContainerState(ctx context.Context, dockerClient containerUpdateClient, oldID string, wasRunning, wasPaused bool) error {
+	if err := restartOldContainer(ctx, dockerClient, oldID, wasRunning); err != nil {
+		return err
+	}
+	if wasPaused {
+		if err := dockerClient.ContainerPause(ctx, oldID); err != nil {
+			return fmt.Errorf("恢复旧容器暂停状态: %w", err)
+		}
+	}
+	return nil
 }
 
 func restartOldContainer(ctx context.Context, dockerClient containerUpdateClient, oldID string, wasRunning bool) error {

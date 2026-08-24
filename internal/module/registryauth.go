@@ -25,6 +25,18 @@ type dockerAuthFile struct {
 	Auths map[string]registry.AuthConfig `json:"auths"`
 }
 
+// RegistryAuthForReference returns the Docker API encoded registry
+// credentials for an image reference. Callers should pass the result to
+// image.PullOptions.RegistryAuth; update checks and actual pulls must use the
+// same authentication source.
+func RegistryAuthForReference(imageReference string) (string, error) {
+	credentials, err := credentialsForReference(imageReference)
+	if err != nil {
+		return "", err
+	}
+	return credentials.Encoded, nil
+}
+
 func credentialsForReference(imageReference string) (registryCredentials, error) {
 	named, err := ref.ParseNormalizedNamed(imageReference)
 	if err != nil {

@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"context"
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/internal/config"
 	"github.com/onlyLTY/dockerCopilot/internal/module"
@@ -22,8 +23,9 @@ type ServiceContext struct {
 	ProgressStore              ProgressStoreType
 	DockerClient               *client.Client
 	mu                         sync.RWMutex
-	activeContainerUpdates     map[string]struct{}
+	activeContainerOperations  map[string]string
 	activeRestore              bool
+	containerUpdateSlots       chan struct{}
 }
 
 const (
@@ -51,11 +53,12 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		logx.Errorf("Unable to create docker client: %s", err)
 	}
 	return &ServiceContext{
-		Config:                 c,
-		HubImageInfo:           module.NewImageCheck(),
-		ProgressStore:          make(ProgressStoreType),
-		DockerClient:           cli,
-		activeContainerUpdates: make(map[string]struct{}),
+		Config:                    c,
+		HubImageInfo:              module.NewImageCheck(),
+		ProgressStore:             make(ProgressStoreType),
+		DockerClient:              cli,
+		activeContainerOperations: make(map[string]string),
+		containerUpdateSlots:      make(chan struct{}, 2),
 	}
 }
 
@@ -102,28 +105,72 @@ func (ctx *ServiceContext) cleanupProgressLocked(retention time.Duration) int {
 }
 
 func (ctx *ServiceContext) BeginContainerUpdate(containerID string) bool {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
-	if ctx.activeContainerUpdates == nil {
-		ctx.activeContainerUpdates = make(map[string]struct{})
-	}
-	if _, exists := ctx.activeContainerUpdates[containerID]; exists {
-		return false
-	}
-	ctx.activeContainerUpdates[containerID] = struct{}{}
-	return true
+	return ctx.BeginContainerOperation(containerID, "update")
 }
 
 func (ctx *ServiceContext) EndContainerUpdate(containerID string) {
+	ctx.EndContainerOperation(containerID)
+}
+
+// BeginContainerOperation serializes all mutating operations for a container
+// and prevents them from racing with a restore job.
+func (ctx *ServiceContext) BeginContainerOperation(containerID, operation string) bool {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
-	delete(ctx.activeContainerUpdates, containerID)
+	if ctx.activeRestore {
+		return false
+	}
+	if ctx.activeContainerOperations == nil {
+		ctx.activeContainerOperations = make(map[string]string)
+	}
+	if _, exists := ctx.activeContainerOperations[containerID]; exists {
+		return false
+	}
+	ctx.activeContainerOperations[containerID] = operation
+	return true
+}
+
+func (ctx *ServiceContext) EndContainerOperation(containerID string) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	delete(ctx.activeContainerOperations, containerID)
+}
+
+// AcquireContainerUpdateSlot bounds concurrent image pulls and container
+// replacements. It is deliberately separate from the per-container lock so
+// accepted tasks can wait without permitting another operation on that ID.
+func (ctx *ServiceContext) AcquireContainerUpdateSlot(waitContext context.Context) bool {
+	ctx.mu.Lock()
+	if ctx.containerUpdateSlots == nil {
+		ctx.containerUpdateSlots = make(chan struct{}, 2)
+	}
+	slots := ctx.containerUpdateSlots
+	ctx.mu.Unlock()
+	select {
+	case slots <- struct{}{}:
+		return true
+	case <-waitContext.Done():
+		return false
+	}
+}
+
+func (ctx *ServiceContext) ReleaseContainerUpdateSlot() {
+	ctx.mu.RLock()
+	slots := ctx.containerUpdateSlots
+	ctx.mu.RUnlock()
+	if slots == nil {
+		return
+	}
+	select {
+	case <-slots:
+	default:
+	}
 }
 
 func (ctx *ServiceContext) BeginRestore() bool {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
-	if ctx.activeRestore {
+	if ctx.activeRestore || len(ctx.activeContainerOperations) > 0 {
 		return false
 	}
 	ctx.activeRestore = true

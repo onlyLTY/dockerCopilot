@@ -94,6 +94,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/container/backups/download",
+				Handler: container.DownloadBackupHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/containers",
 				Handler: container.ContainersListHandler(serverCtx),
 			},
@@ -118,7 +123,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api/icons"),
-		rest.WithMaxBytes(11<<20),
+		rest.WithMaxBytes(3<<20),
 	)
 
 	server.AddRoutes(

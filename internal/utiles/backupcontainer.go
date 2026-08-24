@@ -6,7 +6,6 @@ import (
 	"errors"
 
 	dockerBackend "github.com/docker/docker/api/types/backend"
-	"github.com/docker/docker/api/types/network"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -14,6 +13,7 @@ import (
 type containerBackupEntry struct {
 	dockerBackend.ContainerCreateConfig
 	WasRunning *bool `json:"WasRunning,omitempty"`
+	WasPaused  *bool `json:"WasPaused,omitempty"`
 }
 
 func BackupContainer(ctx *svc.ServiceContext) error {
@@ -43,15 +43,17 @@ func BackupContainer(ctx *svc.ServiceContext) error {
 			}
 		}
 		clearGeneratedHostname(inspectedContainer.Config, inspectedContainer.ID)
-		wasRunning := inspectedContainer.State != nil && inspectedContainer.State.Running
+		wasPaused := inspectedContainer.State != nil && inspectedContainer.State.Paused
+		wasRunning := inspectedContainer.State != nil && (inspectedContainer.State.Running || wasPaused)
 		backupList = append(backupList, containerBackupEntry{
 			ContainerCreateConfig: dockerBackend.ContainerCreateConfig{
 				Config:           inspectedContainer.Config,
 				HostConfig:       inspectedContainer.HostConfig,
-				NetworkingConfig: &network.NetworkingConfig{EndpointsConfig: inspectedContainer.NetworkSettings.Networks},
+				NetworkingConfig: networkingConfigForRecreate(inspectedContainer),
 				Name:             containerName,
 			},
 			WasRunning: &wasRunning,
+			WasPaused:  &wasPaused,
 		})
 	}
 	jsonData, err := json.MarshalIndent(backupList, "", "  ")

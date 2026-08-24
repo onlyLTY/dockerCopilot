@@ -16,19 +16,37 @@ import (
 )
 
 var updateValuePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
+var updateRepositoryPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
+
+const defaultUpdateRepository = "autunn/dockerCopilot"
 
 func GetRemoteVersion(ctx context.Context) (string, error) {
 	channel, versionFile, err := updateChannel()
 	if err != nil {
 		return "", err
 	}
-	baseURL := fmt.Sprintf("https://raw.githubusercontent.com/onlyLTY/dockerCopilot/%s/%s", channel, versionFile)
+	repository, err := updateRepository()
+	if err != nil {
+		return "", err
+	}
+	baseURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s", repository, channel, versionFile)
 	versionURL, err := githubURL(baseURL)
 	if err != nil {
 		return "", err
 	}
 	client := newHTTPSClient(15 * time.Second)
 	return fetchVersionFromURL(ctx, client, versionURL)
+}
+
+func updateRepository() (string, error) {
+	repository := strings.TrimSpace(os.Getenv("UPDATE_REPOSITORY"))
+	if repository == "" {
+		repository = defaultUpdateRepository
+	}
+	if !updateRepositoryPattern.MatchString(repository) {
+		return "", errors.New("UPDATE_REPOSITORY 必须使用 owner/repository 格式")
+	}
+	return repository, nil
 }
 
 func newHTTPSClient(timeout time.Duration) *http.Client {

@@ -60,3 +60,17 @@ func ResolveBackupPath(filename string, allowedExts ...string) (string, error) {
 
 	return fullPath, nil
 }
+
+// ReadBackupDownload returns an authenticated download payload while reusing
+// the same filename, symlink and size checks as restore operations.
+func ReadBackupDownload(filename string) ([]byte, string, error) {
+	fullPath, err := ResolveBackupPath(filename, ".json", ".yaml", ".yml")
+	if err != nil {
+		return nil, "", err
+	}
+	content, err := readBackupFile(fullPath)
+	if err != nil {
+		return nil, "", err
+	}
+	return content, filepath.Base(fullPath), nil
+}

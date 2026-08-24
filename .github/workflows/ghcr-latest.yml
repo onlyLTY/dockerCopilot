@@ -5,6 +5,11 @@ permissions:
 
 on:
   workflow_dispatch:
+    inputs:
+      frontend_ref:
+        description: Immutable Docker-Copilot-React commit SHA
+        required: false
+        type: string
   push:
     branches:
       - latest
@@ -17,7 +22,7 @@ concurrency:
 
 env:
   FRONTEND_REPOSITORY: autunn/Docker-Copilot-React
-  FRONTEND_REF: 796fd94d38a272e135b471d487d83413ed69e553
+  FRONTEND_REF: ${{ inputs.frontend_ref || 'afc2105211eb1adaa417ce8c125f2a91789c9bf1' }}
   IMAGE_NAME: ghcr.io/autunn/dockercopilot
 
 jobs:

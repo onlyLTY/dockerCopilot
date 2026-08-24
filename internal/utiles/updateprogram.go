@@ -14,7 +14,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -26,8 +28,15 @@ const (
 )
 
 var ErrAlreadyLatest = errors.New("当前已是最新版本")
+var ErrImageManagedUpdate = errors.New("当前部署由容器镜像管理，请拉取新镜像并重新创建容器")
+var ErrRemoteVersionNotNewer = errors.New("远端版本不高于当前版本，拒绝更新")
+
+var semanticVersionPattern = regexp.MustCompile(`^[vV]?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$`)
 
 func UpdateProgram(ctx context.Context) error {
+	if BinarySelfUpdateDisabled() {
+		return ErrImageManagedUpdate
+	}
 	version, err := GetRemoteVersion(ctx)
 	if err != nil {
 		return fmt.Errorf("获取最新版本失败: %w", err)
@@ -35,8 +44,19 @@ func UpdateProgram(ctx context.Context) error {
 	if version == currentVersion() {
 		return ErrAlreadyLatest
 	}
+	newer, err := isNewerVersion(currentVersion(), version)
+	if err != nil {
+		return fmt.Errorf("比较版本失败: %w", err)
+	}
+	if !newer {
+		return ErrRemoteVersionNotNewer
+	}
 
-	releaseBaseURL, err := githubURL("https://github.com/onlyLTY/dockerCopilot/releases/download")
+	repository, err := updateRepository()
+	if err != nil {
+		return err
+	}
+	releaseBaseURL, err := githubURL("https://github.com/" + repository + "/releases/download")
 	if err != nil {
 		return err
 	}
@@ -100,6 +120,48 @@ func UpdateProgram(ctx context.Context) error {
 		return fmt.Errorf("安装更新文件失败: %w", err)
 	}
 	return nil
+}
+
+func BinarySelfUpdateDisabled() bool {
+	raw := strings.TrimSpace(os.Getenv("DISABLE_BINARY_SELF_UPDATE"))
+	if raw == "" {
+		return false
+	}
+	disabled, err := strconv.ParseBool(raw)
+	return err != nil || disabled
+}
+
+func isNewerVersion(current, remote string) (bool, error) {
+	currentParts, err := parseSemanticVersion(current)
+	if err != nil {
+		return false, err
+	}
+	remoteParts, err := parseSemanticVersion(remote)
+	if err != nil {
+		return false, err
+	}
+	for index := range currentParts {
+		if remoteParts[index] != currentParts[index] {
+			return remoteParts[index] > currentParts[index], nil
+		}
+	}
+	return false, nil
+}
+
+func parseSemanticVersion(value string) ([3]uint64, error) {
+	match := semanticVersionPattern.FindStringSubmatch(strings.TrimSpace(value))
+	if len(match) != 4 {
+		return [3]uint64{}, fmt.Errorf("版本 %q 不是支持的语义版本", value)
+	}
+	var result [3]uint64
+	for index := range result {
+		component, err := strconv.ParseUint(match[index+1], 10, 64)
+		if err != nil {
+			return [3]uint64{}, fmt.Errorf("版本 %q 格式错误", value)
+		}
+		result[index] = component
+	}
+	return result, nil
 }
 
 func downloadFile(ctx context.Context, client *http.Client, rawURL, dest string, maxBytes int64) (retErr error) {

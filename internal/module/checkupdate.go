@@ -42,18 +42,52 @@ func (i *ImageUpdateData) CheckUpdate(ctx context.Context, dockerClient *client.
 		return
 	}
 	defer i.checkMu.Unlock()
-	checked := make(map[string]ImageCheckList)
 	liveReferences := make(map[string]struct{})
+	uniqueImages := make(map[string]types.Image)
 	for _, image := range expandImageReferences(imageList) {
 		key := imageref.CacheKey(image.Reference)
-		liveReferences[key] = struct{}{}
-		parsedReference, err := imageref.ParseTagged(image.Reference)
-		if err == nil && parsedReference.Repository == "docker.io/0nlylty/dockercopilot" {
+		if key == "" {
 			continue
 		}
-		needUpdate, comparable := checkSingleImage(ctx, dockerClient, image)
-		if comparable {
-			checked[key] = ImageCheckList{NeedUpdate: needUpdate}
+		liveReferences[key] = struct{}{}
+		if _, exists := uniqueImages[key]; !exists {
+			uniqueImages[key] = image
+		}
+	}
+	type checkResult struct {
+		key        string
+		needUpdate bool
+		comparable bool
+	}
+	jobs := make(chan types.Image)
+	results := make(chan checkResult, len(uniqueImages))
+	workerCount := 4
+	if len(uniqueImages) < workerCount {
+		workerCount = len(uniqueImages)
+	}
+	var workers sync.WaitGroup
+	for worker := 0; worker < workerCount; worker++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for image := range jobs {
+				needUpdate, comparable := checkSingleImage(ctx, dockerClient, image)
+				results <- checkResult{
+					key: imageref.CacheKey(image.Reference), needUpdate: needUpdate, comparable: comparable,
+				}
+			}
+		}()
+	}
+	for _, image := range uniqueImages {
+		jobs <- image
+	}
+	close(jobs)
+	workers.Wait()
+	close(results)
+	checked := make(map[string]ImageCheckList, len(uniqueImages))
+	for result := range results {
+		if result.comparable {
+			checked[result.key] = ImageCheckList{NeedUpdate: result.needUpdate}
 		}
 	}
 

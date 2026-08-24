@@ -29,7 +29,7 @@ func (l *UpdateProgramLogic) UpdateProgram() (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	err = utiles.UpdateProgram(l.ctx)
 	if err != nil {
-		if errors.Is(err, utiles.ErrAlreadyLatest) {
+		if errors.Is(err, utiles.ErrAlreadyLatest) || errors.Is(err, utiles.ErrImageManagedUpdate) || errors.Is(err, utiles.ErrRemoteVersionNotNewer) {
 			resp.Code = 409
 			resp.Msg = err.Error()
 			resp.Data = map[string]interface{}{}

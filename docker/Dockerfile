@@ -1,6 +1,6 @@
 # 使用 Alpine 作为基础镜像
 FROM alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
-LABEL authors="onlyLTY"
+LABEL org.opencontainers.image.authors="autunn"
 WORKDIR /app
 
 ARG TARGETPLATFORM
@@ -16,6 +16,8 @@ RUN apk add --no-cache tzdata \
 # 设置环境变量
 ENV DOCKER_HOST="unix:///var/run/docker.sock" \
     BACKUP_DIR="/data/backups" \
+    DISABLE_BINARY_SELF_UPDATE="true" \
+    UPDATE_REPOSITORY="autunn/dockerCopilot" \
     UPDATE_CHANNEL="latest" \
     TZ="Asia/Shanghai"
 

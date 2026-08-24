@@ -1,6 +1,11 @@
 package utiles
 
 import (
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	backupCompose "github.com/onlyLTY/dockerCopilot/internal/utiles/backup_compose"
@@ -22,7 +27,17 @@ func Backup2Compose(ctx *svc.ServiceContext) (err error) {
 		}
 		containerJSONs = append(containerJSONs, inspectedContainer)
 	}
-	composeYAML, err := backupCompose.DockerConfig2ComposeYaml(containerJSONs)
+	includeSensitiveEnvironment := false
+	if raw := strings.TrimSpace(os.Getenv("COMPOSE_BACKUP_INCLUDE_SECRETS")); raw != "" {
+		parsed, parseErr := strconv.ParseBool(raw)
+		if parseErr != nil {
+			return fmt.Errorf("COMPOSE_BACKUP_INCLUDE_SECRETS 配置错误: %w", parseErr)
+		}
+		includeSensitiveEnvironment = parsed
+	}
+	composeYAML, err := backupCompose.DockerConfig2ComposeYamlWithOptions(containerJSONs, backupCompose.Options{
+		IncludeSensitiveEnvironment: includeSensitiveEnvironment,
+	})
 	if err != nil {
 		logx.Error("备份失败" + err.Error())
 		return err

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/onlyLTY/dockerCopilot/internal/imageref"
@@ -15,6 +16,9 @@ import (
 )
 
 var errContainerUpdateInProgress = errors.New("该容器正在更新，请勿重复提交")
+var errSelfContainerUpdate = errors.New("当前 Docker Copilot 不能在自身容器内执行原地更新，请拉取新镜像后由 Docker Compose 重新创建")
+
+const containerUpdateQueueTimeout = 30 * time.Minute
 
 type UpdateLogic struct {
 	logx.Logger
@@ -47,6 +51,12 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 		resp.Data = map[string]interface{}{}
 		return resp, err
 	}
+	if utiles.IsSelfContainerID(containerID) {
+		resp.Code = 409
+		resp.Msg = errSelfContainerUpdate.Error()
+		resp.Data = map[string]interface{}{}
+		return resp, errSelfContainerUpdate
+	}
 	if !l.svcCtx.BeginContainerUpdate(containerID) {
 		resp.Code = 409
 		resp.Msg = errContainerUpdateInProgress.Error()
@@ -70,6 +80,21 @@ func (l *UpdateLogic) Update(req *types.ContainerUpdateReq) (resp *types.Resp, e
 				})
 			}
 		}()
+		l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{
+			TaskID: taskID, Name: containerName, Message: "等待更新执行槽",
+			DetailMsg: "最多同时更新两个容器", Status: svc.TaskStatusRunning,
+		})
+		queueContext, cancelQueue := context.WithTimeout(context.Background(), containerUpdateQueueTimeout)
+		acquired := l.svcCtx.AcquireContainerUpdateSlot(queueContext)
+		cancelQueue()
+		if !acquired {
+			l.svcCtx.UpdateProgress(taskID, svc.TaskProgress{
+				TaskID: taskID, Name: containerName, Message: "更新任务已取消",
+				DetailMsg: "等待执行槽时任务被取消", IsDone: true, Status: svc.TaskStatusFailed,
+			})
+			return
+		}
+		defer l.svcCtx.ReleaseContainerUpdateSlot()
 		err := utiles.UpdateContainer(l.svcCtx, containerID, containerName, imageReference.Normalized, req.DelOldContainer, taskID)
 		if err != nil {
 			l.Errorf("Error in UpdateContainer: %v", err)

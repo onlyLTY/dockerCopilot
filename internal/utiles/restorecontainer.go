@@ -9,10 +9,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
+	"github.com/onlyLTY/dockerCopilot/internal/module"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -20,10 +22,16 @@ import (
 
 const maxBackupFileSize int64 = 128 << 20
 
+const (
+	containerRestoreTimeout     = 24 * time.Hour
+	containerRestoreItemTimeout = 30 * time.Minute
+)
+
 type restoreClient interface {
 	ImagePull(context.Context, string, image.PullOptions) (io.ReadCloser, error)
 	ContainerCreate(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, *ocispec.Platform, string) (container.CreateResponse, error)
 	ContainerStart(context.Context, string, container.StartOptions) error
+	ContainerPause(context.Context, string) error
 	ContainerRemove(context.Context, string, container.RemoveOptions) error
 }
 
@@ -33,7 +41,7 @@ func RestoreContainer(serviceContext *svc.ServiceContext, filename, taskID strin
 		setRestoreProgress(serviceContext, taskID, 0, "恢复失败", err.Error(), true, svc.TaskStatusFailed)
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), containerUpdateTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), containerRestoreTimeout)
 	defer cancel()
 	return restoreContainer(ctx, serviceContext, serviceContext.DockerClient, filename, taskID)
 }
@@ -83,49 +91,13 @@ func restoreContainer(ctx context.Context, serviceContext *svc.ServiceContext, d
 			label = fmt.Sprintf("第 %d 个容器", index+1)
 		}
 		setRestoreProgress(serviceContext, taskID, percentage, "正在恢复 "+label, "正在拉取镜像", false, svc.TaskStatusRunning)
-		if containerInfo.Config == nil || containerInfo.HostConfig == nil || containerInfo.Config.Image == "" {
+		itemContext, cancelItem := context.WithTimeout(ctx, containerRestoreItemTimeout)
+		restoreErr := restoreSingleContainer(itemContext, serviceContext, dockerClient, containerInfo, taskID)
+		cancelItem()
+		if restoreErr != nil {
 			failureCount++
-			results = append(results, label+"：备份配置不完整")
+			results = append(results, label+"："+restoreErr.Error())
 			continue
-		}
-
-		reader, pullErr := dockerClient.ImagePull(ctx, containerInfo.Config.Image, image.PullOptions{})
-		if pullErr != nil {
-			failureCount++
-			results = append(results, label+"：拉取镜像失败："+pullErr.Error())
-			continue
-		}
-		decodeErr := decodePullResp(reader, serviceContext, taskID)
-		closeErr := reader.Close()
-		if decodeErr != nil || closeErr != nil {
-			failureCount++
-			results = append(results, label+"：拉取镜像失败："+errors.Join(decodeErr, closeErr).Error())
-			continue
-		}
-
-		created, createErr := dockerClient.ContainerCreate(ctx, containerInfo.Config, containerInfo.HostConfig, containerInfo.NetworkingConfig, containerInfo.Platform, containerInfo.Name)
-		if createErr != nil {
-			failureCount++
-			results = append(results, label+"：创建失败："+createErr.Error())
-			continue
-		}
-		if strings.TrimSpace(created.ID) == "" {
-			failureCount++
-			results = append(results, label+"：创建失败：Docker 未返回容器 ID")
-			continue
-		}
-		if containerInfo.WasRunning != nil && *containerInfo.WasRunning {
-			if startErr := dockerClient.ContainerStart(ctx, created.ID, container.StartOptions{}); startErr != nil {
-				failureCount++
-				results = append(results, label+"：启动失败："+startErr.Error())
-				removeErr := runContainerRecovery(func(recoveryCtx context.Context) error {
-					return dockerClient.ContainerRemove(recoveryCtx, created.ID, container.RemoveOptions{Force: true})
-				})
-				if removeErr != nil {
-					logx.Errorf("清理启动失败的容器 %s 失败: %v", created.ID, removeErr)
-				}
-				continue
-			}
 		}
 		results = append(results, label+"：恢复成功")
 	}
@@ -138,6 +110,66 @@ func restoreContainer(ctx context.Context, serviceContext *svc.ServiceContext, d
 	}
 	setRestoreProgress(serviceContext, taskID, 100, "恢复完成", detail, true, svc.TaskStatusCompleted)
 	return nil
+}
+
+func restoreSingleContainer(ctx context.Context, serviceContext *svc.ServiceContext, dockerClient restoreClient, containerInfo containerBackupEntry, taskID string) error {
+	if containerInfo.Config == nil || containerInfo.HostConfig == nil || containerInfo.Config.Image == "" {
+		return errors.New("备份配置不完整")
+	}
+	registryAuth, err := module.RegistryAuthForReference(containerInfo.Config.Image)
+	if err != nil {
+		return fmt.Errorf("读取镜像仓库凭据失败：%w", err)
+	}
+	reader, err := dockerClient.ImagePull(ctx, containerInfo.Config.Image, image.PullOptions{RegistryAuth: registryAuth})
+	if err != nil {
+		return fmt.Errorf("拉取镜像失败：%w", err)
+	}
+	decodeErr := decodePullResp(reader, serviceContext, taskID)
+	closeErr := reader.Close()
+	if decodeErr != nil || closeErr != nil {
+		return fmt.Errorf("拉取镜像失败：%w", errors.Join(decodeErr, closeErr))
+	}
+	networkingConfig := cleanSavedNetworkingConfig(containerInfo.NetworkingConfig, containerInfo.Config, containerInfo.Name)
+	created, err := dockerClient.ContainerCreate(ctx, containerInfo.Config, containerInfo.HostConfig, networkingConfig, containerInfo.Platform, containerInfo.Name)
+	if err != nil {
+		return fmt.Errorf("创建失败：%w", err)
+	}
+	if strings.TrimSpace(created.ID) == "" {
+		return errors.New("创建失败：Docker 未返回容器 ID")
+	}
+	if containerInfo.WasRunning == nil || !*containerInfo.WasRunning {
+		return nil
+	}
+	if err := dockerClient.ContainerStart(ctx, created.ID, container.StartOptions{}); err != nil {
+		removeErr := runContainerRecovery(func(recoveryCtx context.Context) error {
+			return dockerClient.ContainerRemove(recoveryCtx, created.ID, container.RemoveOptions{Force: true})
+		})
+		if removeErr != nil {
+			logx.Errorf("清理启动失败的容器 %s 失败: %v", created.ID, removeErr)
+		}
+		return fmt.Errorf("启动失败：%w", errors.Join(err, removeErr))
+	}
+	if containerInfo.WasPaused != nil && *containerInfo.WasPaused {
+		if err := dockerClient.ContainerPause(ctx, created.ID); err != nil {
+			removeErr := runContainerRecovery(func(recoveryCtx context.Context) error {
+				return dockerClient.ContainerRemove(recoveryCtx, created.ID, container.RemoveOptions{Force: true})
+			})
+			return fmt.Errorf("恢复暂停状态失败：%w", errors.Join(err, removeErr))
+		}
+	}
+	return nil
+}
+
+func cleanSavedNetworkingConfig(saved *network.NetworkingConfig, config *container.Config, name string) *network.NetworkingConfig {
+	if saved == nil {
+		return nil
+	}
+	inspected := container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{Name: "/" + strings.TrimPrefix(name, "/")},
+		Config:            config,
+		NetworkSettings:   &container.NetworkSettings{Networks: saved.EndpointsConfig},
+	}
+	return networkingConfigForRecreate(inspected)
 }
 
 func readBackupFile(path string) ([]byte, error) {

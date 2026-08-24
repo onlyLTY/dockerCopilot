@@ -25,14 +25,31 @@ type fakeRestoreClient struct {
 	cancelOnStart    context.CancelFunc
 	removeContextErr error
 	started          []string
+	paused           []string
 	removed          []string
+	pullOptions      image.PullOptions
+	createdNetwork   *network.NetworkingConfig
 }
 
-func (f *fakeRestoreClient) ImagePull(context.Context, string, image.PullOptions) (io.ReadCloser, error) {
+func (f *fakeRestoreClient) ImagePull(_ context.Context, _ string, options image.PullOptions) (io.ReadCloser, error) {
+	f.pullOptions = options
 	return io.NopCloser(strings.NewReader("{}\n")), nil
 }
 
-func (f *fakeRestoreClient) ContainerCreate(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, *ocispec.Platform, string) (container.CreateResponse, error) {
+func TestRestoreContainerUsesRegistryAuthentication(t *testing.T) {
+	t.Setenv("DOCKER_AUTH_CONFIG", `{"auths":{"registry.example":{"auth":"dXNlcjpwYXNz"}}}`)
+	filename, serviceContext := writeRestoreTestBackupWithImage(t, false, "registry.example/team/app:latest")
+	client := &fakeRestoreClient{}
+	if err := restoreContainer(context.Background(), serviceContext, client, filename, "restore-task"); err != nil {
+		t.Fatal(err)
+	}
+	if client.pullOptions.RegistryAuth == "" {
+		t.Fatal("private registry credentials were not passed to restore ImagePull")
+	}
+}
+
+func (f *fakeRestoreClient) ContainerCreate(_ context.Context, _ *container.Config, _ *container.HostConfig, networking *network.NetworkingConfig, _ *ocispec.Platform, _ string) (container.CreateResponse, error) {
+	f.createdNetwork = networking
 	if f.createErr != nil {
 		return container.CreateResponse{}, f.createErr
 	}
@@ -45,6 +62,11 @@ func (f *fakeRestoreClient) ContainerStart(_ context.Context, id string, _ conta
 		f.cancelOnStart()
 	}
 	return f.startErr
+}
+
+func (f *fakeRestoreClient) ContainerPause(_ context.Context, id string) error {
+	f.paused = append(f.paused, id)
+	return nil
 }
 
 func (f *fakeRestoreClient) ContainerRemove(ctx context.Context, id string, _ container.RemoveOptions) error {
@@ -81,6 +103,33 @@ func TestRestoreContainerRestoresRunningState(t *testing.T) {
 	}
 }
 
+func TestRestoreContainerRestoresPausedState(t *testing.T) {
+	filename, serviceContext := writeRestoreTestBackupWithState(t, true, true, "repo:tag")
+	client := &fakeRestoreClient{}
+	if err := restoreContainer(context.Background(), serviceContext, client, filename, "restore-task"); err != nil {
+		t.Fatal(err)
+	}
+	if len(client.started) != 1 || len(client.paused) != 1 || client.paused[0] != "restored" {
+		t.Fatalf("paused state was not restored: started=%v paused=%v", client.started, client.paused)
+	}
+}
+
+func TestCleanSavedNetworkingConfigDropsRuntimeFields(t *testing.T) {
+	saved := &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{
+		"project_default": {
+			Aliases: []string{"app", "custom"}, NetworkID: "old-network", EndpointID: "old-endpoint",
+			IPAddress: "172.20.0.2", IPAMConfig: &network.EndpointIPAMConfig{IPv4Address: "172.20.0.10"},
+		},
+	}}
+	clean := cleanSavedNetworkingConfig(saved, &container.Config{}, "app").EndpointsConfig["project_default"]
+	if clean.NetworkID != "" || clean.EndpointID != "" || clean.IPAddress != "" {
+		t.Fatalf("runtime fields were retained: %+v", clean)
+	}
+	if clean.IPAMConfig == nil || clean.IPAMConfig.IPv4Address != "172.20.0.10" || len(clean.Aliases) != 1 || clean.Aliases[0] != "custom" {
+		t.Fatalf("configured network fields were lost: %+v", clean)
+	}
+}
+
 func TestRestoreContainerUsesFreshContextForCleanup(t *testing.T) {
 	filename, serviceContext := writeRestoreTestBackup(t, true)
 	primaryContext, cancel := context.WithCancel(context.Background())
@@ -97,16 +146,25 @@ func TestRestoreContainerUsesFreshContextForCleanup(t *testing.T) {
 }
 
 func writeRestoreTestBackup(t *testing.T, wasRunning bool) (string, *svc.ServiceContext) {
+	return writeRestoreTestBackupWithImage(t, wasRunning, "repo:tag")
+}
+
+func writeRestoreTestBackupWithImage(t *testing.T, wasRunning bool, imageReference string) (string, *svc.ServiceContext) {
+	return writeRestoreTestBackupWithState(t, wasRunning, false, imageReference)
+}
+
+func writeRestoreTestBackupWithState(t *testing.T, wasRunning, wasPaused bool, imageReference string) (string, *svc.ServiceContext) {
 	t.Helper()
 	const accessSecret = "restore-test-secret-that-is-long-enough"
 	dir := t.TempDir()
 	t.Setenv("BACKUP_DIR", dir)
 	entry := containerBackupEntry{
 		ContainerCreateConfig: dockerBackend.ContainerCreateConfig{
-			Name: "app", Config: &container.Config{Image: "repo:tag"},
+			Name: "app", Config: &container.Config{Image: imageReference},
 			HostConfig: &container.HostConfig{}, NetworkingConfig: &network.NetworkingConfig{},
 		},
 		WasRunning: &wasRunning,
+		WasPaused:  &wasPaused,
 	}
 	plaintext, err := json.Marshal([]containerBackupEntry{entry})
 	if err != nil {

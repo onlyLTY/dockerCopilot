@@ -12,6 +12,19 @@ import (
 	"github.com/zeromicro/go-zero/rest"
 )
 
+func TestHealthCheckAddressUsesConfiguredPort(t *testing.T) {
+	cfg := config.Config{}
+	cfg.Host = "0.0.0.0"
+	cfg.Port = 18080
+	address, err := healthCheckAddress(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if address != "127.0.0.1:18080" {
+		t.Fatalf("unexpected health address %q", address)
+	}
+}
+
 func TestRuntimeSecurityWarningsAreAdvisory(t *testing.T) {
 	t.Setenv("BACKUP_ENCRYPTION_KEY", "")
 	var cfg config.Config

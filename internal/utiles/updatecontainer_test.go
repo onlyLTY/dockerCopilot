@@ -22,18 +22,35 @@ type fakeContainerUpdateClient struct {
 	removeOldErr          error
 	cancelOnCreate        context.CancelFunc
 	recoveryContextErrors []error
+	pullOptions           image.PullOptions
+	stopped               bool
+	paused                bool
+	createdNetworking     *network.NetworkingConfig
 }
 
-func (f *fakeContainerUpdateClient) ImagePull(context.Context, string, image.PullOptions) (io.ReadCloser, error) {
+func (f *fakeContainerUpdateClient) ImagePull(_ context.Context, _ string, options image.PullOptions) (io.ReadCloser, error) {
 	f.events = append(f.events, "pull")
+	f.pullOptions = options
 	return io.NopCloser(strings.NewReader("{}\n")), nil
+}
+
+func TestUpdateContainerUsesRegistryAuthentication(t *testing.T) {
+	t.Setenv("DOCKER_AUTH_CONFIG", `{"auths":{"registry.example":{"auth":"dXNlcjpwYXNz"}}}`)
+	client := &fakeContainerUpdateClient{}
+	serviceContext := testUpdateServiceContext()
+	if err := updateContainer(context.Background(), serviceContext, client, "old", "app", "registry.example/team/app:latest", false, "task"); err != nil {
+		t.Fatal(err)
+	}
+	if client.pullOptions.RegistryAuth == "" {
+		t.Fatal("private registry credentials were not passed to ImagePull")
+	}
 }
 
 func (f *fakeContainerUpdateClient) ContainerInspect(context.Context, string) (container.InspectResponse, error) {
 	f.events = append(f.events, "inspect")
 	return container.InspectResponse{
 		ContainerJSONBase: &container.ContainerJSONBase{
-			ID: "old", Name: "/app", Image: "sha256:old", State: &container.State{Running: true},
+			ID: "old", Name: "/app", Image: "sha256:old", State: &container.State{Running: !f.stopped, Paused: f.paused},
 			HostConfig: &container.HostConfig{},
 		},
 		Config:          &container.Config{Image: "repo:old"},
@@ -59,6 +76,16 @@ func (f *fakeContainerUpdateClient) ContainerStop(context.Context, string, conta
 	return nil
 }
 
+func (f *fakeContainerUpdateClient) ContainerPause(_ context.Context, id string) error {
+	f.events = append(f.events, "pause-"+id)
+	return nil
+}
+
+func (f *fakeContainerUpdateClient) ContainerUnpause(_ context.Context, id string) error {
+	f.events = append(f.events, "unpause-"+id)
+	return nil
+}
+
 func (f *fakeContainerUpdateClient) ContainerRename(ctx context.Context, id, name string) error {
 	if name == "app" {
 		f.events = append(f.events, "rename-old-back")
@@ -69,8 +96,9 @@ func (f *fakeContainerUpdateClient) ContainerRename(ctx context.Context, id, nam
 	return nil
 }
 
-func (f *fakeContainerUpdateClient) ContainerCreate(_ context.Context, config *container.Config, _ *container.HostConfig, _ *network.NetworkingConfig, _ *ocispec.Platform, _ string) (container.CreateResponse, error) {
+func (f *fakeContainerUpdateClient) ContainerCreate(_ context.Context, config *container.Config, _ *container.HostConfig, networking *network.NetworkingConfig, _ *ocispec.Platform, _ string) (container.CreateResponse, error) {
 	f.events = append(f.events, "create-"+config.Image)
+	f.createdNetworking = networking
 	if f.cancelOnCreate != nil {
 		f.cancelOnCreate()
 	}
@@ -153,6 +181,53 @@ func TestUpdateContainerKeepsSuccessfulReplacementWhenOldRemovalFails(t *testing
 	progress, _ := serviceContext.GetProgress("task")
 	if progress.Status != svc.TaskStatusCompleted || !strings.Contains(progress.DetailMsg, "旧容器删除失败") {
 		t.Fatalf("unexpected progress: %+v", progress)
+	}
+}
+
+func TestUpdateContainerPreservesStoppedState(t *testing.T) {
+	client := &fakeContainerUpdateClient{stopped: true}
+	serviceContext := testUpdateServiceContext()
+	if err := updateContainer(context.Background(), serviceContext, client, "old", "app", "repo:new", true, "task"); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range client.events {
+		if event == "stop-old" || event == "start-new" {
+			t.Fatalf("stopped container state was not preserved: %v", client.events)
+		}
+	}
+}
+
+func TestUpdateContainerPreservesPausedState(t *testing.T) {
+	client := &fakeContainerUpdateClient{paused: true}
+	serviceContext := testUpdateServiceContext()
+	if err := updateContainer(context.Background(), serviceContext, client, "old", "app", "repo:new", true, "task"); err != nil {
+		t.Fatal(err)
+	}
+	assertEventOrder(t, client.events, "unpause-old", "stop-old", "start-new", "pause-new")
+}
+
+func TestNetworkingConfigForRecreateDropsOperationalFields(t *testing.T) {
+	inspected := container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{ID: "abcdefabcdef1234", Name: "/app"},
+		Config:            &container.Config{},
+		NetworkSettings: &container.NetworkSettings{Networks: map[string]*network.EndpointSettings{
+			"project_default": {
+				IPAMConfig: &network.EndpointIPAMConfig{IPv4Address: "172.20.0.10"},
+				Aliases:    []string{"app", "abcdefabcdef", "custom-alias"},
+				NetworkID:  "runtime-network-id", EndpointID: "runtime-endpoint-id",
+				IPAddress: "172.20.0.10", Gateway: "172.20.0.1", MacAddress: "02:42:ac:14:00:0a",
+			},
+		}},
+	}
+	clean := networkingConfigForRecreate(inspected).EndpointsConfig["project_default"]
+	if clean == nil || clean.IPAMConfig == nil || clean.IPAMConfig.IPv4Address != "172.20.0.10" {
+		t.Fatalf("configured IPAM settings were lost: %+v", clean)
+	}
+	if clean.NetworkID != "" || clean.EndpointID != "" || clean.IPAddress != "" || clean.Gateway != "" || clean.MacAddress != "" {
+		t.Fatalf("runtime-only network fields leaked into create request: %+v", clean)
+	}
+	if len(clean.Aliases) != 1 || clean.Aliases[0] != "custom-alias" {
+		t.Fatalf("generated aliases were not filtered: %+v", clean.Aliases)
 	}
 }
 

@@ -12,8 +12,9 @@ const maxImageLogosConfigSize int64 = 1 << 20
 var errImageLogosConfigTooLarge = errors.New("image logo config exceeds size limit")
 
 var (
-	imageUploadDir = "/data/config/image"
-	imageLogosPath = "/data/config/imageLogos.js"
+	imageUploadDir       = "/data/config/image"
+	imageLogosPath       = "/data/config/imageLogos.json"
+	legacyImageLogosPath = "/data/config/imageLogos.js"
 )
 
 func readImageLogosConfig(filePath string) ([]byte, error) {

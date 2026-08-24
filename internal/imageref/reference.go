@@ -14,6 +14,17 @@ type TaggedReference struct {
 	Tag        string
 }
 
+// RepositoryKey returns a canonical repository name without a tag or digest.
+// Docker Hub short names are normalized to docker.io/library/<name> so the
+// same image cannot acquire several cache or icon keys.
+func RepositoryKey(value string) (string, error) {
+	parsed, err := ref.ParseNormalizedNamed(strings.TrimSpace(value))
+	if err != nil {
+		return "", err
+	}
+	return ref.TrimNamed(parsed).Name(), nil
+}
+
 func ParseTagged(value string) (TaggedReference, error) {
 	parsed, err := ref.ParseDockerRef(strings.TrimSpace(value))
 	if err != nil {

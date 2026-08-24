@@ -28,11 +28,16 @@ func NewVersionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *VersionLo
 func (l *VersionLogic) Version(req *types.VersionReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	if req.Type == "local" {
+		updateMode := "binary"
+		if utiles.BinarySelfUpdateDisabled() {
+			updateMode = "container"
+		}
 		resp.Code = 200
 		resp.Msg = "success"
 		resp.Data = map[string]string{
-			"version":   config.Version,
-			"buildDate": config.BuildDate,
+			"version":    config.Version,
+			"buildDate":  config.BuildDate,
+			"updateMode": updateMode,
 		}
 		return resp, nil
 	} else if req.Type == "remote" {

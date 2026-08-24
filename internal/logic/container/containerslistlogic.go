@@ -19,14 +19,16 @@ type ContainersListLogic struct {
 }
 
 type Info struct {
-	Id          string `json:"id"`
-	Status      string `json:"status"`
-	Name        string `json:"name"`
-	UsingImage  string `json:"usingImage"`
-	CreateImage string `json:"createImage"`
-	CreateTime  string `json:"createTime"`
-	RunningTime string `json:"runningTime"`
-	HaveUpdate  bool   `json:"haveUpdate"`
+	Id          string   `json:"id"`
+	Status      string   `json:"status"`
+	Name        string   `json:"name"`
+	UsingImage  string   `json:"usingImage"`
+	CreateImage string   `json:"createImage"`
+	CreateTime  string   `json:"createTime"`
+	RunningTime string   `json:"runningTime"`
+	HaveUpdate  bool     `json:"haveUpdate"`
+	IsSelf      bool     `json:"isSelf"`
+	IconHints   []string `json:"iconHints,omitempty"`
 }
 
 func NewContainersListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ContainersListLogic {
@@ -67,17 +69,21 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 			containerInfo.UsingImage = v.ImageID
 			l.Error("image dont have name" + v.ID)
 		}
-		containerInspect, err := utiles.GetContainerInspect(l.svcCtx, v.ID)
-		if err != nil {
-			containerInfo.CreateImage = ""
-			l.Error("get image name error" + v.ID)
-		} else if containerInspect.Config != nil {
-			containerInfo.CreateImage = containerInspect.Config.Image
-		}
+		containerInfo.CreateImage = containerInfo.UsingImage
 		t := time.Unix(v.Created, 0)
 		containerInfo.CreateTime = t.Format("2006-01-02 15:04:05")
 		containerInfo.RunningTime = v.Status
 		containerInfo.HaveUpdate = v.Update
+		containerInfo.IsSelf = utiles.IsSelfContainerID(v.ID)
+		for _, key := range []string{
+			"org.opencontainers.image.title",
+			"org.opencontainers.image.source",
+			"com.docker.compose.service",
+		} {
+			if hint := strings.TrimSpace(v.Labels[key]); hint != "" {
+				containerInfo.IconHints = append(containerInfo.IconHints, hint)
+			}
+		}
 		containerInfoList = append(containerInfoList, containerInfo)
 	}
 	resp.Data = containerInfoList

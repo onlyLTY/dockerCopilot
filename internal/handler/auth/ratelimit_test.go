@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -42,5 +43,45 @@ func TestLoginAttemptLimiterCapsTrackedClients(t *testing.T) {
 	}
 	if _, exists := limiter.attempts["client-0"]; exists {
 		t.Fatal("oldest client was not evicted")
+	}
+}
+
+func TestLoginClientKeyIgnoresForwardedHeaderFromUntrustedPeer(t *testing.T) {
+	t.Setenv("TRUSTED_PROXY_CIDRS", "10.0.0.0/8")
+	request := httptest.NewRequest("POST", "/api/auth", nil)
+	request.RemoteAddr = "192.0.2.10:12345"
+	request.Header.Set("X-Forwarded-For", "198.51.100.25")
+	if key := loginClientKey(request); key != "192.0.2.10" {
+		t.Fatalf("client key = %q, want direct peer", key)
+	}
+}
+
+func TestLoginClientKeyUsesRightmostUntrustedForwardedAddress(t *testing.T) {
+	t.Setenv("TRUSTED_PROXY_CIDRS", "10.0.0.0/8")
+	request := httptest.NewRequest("POST", "/api/auth", nil)
+	request.RemoteAddr = "10.0.0.8:12345"
+	request.Header.Set("X-Forwarded-For", "203.0.113.99, 198.51.100.25")
+	if key := loginClientKey(request); key != "198.51.100.25" {
+		t.Fatalf("client key = %q, want rightmost untrusted hop", key)
+	}
+}
+
+func TestLoginClientKeyWalksTrustedProxyChain(t *testing.T) {
+	t.Setenv("TRUSTED_PROXY_CIDRS", "10.0.0.0/8, 172.16.0.0/12")
+	request := httptest.NewRequest("POST", "/api/auth", nil)
+	request.RemoteAddr = "10.0.0.8:12345"
+	request.Header.Set("X-Forwarded-For", "198.51.100.25, 172.16.0.4")
+	if key := loginClientKey(request); key != "198.51.100.25" {
+		t.Fatalf("client key = %q, want original untrusted client", key)
+	}
+}
+
+func TestLoginClientKeyRejectsMalformedForwardedChain(t *testing.T) {
+	t.Setenv("TRUSTED_PROXY_CIDRS", "10.0.0.0/8")
+	request := httptest.NewRequest("POST", "/api/auth", nil)
+	request.RemoteAddr = "10.0.0.8:12345"
+	request.Header.Set("X-Forwarded-For", "198.51.100.25, invalid")
+	if key := loginClientKey(request); key != "10.0.0.8" {
+		t.Fatalf("client key = %q, want safe direct-peer fallback", key)
 	}
 }
