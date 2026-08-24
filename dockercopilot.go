@@ -52,12 +52,11 @@ func main() {
 	err := conf.Load(*configFile, &c, conf.UseEnv())
 	if err != nil {
 		logx.Errorf("无法加载配置文件出错: %v", err)
-		logx.Errorf("请确认 secretKey 设置正确，要求非纯数字且不少于 32 个字符")
+		logx.Errorf("请确认 secretKey 环境变量已设置且配置文件格式正确")
 		os.Exit(1)
 	}
-	if err := validateRuntimeConfig(c); err != nil {
-		logx.Errorf("配置不安全: %v", err)
-		os.Exit(1)
+	for _, warning := range runtimeSecurityWarnings(c) {
+		logx.Infof("安全提示（不阻止启动）: %s", warning)
 	}
 	serverOptions := []rest.RunOption{rest.WithUnauthorizedCallback(
 		func(w http.ResponseWriter, r *http.Request, err error) {
@@ -164,10 +163,11 @@ export const customImageLogos = {
 	server.Start()
 }
 
-func validateRuntimeConfig(c config.Config) error {
-	secret := strings.TrimSpace(c.Auth.AccessSecret)
+func runtimeSecurityWarnings(c config.Config) []string {
+	warnings := make([]string, 0, 3)
+	secret := c.Auth.AccessSecret
 	if len(secret) < 32 {
-		return fmt.Errorf("secretKey 至少需要 32 个字符")
+		warnings = append(warnings, "secretKey 少于 32 个字符，建议使用更强的随机密码")
 	}
 	allDigits := true
 	for _, character := range secret {
@@ -176,14 +176,14 @@ func validateRuntimeConfig(c config.Config) error {
 			break
 		}
 	}
-	if allDigits {
-		return fmt.Errorf("secretKey 不能是纯数字")
+	if secret != "" && allDigits {
+		warnings = append(warnings, "secretKey 为纯数字，建议使用包含字母和符号的密码")
 	}
-	backupSecret := strings.TrimSpace(os.Getenv("BACKUP_ENCRYPTION_KEY"))
+	backupSecret := os.Getenv("BACKUP_ENCRYPTION_KEY")
 	if backupSecret != "" && len(backupSecret) < 32 {
-		return fmt.Errorf("BACKUP_ENCRYPTION_KEY 至少需要 32 个字符")
+		warnings = append(warnings, "BACKUP_ENCRYPTION_KEY 少于 32 个字符，建议使用更强的随机密钥")
 	}
-	return nil
+	return warnings
 }
 
 func securityHeaders(next http.HandlerFunc) http.HandlerFunc {

@@ -29,12 +29,9 @@ type encryptedBackupEnvelope struct {
 }
 
 func backupEncryptionSecret(accessSecret string) (string, error) {
-	secret := strings.TrimSpace(os.Getenv("BACKUP_ENCRYPTION_KEY"))
+	secret := os.Getenv("BACKUP_ENCRYPTION_KEY")
 	if secret == "" {
 		secret = accessSecret
-	}
-	if len(secret) < 32 {
-		return "", errors.New("备份加密密钥至少需要 32 个字符")
 	}
 	return secret, nil
 }

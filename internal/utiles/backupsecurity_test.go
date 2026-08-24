@@ -36,3 +36,26 @@ func TestDecryptBackupSupportsLegacyPlaintext(t *testing.T) {
 		t.Fatalf("legacy backup changed: %s", decrypted)
 	}
 }
+
+func TestBackupEncryptionUsesUserChosenShortSecret(t *testing.T) {
+	t.Setenv("BACKUP_ENCRYPTION_KEY", "")
+	secret, err := backupEncryptionSecret("123456")
+	if err != nil {
+		t.Fatalf("user-chosen secret was rejected: %v", err)
+	}
+	if secret != "123456" {
+		t.Fatalf("secret was modified: %q", secret)
+	}
+	plaintext := []byte(`[{"Name":"short-secret"}]`)
+	encrypted, err := encryptBackup(plaintext, secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decrypted, err := decryptBackup(encrypted, secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(decrypted, plaintext) {
+		t.Fatalf("round trip mismatch: %s", decrypted)
+	}
+}

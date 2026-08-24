@@ -8,25 +8,27 @@ import (
 	"github.com/onlyLTY/dockerCopilot/internal/config"
 )
 
-func TestValidateRuntimeConfigRequiresStrongSecret(t *testing.T) {
+func TestRuntimeSecurityWarningsAreAdvisory(t *testing.T) {
 	t.Setenv("BACKUP_ENCRYPTION_KEY", "")
 	var cfg config.Config
-	cfg.Auth.AccessSecret = "too-short"
-	if err := validateRuntimeConfig(cfg); err == nil {
-		t.Fatal("short secret was accepted")
+	cfg.Auth.AccessSecret = "123456"
+	warnings := runtimeSecurityWarnings(cfg)
+	if len(warnings) != 2 {
+		t.Fatalf("expected short and numeric warnings, got %v", warnings)
 	}
 	cfg.Auth.AccessSecret = "0123456789abcdef-strong-random-key"
-	if err := validateRuntimeConfig(cfg); err != nil {
-		t.Fatalf("strong secret was rejected: %v", err)
+	if warnings := runtimeSecurityWarnings(cfg); len(warnings) != 0 {
+		t.Fatalf("strong secret produced warnings: %v", warnings)
 	}
 }
 
-func TestValidateRuntimeConfigRejectsWeakBackupKey(t *testing.T) {
+func TestRuntimeSecurityWarningsAllowUserChosenBackupKey(t *testing.T) {
 	t.Setenv("BACKUP_ENCRYPTION_KEY", "too-short")
 	var cfg config.Config
 	cfg.Auth.AccessSecret = "0123456789abcdef-strong-random-key"
-	if err := validateRuntimeConfig(cfg); err == nil {
-		t.Fatal("short backup encryption key was accepted")
+	warnings := runtimeSecurityWarnings(cfg)
+	if len(warnings) != 1 {
+		t.Fatalf("expected one advisory warning, got %v", warnings)
 	}
 }
 
