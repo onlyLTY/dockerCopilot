@@ -1,11 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/onlyLTY/dockerCopilot/internal/config"
+	"github.com/zeromicro/go-zero/rest"
 )
 
 func TestRuntimeSecurityWarningsAreAdvisory(t *testing.T) {
@@ -56,4 +60,53 @@ func TestSecurityHeadersDisableAPICaching(t *testing.T) {
 	if recorder.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("API response cache policy is %q", recorder.Header().Get("Cache-Control"))
 	}
+}
+
+func TestFrontendRoutesStartWithoutDuplicates(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to allocate test port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		t.Fatalf("failed to release test port: %v", err)
+	}
+
+	var cfg config.Config
+	cfg.Host = "127.0.0.1"
+	cfg.Port = port
+	server := rest.MustNewServer(cfg.RestConf)
+	RegisterHandlers(server)
+	startResult := make(chan any, 1)
+	go func() {
+		defer func() { startResult <- recover() }()
+		server.Start()
+	}()
+
+	client := &http.Client{Timeout: 250 * time.Millisecond}
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		select {
+		case recovered := <-startResult:
+			if recovered != nil {
+				t.Fatalf("server panicked while registering frontend routes: %v", recovered)
+			}
+			t.Fatal("server stopped before becoming ready")
+		default:
+		}
+
+		response, requestErr := client.Get(fmt.Sprintf("http://127.0.0.1:%d/manager/", port))
+		if requestErr == nil {
+			response.Body.Close()
+			if response.StatusCode != http.StatusOK {
+				server.Stop()
+				t.Fatalf("GET /manager/ returned %d", response.StatusCode)
+			}
+			server.Stop()
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	server.Stop()
+	t.Fatal("frontend server did not become ready")
 }

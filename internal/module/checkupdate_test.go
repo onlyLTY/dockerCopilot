@@ -103,6 +103,24 @@ func TestImageUpdateDataMarkCurrent(t *testing.T) {
 	}
 }
 
+func TestExpandImageReferencesSkipsDigestOnlyReferences(t *testing.T) {
+	const digestReference = "ghcr.io/autunn/dockercopilot@sha256:3667bdb9f23780de257a2105755c82e1633afc01e98189e7270c3c5a9b3ee30e"
+	if !isDigestOnlyReference(digestReference) {
+		t.Fatal("expected digest-only reference to be recognized")
+	}
+
+	expanded := expandImageReferences([]types.Image{
+		{Reference: digestReference},
+		{Reference: "postgres:17-alpine"},
+	})
+	if len(expanded) != 1 {
+		t.Fatalf("expected only the tagged reference, got %+v", expanded)
+	}
+	if expanded[0].Reference != "docker.io/library/postgres:17-alpine" {
+		t.Fatalf("unexpected normalized reference %q", expanded[0].Reference)
+	}
+}
+
 func TestCheckSingleImageUsesDockerDaemonDigest(t *testing.T) {
 	const currentDigest = "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73"
 

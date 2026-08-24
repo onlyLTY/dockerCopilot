@@ -241,13 +241,6 @@ func RegisterHandlers(engine *rest.Server) {
 			},
 			{
 				Method: http.MethodGet,
-				Path:   "/manager/",
-				Handler: func(w http.ResponseWriter, r *http.Request) {
-					frontFileServer.ServeHTTP(w, r)
-				},
-			},
-			{
-				Method: http.MethodGet,
 				Path:   "/manager/:path",
 				Handler: func(w http.ResponseWriter, r *http.Request) {
 					frontFileServer.ServeHTTP(w, r)
