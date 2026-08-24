@@ -21,6 +21,6 @@ ENV DOCKER_HOST="unix:///var/run/docker.sock" \
 
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD wget -q -O /dev/null http://127.0.0.1:12712/manager || exit 1
+    CMD ["./dockerCopilot", "-healthcheck"]
 # 设置启动命令
 CMD ["./start.sh"]

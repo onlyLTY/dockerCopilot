@@ -9,6 +9,7 @@ import (
 	"go/types"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -30,7 +31,10 @@ import (
 //go:embed front/*
 var embeddedFront embed.FS
 
-var configFile = flag.String("f", "etc/dockerCopilot.yaml", "the config file")
+var (
+	configFile      = flag.String("f", "etc/dockerCopilot.yaml", "the config file")
+	healthCheckOnly = flag.Bool("healthcheck", false, "check whether the HTTP server port is accepting connections")
+)
 
 type UnauthorizedResponse struct {
 	Code int                    `json:"code"`
@@ -39,6 +43,15 @@ type UnauthorizedResponse struct {
 }
 
 func main() {
+	flag.Parse()
+	if *healthCheckOnly {
+		if err := checkTCPHealth("127.0.0.1:12712", 2*time.Second); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	logDir := "./logs"
 	ErrSetupLog := SetupLog(logDir)
 	if ErrSetupLog != nil {
@@ -47,7 +60,6 @@ func main() {
 	}
 	logx.SetLevel(logx.InfoLevel)
 
-	flag.Parse()
 	var c config.Config
 	err := conf.Load(*configFile, &c, conf.UseEnv())
 	if err != nil {
@@ -161,6 +173,14 @@ export const customImageLogos = {
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	logx.Info("程序版本" + config.Version)
 	server.Start()
+}
+
+func checkTCPHealth(address string, timeout time.Duration) error {
+	connection, err := net.DialTimeout("tcp", address, timeout)
+	if err != nil {
+		return fmt.Errorf("health check failed for %s: %w", address, err)
+	}
+	return connection.Close()
 }
 
 func runtimeSecurityWarnings(c config.Config) []string {

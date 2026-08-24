@@ -2,14 +2,30 @@ package module
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 )
+
+func TestFallbackDigestErrorPreservesBothFailures(t *testing.T) {
+	daemonErr := errors.New("daemon EOF")
+	registryErr := errors.New("registry timeout")
+	err := fallbackDigestError("example.test/app:latest", daemonErr, registryErr)
+	if !errors.Is(err, registryErr) {
+		t.Fatalf("fallback error does not wrap the Registry API failure: %v", err)
+	}
+	for _, expected := range []string{"example.test/app:latest", "daemon EOF", "registry timeout"} {
+		if !strings.Contains(err.Error(), expected) {
+			t.Fatalf("fallback error %q does not contain %q", err, expected)
+		}
+	}
+}
 
 func TestCompareRepoDigests(t *testing.T) {
 	tests := []struct {

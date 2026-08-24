@@ -110,3 +110,21 @@ func TestFrontendRoutesStartWithoutDuplicates(t *testing.T) {
 	server.Stop()
 	t.Fatal("frontend server did not become ready")
 }
+
+func TestTCPHealthCheck(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to create test listener: %v", err)
+	}
+	address := listener.Addr().String()
+	if err := checkTCPHealth(address, time.Second); err != nil {
+		listener.Close()
+		t.Fatalf("health check rejected a listening server: %v", err)
+	}
+	if err := listener.Close(); err != nil {
+		t.Fatalf("failed to close test listener: %v", err)
+	}
+	if err := checkTCPHealth(address, 100*time.Millisecond); err == nil {
+		t.Fatal("health check accepted a closed server")
+	}
+}

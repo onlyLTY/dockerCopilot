@@ -143,6 +143,7 @@ func getRemoteDigest(ctx context.Context, dockerClient *client.Client, image typ
 	if credentialErr != nil {
 		logx.Errorf("读取 registry 凭据失败: %v", credentialErr)
 	}
+	var daemonInspectErr error
 	if dockerClient != nil {
 		inspectCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		distribution, inspectErr := dockerClient.DistributionInspect(inspectCtx, imageReference, credentials.Encoded)
@@ -150,20 +151,40 @@ func getRemoteDigest(ctx context.Context, dockerClient *client.Client, image typ
 		if inspectErr == nil && distribution.Descriptor.Digest.String() != "" {
 			return distribution.Descriptor.Digest.String(), nil
 		}
-		if inspectErr != nil {
-			logx.Errorf("通过 Docker 守护进程获取 %s digest 失败，回退到 Registry API: %v", imageReference, inspectErr)
+		daemonInspectErr = inspectErr
+		if daemonInspectErr == nil {
+			daemonInspectErr = errors.New("守护进程返回了空 digest")
 		}
 	}
 
 	token, tokenErr := GetToken(ctx, image, credentials.Basic)
 	if tokenErr != nil {
-		return "", tokenErr
+		return "", fallbackDigestError(imageReference, daemonInspectErr, tokenErr)
 	}
 	digestURL, err := BuildManifestURL(image)
 	if err != nil {
-		return "", err
+		return "", fallbackDigestError(imageReference, daemonInspectErr, err)
 	}
-	return GetDigest(ctx, digestURL, token)
+	digest, registryErr := GetDigest(ctx, digestURL, token)
+	if registryErr != nil {
+		return "", fallbackDigestError(imageReference, daemonInspectErr, registryErr)
+	}
+	if daemonInspectErr != nil {
+		logx.Debugf("通过 Docker 守护进程获取 %s digest 失败，Registry API 回退成功: %v", imageReference, daemonInspectErr)
+	}
+	return digest, nil
+}
+
+func fallbackDigestError(imageReference string, daemonErr, registryErr error) error {
+	if daemonErr == nil {
+		return registryErr
+	}
+	return fmt.Errorf(
+		"通过 Docker 守护进程获取 %s digest 失败（%v），Registry API 回退也失败: %w",
+		imageReference,
+		daemonErr,
+		registryErr,
+	)
 }
 
 func referenceForImage(image types.Image) (string, error) {
