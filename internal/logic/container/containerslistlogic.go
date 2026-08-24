@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
+	"strings"
 	"time"
 
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
@@ -47,15 +48,15 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 		return resp, err
 	}
 	resp.Msg = "success"
+	resp.Code = 200
 	var containerInfoList []Info
 	list = utiles.CheckImageUpdate(l.svcCtx, list)
 	for _, v := range list {
 		var containerInfo Info
 		containerInfo.Id = v.ID
 		containerInfo.Status = v.State
-		if len(v.Names) > 0 {
-			ContainerName := v.Names[0][1:]
-			containerInfo.Name = ContainerName
+		if len(v.Names) > 0 && strings.TrimPrefix(v.Names[0], "/") != "" {
+			containerInfo.Name = strings.TrimPrefix(v.Names[0], "/")
 		} else {
 			containerInfo.Name = "get container name error"
 			l.Error("get container name error" + v.ID)
@@ -70,8 +71,9 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 		if err != nil {
 			containerInfo.CreateImage = ""
 			l.Error("get image name error" + v.ID)
+		} else if containerInspect.Config != nil {
+			containerInfo.CreateImage = containerInspect.Config.Image
 		}
-		containerInfo.CreateImage = containerInspect.Config.Image
 		t := time.Unix(v.Created, 0)
 		containerInfo.CreateTime = t.Format("2006-01-02 15:04:05")
 		containerInfo.RunningTime = v.Status

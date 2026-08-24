@@ -28,9 +28,14 @@ func (l *Backup2composeLogic) Backup2compose() (resp *types.Resp, err error) {
 	resp = &types.Resp{}
 	err = utiles.Backup2Compose(l.svcCtx)
 	if err != nil {
-		return nil, err
+		l.Errorf("Compose 备份失败: %v", err)
+		resp.Code = 500
+		resp.Msg = "Compose 备份失败"
+		resp.Data = map[string]interface{}{}
+		return resp, err
 	}
 	resp.Code = 200
 	resp.Msg = "success"
-	return
+	resp.Data = map[string]interface{}{}
+	return resp, nil
 }

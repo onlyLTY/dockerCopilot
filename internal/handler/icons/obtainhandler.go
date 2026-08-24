@@ -1,7 +1,7 @@
 package icons
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"os"
 	"regexp"
@@ -14,12 +14,14 @@ import (
 
 func ObtainHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		jsPath := "/data/config/imageLogos.js"
+		jsPath := imageLogosPath
 		logx.Infof("Reading icons from: %s", jsPath)
 
-		contentBytes, err := os.ReadFile(jsPath)
+		imageLogosMu.Lock()
+		contentBytes, err := readImageLogosConfig(jsPath)
+		imageLogosMu.Unlock()
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, os.ErrNotExist) {
 				logx.Info("Config file does not exist, returning empty.")
 				httpx.OkJsonCtx(r.Context(), w, types.Resp{
 					Code: 200,
@@ -29,7 +31,9 @@ func ObtainHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				return
 			}
 			logx.Errorf("Error reading config: %v", err)
-			httpx.ErrorCtx(r.Context(), w, fmt.Errorf("failed to read config: %v", err))
+			httpx.WriteJson(w, http.StatusInternalServerError, types.Resp{
+				Code: http.StatusInternalServerError, Msg: "读取图标配置失败", Data: map[string]interface{}{},
+			})
 			return
 		}
 

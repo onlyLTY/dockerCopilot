@@ -36,10 +36,11 @@ func (l *VersionLogic) Version(req *types.VersionReq) (resp *types.Resp, err err
 		}
 		return resp, nil
 	} else if req.Type == "remote" {
-		remoteVersion, err := utiles.GetRemoteVersion()
+		remoteVersion, err := utiles.GetRemoteVersion(l.ctx)
 		if err != nil {
-			resp.Code = 50001
-			resp.Msg = "获取版本错误" + err.Error()
+			l.Errorf("获取远端版本失败: %v", err)
+			resp.Code = 502
+			resp.Msg = "获取远端版本失败"
 			resp.Data = map[string]string{
 				"remoteVersion": config.Version,
 			}

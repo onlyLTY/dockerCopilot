@@ -4,25 +4,37 @@ import (
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 func BackupList(ctx *svc.ServiceContext) ([]string, error) {
+	_ = ctx
 	var backupList []string
-	dir := os.Getenv("BACKUP_DIR") // 从环境变量中获取备份目录
-	if dir == "" {
-		dir = "/data/backups" // 如果环境变量未设置，使用默认值
+	dir, err := ensureBackupDir()
+	if err != nil {
+		return nil, err
 	}
-	entries, err := os.ReadDir(dir)
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	directory, err := root.Open(".")
+	if err != nil {
+		return nil, err
+	}
+	defer directory.Close()
+	entries, err := directory.ReadDir(-1)
 	if err != nil {
 		return nil, err
 	}
 	for _, entry := range entries {
-		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
-			backupList = append(backupList, entry.Name())
-		} else if !entry.IsDir() && filepath.Ext(entry.Name()) == ".yaml" {
+		extension := strings.ToLower(filepath.Ext(entry.Name()))
+		if entry.Type().IsRegular() && (extension == ".json" || extension == ".yaml") {
 			backupList = append(backupList, entry.Name())
 		}
 	}
-
+	sort.Sort(sort.Reverse(sort.StringSlice(backupList)))
 	return backupList, nil
 }

@@ -13,16 +13,12 @@ func RestoreHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.ContainerRestoreReq
 		if err := httpx.Parse(r, &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			writeContainerBadRequest(w)
 			return
 		}
 
 		l := container.NewRestoreLogic(r.Context(), svcCtx)
-		resp, err := l.Restore(&req)
-		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
-		}
+		resp, _ := l.Restore(&req)
+		writeContainerResponse(w, resp)
 	}
 }

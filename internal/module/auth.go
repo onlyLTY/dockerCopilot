@@ -1,157 +1,209 @@
 package module
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	ref "github.com/distribution/reference"
-	"github.com/onlyLTY/dockerCopilot/internal/types"
-	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	ref "github.com/distribution/reference"
+	"github.com/onlyLTY/dockerCopilot/internal/types"
 )
 
 const ChallengeHeader = "WWW-Authenticate"
+
 const (
 	DefaultRegistryDomain = "docker.io"
-	DefaultRegistryHost   = "index.docker.io"
+	DefaultRegistryHost   = "registry-1.docker.io"
+	maxRegistryBodySize   = 1 << 20
 )
 
-var DefaultAcceleratorHostList = []string{"docker.1ms.run", "docker.m.daocloud.io",
-	"docker.1panel.top", "docker.1panel.live", "proxy.1panel.live", "dockerproxy.1panel.live", "docker.1panel.dev",
-	"docker.anye.in", "hub.rat.dev", "docker.amingg.com"}
+var registryHTTPClient = secureRegistryHTTPClient(15 * time.Second)
 
-func GetToken(image types.Image, registryAuth string) (string, error) {
-	logx.Infof("image name %s", image.ImageName)
-	normalizedRef, err := ref.ParseNormalizedNamed(image.ImageName)
-	if err != nil {
-		return "", err
+func secureRegistryHTTPClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if req.URL.Scheme != "https" {
+				return errors.New("拒绝 registry 重定向到非 HTTPS 地址")
+			}
+			if len(via) >= 10 {
+				return errors.New("registry 重定向次数过多")
+			}
+			return nil
+		},
 	}
-
-	URL := GetChallengeURL(normalizedRef)
-
-	var req *http.Request
-	if req, err = GetChallengeRequest(URL); err != nil {
-		return "", err
-	}
-
-	client := &http.Client{}
-	var res *http.Response
-	if res, err = client.Do(req); err != nil {
-		return "", err
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logx.Error("GetToken关闭Body失败" + err.Error())
-		}
-	}(res.Body)
-	v := res.Header.Get(ChallengeHeader)
-
-	challenge := strings.ToLower(v)
-	if strings.HasPrefix(challenge, "basic") {
-		if registryAuth == "" {
-			return "", fmt.Errorf("no credentials available")
-		}
-
-		return fmt.Sprintf("Basic %s", registryAuth), nil
-	}
-	if strings.HasPrefix(challenge, "bearer") {
-		return GetBearerHeader(challenge, normalizedRef, registryAuth)
-	}
-
-	return "", errors.New("unsupported challenge type from registry")
 }
 
-func GetChallengeRequest(URL url.URL) (*http.Request, error) {
-	req, err := http.NewRequest("GET", URL.String(), nil)
+func GetToken(ctx context.Context, image types.Image, registryAuth string) (string, error) {
+	imageReference, err := referenceForImage(image)
 	if err != nil {
-		return nil, err
+		return "", err
+	}
+	normalizedRef, err := ref.ParseNormalizedNamed(imageReference)
+	if err != nil {
+		return "", err
+	}
+	challengeURL, err := GetChallengeURL(normalizedRef)
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, challengeURL.String(), nil)
+	if err != nil {
+		return "", err
 	}
 	req.Header.Set("Accept", "*/*")
-	req.Header.Set("User-Agent", "Watchtower (Docker)")
-	return req, nil
+	req.Header.Set("User-Agent", "Docker-Copilot")
+	res, err := registryHTTPClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusUnauthorized {
+		return "", fmt.Errorf("registry challenge 返回 %s", res.Status)
+	}
+	challenge := strings.TrimSpace(res.Header.Get(ChallengeHeader))
+	if challenge == "" {
+		if res.StatusCode == http.StatusOK {
+			return "", nil
+		}
+		return "", errors.New("registry 未返回 WWW-Authenticate")
+	}
+	scheme, _, _ := strings.Cut(challenge, " ")
+	switch strings.ToLower(scheme) {
+	case "basic":
+		if registryAuth == "" {
+			return "", errors.New("私有 registry 需要凭据")
+		}
+		return "Basic " + registryAuth, nil
+	case "bearer":
+		return GetBearerHeader(ctx, challenge, normalizedRef, registryAuth)
+	default:
+		return "", fmt.Errorf("不支持的 registry 鉴权方式 %q", scheme)
+	}
 }
 
-func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) (string, error) {
-	client := http.Client{}
+func GetBearerHeader(ctx context.Context, challenge string, imageRef ref.Named, registryAuth string) (string, error) {
 	authURL, err := GetAuthURL(challenge, imageRef)
-
 	if err != nil {
 		return "", err
 	}
-
-	var r *http.Request
-	if r, err = http.NewRequest("GET", authURL.String(), nil); err != nil {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, authURL.String(), nil)
+	if err != nil {
 		return "", err
 	}
-
 	if registryAuth != "" {
-		logx.Info("私有镜像，无法获取是否有更新")
-		r.Header.Add("Authorization", fmt.Sprintf("Basic %s", registryAuth))
-	} else {
-		logx.Info("No credentials found.")
+		req.Header.Set("Authorization", "Basic "+registryAuth)
 	}
-
-	var authResponse *http.Response
-	if authResponse, err = client.Do(r); err != nil {
-		return "", err
-	}
-
-	body, _ := io.ReadAll(authResponse.Body)
-	tokenResponse := &types.TokenResponse{}
-
-	err = json.Unmarshal(body, tokenResponse)
+	authResponse, err := registryHTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}
-
-	return fmt.Sprintf("Bearer %s", tokenResponse.Token), nil
+	defer authResponse.Body.Close()
+	if authResponse.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("registry token 服务返回 %s", authResponse.Status)
+	}
+	body, err := io.ReadAll(io.LimitReader(authResponse.Body, maxRegistryBodySize+1))
+	if err != nil {
+		return "", err
+	}
+	if len(body) > maxRegistryBodySize {
+		return "", errors.New("registry token 响应超过大小限制")
+	}
+	tokenResponse := &types.TokenResponse{}
+	if err := json.Unmarshal(body, tokenResponse); err != nil {
+		return "", err
+	}
+	token := tokenResponse.Token
+	if token == "" {
+		token = tokenResponse.AccessToken
+	}
+	if token == "" {
+		return "", errors.New("registry token 响应中没有 token")
+	}
+	return "Bearer " + token, nil
 }
 
 func GetAuthURL(challenge string, imageRef ref.Named) (*url.URL, error) {
-	loweredChallenge := strings.ToLower(challenge)
-	raw := strings.TrimPrefix(loweredChallenge, "bearer")
-
-	pairs := strings.Split(raw, ",")
-	values := make(map[string]string, len(pairs))
-
-	for _, pair := range pairs {
-		trimmed := strings.Trim(pair, " ")
-		if key, val, ok := strings.Cut(trimmed, "="); ok {
-			values[key] = strings.Trim(val, `"`)
-		}
+	trimmed := strings.TrimSpace(challenge)
+	if scheme, rest, found := strings.Cut(trimmed, " "); found && strings.EqualFold(scheme, "bearer") {
+		trimmed = rest
 	}
-	if values["realm"] == "" || values["service"] == "" {
-
-		return nil, fmt.Errorf("challenge header did not include all values needed to construct an auth url")
+	values, err := parseChallengeParameters(trimmed)
+	if err != nil {
+		return nil, err
 	}
-
-	authURL, _ := url.Parse(values["realm"])
-	q := authURL.Query()
-	q.Add("service", values["service"])
-
-	scopeImage := ref.Path(imageRef)
-
-	scope := fmt.Sprintf("repository:%s:pull", scopeImage)
-	q.Add("scope", scope)
-
-	authURL.RawQuery = q.Encode()
+	realm := values["realm"]
+	if realm == "" {
+		return nil, errors.New("challenge header 缺少 realm")
+	}
+	authURL, err := url.Parse(realm)
+	if err != nil || authURL.Scheme != "https" || authURL.Host == "" {
+		return nil, errors.New("registry token realm 必须是有效的 HTTPS 地址")
+	}
+	query := authURL.Query()
+	if service := values["service"]; service != "" {
+		query.Set("service", service)
+	}
+	query.Set("scope", fmt.Sprintf("repository:%s:pull", ref.Path(imageRef)))
+	authURL.RawQuery = query.Encode()
 	return authURL, nil
 }
 
-func GetChallengeURL(imageRef ref.Named) url.URL {
-	host, _ := GetRegistryAddress(imageRef.Name())
-
-	URL := url.URL{
-		Scheme: "https",
-		Host:   host,
-		Path:   "/v2/",
+func parseChallengeParameters(value string) (map[string]string, error) {
+	parameters := make(map[string]string)
+	for len(strings.TrimSpace(value)) > 0 {
+		value = strings.TrimSpace(value)
+		key, rest, found := strings.Cut(value, "=")
+		if !found {
+			return nil, errors.New("challenge 参数格式错误")
+		}
+		key = strings.ToLower(strings.TrimSpace(key))
+		rest = strings.TrimSpace(rest)
+		if key == "" || !strings.HasPrefix(rest, `"`) {
+			return nil, errors.New("challenge 参数格式错误")
+		}
+		rest = rest[1:]
+		end := -1
+		escaped := false
+		for index, character := range rest {
+			if character == '\\' && !escaped {
+				escaped = true
+				continue
+			}
+			if character == '"' && !escaped {
+				end = index
+				break
+			}
+			escaped = false
+		}
+		if end < 0 {
+			return nil, errors.New("challenge 参数引号未闭合")
+		}
+		parameters[key] = rest[:end]
+		value = strings.TrimSpace(rest[end+1:])
+		if value == "" {
+			break
+		}
+		if !strings.HasPrefix(value, ",") {
+			return nil, errors.New("challenge 参数缺少逗号")
+		}
+		value = value[1:]
 	}
-	return URL
+	return parameters, nil
+}
+
+func GetChallengeURL(imageRef ref.Named) (url.URL, error) {
+	host, err := GetRegistryAddress(imageRef.Name())
+	if err != nil {
+		return url.URL{}, err
+	}
+	return url.URL{Scheme: "https", Host: host, Path: "/v2/"}, nil
 }
 
 func GetRegistryAddress(imageRef string) (string, error) {
@@ -159,52 +211,9 @@ func GetRegistryAddress(imageRef string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	address := ref.Domain(normalizedRef)
-
 	if address == DefaultRegistryDomain {
-		if checkHost(DefaultRegistryHost) {
-			address = DefaultRegistryHost
-		} else {
-			for _, host := range DefaultAcceleratorHostList {
-				if checkHost(host) {
-					address = host
-					break
-				}
-			}
-		}
-		if address == DefaultRegistryDomain {
-			address = DefaultRegistryHost
-		}
+		address = DefaultRegistryHost
 	}
 	return address, nil
-}
-
-func checkHost(host string) bool {
-	URL := "https://" + host + "/v2/"
-	// 创建带有超时设置的 http.Client
-	client := http.Client{
-		Timeout: 5 * time.Second,
-	}
-	// 发送 HEAD 请求
-	resp, err := client.Get(URL)
-	if err != nil {
-		logx.Errorf("Failed to connect to %s: %s", URL, err)
-		return false
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logx.Errorf("关闭body失败" + err.Error())
-		}
-	}(resp.Body)
-
-	// 检查 HTTP 响应状态码
-	if resp.StatusCode == http.StatusOK ||
-		resp.StatusCode == http.StatusUnauthorized {
-		return true
-	}
-
-	logx.Errorf("Failed to connect to %s: %s", URL, resp.Status)
-	return false
 }

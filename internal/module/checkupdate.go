@@ -1,150 +1,291 @@
 package module
 
 import (
-	"crypto/tls"
+	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
+
 	ref "github.com/distribution/reference"
+	"github.com/docker/docker/client"
+	"github.com/onlyLTY/dockerCopilot/internal/imageref"
 	"github.com/onlyLTY/dockerCopilot/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
-	"io"
-	"net"
-	"net/http"
-	url2 "net/url"
-	"strings"
-	"time"
 )
 
-// ImageCheckList 检查更新处理后的镜像列表
 type ImageCheckList struct {
 	NeedUpdate bool
 }
+
 type ImageUpdateData struct {
-	Data map[string]ImageCheckList
+	mu      sync.RWMutex
+	checkMu sync.Mutex
+	data    map[string]ImageCheckList
 }
 
 const ContentDigestHeader = "Docker-Content-Digest"
 
+var manifestHTTPClient = secureRegistryHTTPClient(30 * time.Second)
+
 func NewImageCheck() *ImageUpdateData {
-	return &ImageUpdateData{
-		Data: map[string]ImageCheckList{},
-	}
-}
-func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
-	for _, image := range imageList {
-		if strings.Contains(image.ImageName, "0nlylty/dockercopilot") {
-			continue
-		}
-		i.checkSingleImage(image)
-	}
+	return &ImageUpdateData{data: map[string]ImageCheckList{}}
 }
 
-func (i *ImageUpdateData) checkSingleImage(image types.Image) {
-	token, err := GetToken(image, "")
+func (i *ImageUpdateData) CheckUpdate(ctx context.Context, dockerClient *client.Client, imageList []types.Image) {
+	if !i.checkMu.TryLock() {
+		logx.Info("镜像更新检查仍在运行，跳过本轮重复任务")
+		return
+	}
+	defer i.checkMu.Unlock()
+	checked := make(map[string]ImageCheckList)
+	liveReferences := make(map[string]struct{})
+	for _, image := range expandImageReferences(imageList) {
+		key := imageref.CacheKey(image.Reference)
+		liveReferences[key] = struct{}{}
+		parsedReference, err := imageref.ParseTagged(image.Reference)
+		if err == nil && parsedReference.Repository == "docker.io/0nlylty/dockercopilot" {
+			continue
+		}
+		needUpdate, comparable := checkSingleImage(ctx, dockerClient, image)
+		if comparable {
+			checked[key] = ImageCheckList{NeedUpdate: needUpdate}
+		}
+	}
+
+	i.mu.Lock()
+	for reference, previous := range i.data {
+		if _, live := liveReferences[reference]; !live {
+			continue
+		}
+		if _, refreshed := checked[reference]; !refreshed {
+			checked[reference] = previous
+		}
+	}
+	i.data = checked
+	i.mu.Unlock()
+}
+
+func expandImageReferences(imageList []types.Image) []types.Image {
+	expanded := make([]types.Image, 0, len(imageList))
+	for _, image := range imageList {
+		references := image.RepoTags
+		if len(references) == 0 && image.Reference != "" {
+			references = []string{image.Reference}
+		}
+		for _, value := range references {
+			parsed, err := imageref.ParseTagged(value)
+			if err != nil {
+				logx.Errorf("跳过无法解析的镜像引用 %q: %v", value, err)
+				continue
+			}
+			copy := image
+			copy.Reference = parsed.Normalized
+			copy.ImageName = parsed.Familiar
+			copy.ImageTag = parsed.Tag
+			expanded = append(expanded, copy)
+		}
+	}
+	return expanded
+}
+
+func checkSingleImage(ctx context.Context, dockerClient *client.Client, image types.Image) (bool, bool) {
+	imageReference, err := referenceForImage(image)
 	if err != nil {
-		logx.Error("获取token失败或者无需获取token，继续尝试检查" + err.Error())
+		logx.Errorf("镜像引用无效: %v", err)
+		return false, false
+	}
+	image.Reference = imageReference
+	localDigests := repoDigestsForReference(image.RepoDigests, image.Reference)
+	if len(localDigests) == 0 {
+		logx.Errorf("镜像 %s 没有可比较的本地 RepoDigest", image.Reference)
+		return false, false
+	}
+	remoteDigest, err := getRemoteDigest(ctx, dockerClient, image)
+	if err != nil {
+		logx.Errorf("获取镜像 %s 的远端 digest 失败: %v", image.Reference, err)
+		return false, false
+	}
+	needUpdate, comparable := compareRepoDigests(localDigests, remoteDigest)
+	if !comparable {
+		return false, false
+	}
+	if needUpdate {
+		logx.Infof("镜像 %s 有更新，本地 %v，远端 %s", image.Reference, localDigests, remoteDigest)
+	}
+	return needUpdate, true
+}
+
+func getRemoteDigest(ctx context.Context, dockerClient *client.Client, image types.Image) (string, error) {
+	imageReference, err := referenceForImage(image)
+	if err != nil {
+		return "", err
+	}
+	credentials, credentialErr := credentialsForReference(imageReference)
+	if credentialErr != nil {
+		logx.Errorf("读取 registry 凭据失败: %v", credentialErr)
+	}
+	if dockerClient != nil {
+		inspectCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		distribution, inspectErr := dockerClient.DistributionInspect(inspectCtx, imageReference, credentials.Encoded)
+		cancel()
+		if inspectErr == nil && distribution.Descriptor.Digest.String() != "" {
+			return distribution.Descriptor.Digest.String(), nil
+		}
+		if inspectErr != nil {
+			logx.Errorf("通过 Docker 守护进程获取 %s digest 失败，回退到 Registry API: %v", imageReference, inspectErr)
+		}
+	}
+
+	token, tokenErr := GetToken(ctx, image, credentials.Basic)
+	if tokenErr != nil {
+		return "", tokenErr
 	}
 	digestURL, err := BuildManifestURL(image)
 	if err != nil {
-		logx.Error("获取digestURL失败" + err.Error())
-		return
+		return "", err
 	}
-	remoteDigest, err := GetDigest(digestURL, token)
+	return GetDigest(ctx, digestURL, token)
+}
+
+func referenceForImage(image types.Image) (string, error) {
+	value := strings.TrimSpace(image.Reference)
+	if value == "" && image.ImageName != "" && image.ImageTag != "" {
+		value = image.ImageName + ":" + image.ImageTag
+	}
+	parsed, err := imageref.ParseTagged(value)
 	if err != nil {
-		logx.Error("获取digest失败" + err.Error())
-		return
+		return "", err
 	}
-	if len(image.RepoDigests) == 0 {
-		logx.Error("未在本地获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
-		return
+	return parsed.Normalized, nil
+}
+
+func repoDigestsForReference(repoDigests []string, imageReference string) []string {
+	parsedTarget, err := imageref.ParseTagged(imageReference)
+	if err != nil {
+		return nil
 	}
-	needUpdate := false
-	for _, localRepoDigests := range image.RepoDigests {
-		localDigest := strings.Split(localRepoDigests, "@")[1]
-		if remoteDigest != localDigest {
-			if remoteDigest == "" || localDigest == "" {
-				logx.Error("Digest为空" + image.ImageName + ":" + image.ImageTag)
-				continue
-			}
-			logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
-			logx.Infof("localDigest: %s, remoteDigest: %s", localDigest, remoteDigest)
-			needUpdate = true
-		} else {
-			logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
-			needUpdate = false
+	matching := make([]string, 0, len(repoDigests))
+	for _, value := range repoDigests {
+		named, err := ref.ParseNormalizedNamed(value)
+		if err != nil || ref.TrimNamed(named).Name() != parsedTarget.Repository {
+			continue
+		}
+		if _, ok := named.(ref.Digested); ok {
+			matching = append(matching, value)
 		}
 	}
-	i.Data[image.ID] = ImageCheckList{NeedUpdate: needUpdate}
+	return matching
+}
+
+func compareRepoDigests(repoDigests []string, remoteDigest string) (needUpdate bool, comparable bool) {
+	remoteDigest = strings.TrimSpace(remoteDigest)
+	if remoteDigest == "" {
+		return false, false
+	}
+	hasLocalDigest := false
+	for _, repoDigest := range repoDigests {
+		_, localDigest, found := strings.Cut(repoDigest, "@")
+		localDigest = strings.TrimSpace(localDigest)
+		if !found || localDigest == "" {
+			continue
+		}
+		hasLocalDigest = true
+		if localDigest == remoteDigest {
+			return false, true
+		}
+	}
+	if !hasLocalDigest {
+		return false, false
+	}
+	return true, true
+}
+
+func (i *ImageUpdateData) NeedUpdate(imageReference string) bool {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	result, ok := i.data[imageref.CacheKey(imageReference)]
+	return ok && result.NeedUpdate
+}
+
+func (i *ImageUpdateData) MarkCurrent(imageReference string) {
+	key := imageref.CacheKey(imageReference)
+	if key == "" {
+		return
+	}
+	i.mu.Lock()
+	if i.data == nil {
+		i.data = make(map[string]ImageCheckList)
+	}
+	i.data[key] = ImageCheckList{NeedUpdate: false}
+	i.mu.Unlock()
 }
 
 func BuildManifestURL(image types.Image) (string, error) {
-	normalizedRef, err := ref.ParseDockerRef(image.ImageName + ":" + image.ImageTag)
+	imageReference, err := referenceForImage(image)
+	if err != nil {
+		return "", err
+	}
+	normalizedRef, err := ref.ParseDockerRef(imageReference)
 	if err != nil {
 		return "", err
 	}
 	normalizedTaggedRef, isTagged := normalizedRef.(ref.NamedTagged)
 	if !isTagged {
-		return "", errors.New("镜像无tag" + normalizedRef.String())
+		return "", errors.New("镜像引用没有 tag")
 	}
-
-	host, ErrGetRegistryAddress := GetRegistryAddress(normalizedTaggedRef.Name())
-	img, tag := ref.Path(normalizedTaggedRef), normalizedTaggedRef.Tag()
-
-	if ErrGetRegistryAddress != nil {
-		return "", ErrGetRegistryAddress
-	}
-
-	url := url2.URL{
-		Scheme: "https",
-		Host:   host,
-		Path:   fmt.Sprintf("/v2/%s/manifests/%s", img, tag),
-	}
-	return url.String(), nil
-}
-
-func GetDigest(url string, token string) (string, error) {
-	tr := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
-	req, _ := http.NewRequest("HEAD", url, nil)
-
-	if token != "" {
-		req.Header.Add("Authorization", token)
-	}
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v1+json")
-	req.Header.Add("Accept", "application/vnd.oci.image.index.v1+json")
-
-	res, err := client.Do(req)
+	host, err := GetRegistryAddress(normalizedTaggedRef.Name())
 	if err != nil {
 		return "", err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logx.Error("GetDigest关闭body失败" + err.Error())
-		}
-	}(res.Body)
-
-	if res.StatusCode != 200 {
-		wwwAuthHeader := res.Header.Get("www-authenticate")
-		if wwwAuthHeader == "" {
-			wwwAuthHeader = "not present"
-		}
-		return "", fmt.Errorf("registry responded to head request with %q, auth: %q", res.Status, wwwAuthHeader)
+	manifestURL := url.URL{
+		Scheme: "https",
+		Host:   host,
+		Path:   fmt.Sprintf("/v2/%s/manifests/%s", ref.Path(normalizedTaggedRef), normalizedTaggedRef.Tag()),
 	}
-	return res.Header.Get(ContentDigestHeader), nil
+	return manifestURL.String(), nil
+}
+
+func GetDigest(ctx context.Context, manifestURL, token string) (string, error) {
+	request := func(method string) (*http.Response, error) {
+		req, err := http.NewRequestWithContext(ctx, method, manifestURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		if token != "" {
+			req.Header.Set("Authorization", token)
+		}
+		req.Header.Set("Accept", strings.Join([]string{
+			"application/vnd.docker.distribution.manifest.v2+json",
+			"application/vnd.docker.distribution.manifest.list.v2+json",
+			"application/vnd.oci.image.index.v1+json",
+			"application/vnd.oci.image.manifest.v1+json",
+		}, ", "))
+		return manifestHTTPClient.Do(req)
+	}
+	response, err := request(http.MethodHead)
+	if err != nil {
+		return "", err
+	}
+	if response.StatusCode == http.StatusMethodNotAllowed {
+		_ = response.Body.Close()
+		response, err = request(http.MethodGet)
+		if err != nil {
+			return "", err
+		}
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4<<10))
+		return "", fmt.Errorf("registry manifest 请求返回 %s", response.Status)
+	}
+	digest := strings.TrimSpace(response.Header.Get(ContentDigestHeader))
+	if digest == "" {
+		return "", errors.New("registry 响应缺少 Docker-Content-Digest")
+	}
+	return digest, nil
 }

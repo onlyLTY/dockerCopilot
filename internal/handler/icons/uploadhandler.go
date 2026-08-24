@@ -1,6 +1,7 @@
 package icons
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
@@ -17,6 +19,14 @@ import (
 )
 
 var imageNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/:-]*$`)
+
+const (
+	maxImageFileSize     int64 = 10 << 20
+	maxUploadRequestSize int64 = maxImageFileSize + (1 << 20)
+	maxImageNameLength         = 255
+)
+
+var imageLogosMu sync.Mutex
 
 var allowedImageTypes = map[string]string{
 	".png":  "image/png",
@@ -28,12 +38,19 @@ var allowedImageTypes = map[string]string{
 
 func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// 1. 解析 Multipart 表单
-		err := r.ParseMultipartForm(10 << 20) // 10MB 限制
+		r.Body = http.MaxBytesReader(w, r.Body, maxUploadRequestSize)
+		// #nosec G120 -- MaxBytesReader enforces a strict limit on the complete request body.
+		err := r.ParseMultipartForm(1 << 20)
 		if err != nil {
+			var maxBytesError *http.MaxBytesError
+			if errors.As(err, &maxBytesError) {
+				writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 10MB limit")
+				return
+			}
 			writeUploadError(w, http.StatusBadRequest, "failed to parse form")
 			return
 		}
+		defer r.MultipartForm.RemoveAll()
 
 		// 2. 获取文件和 Key
 		file, handler, err := r.FormFile("file")
@@ -42,6 +59,10 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 		defer file.Close()
+		if handler.Size > maxImageFileSize {
+			writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 10MB limit")
+			return
+		}
 
 		imageNameKey := r.FormValue("imageName")
 		if err := validateImageName(imageNameKey); err != nil {
@@ -51,10 +72,16 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		// 3. 确保目录存在 (防御性编程)
 		dataPath := imageUploadDir
-		if err := os.MkdirAll(dataPath, 0o755); err != nil {
+		if err := os.MkdirAll(dataPath, 0o700); err != nil {
 			writeUploadError(w, http.StatusInternalServerError, "failed to prepare upload dir")
 			return
 		}
+		dataRoot, err := os.OpenRoot(dataPath)
+		if err != nil {
+			writeUploadError(w, http.StatusInternalServerError, "failed to open upload dir")
+			return
+		}
+		defer dataRoot.Close()
 
 		// 4. 确定文件名
 		filename, err := generateStoredFilename(file, handler)
@@ -63,23 +90,42 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
-		dstPath := filepath.Join(dataPath, filename)
-		dst, err := os.Create(dstPath)
+		dst, err := dataRoot.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if err != nil {
 			writeUploadError(w, http.StatusInternalServerError, "failed to create file on server")
 			return
 		}
-		defer dst.Close()
+		copySucceeded := false
+		defer func() {
+			_ = dst.Close()
+			if !copySucceeded {
+				_ = dataRoot.Remove(filename)
+			}
+		}()
 
-		if _, err := io.Copy(dst, file); err != nil {
+		written, err := io.Copy(dst, io.LimitReader(file, maxImageFileSize+1))
+		if err != nil || written > maxImageFileSize {
+			if written > maxImageFileSize {
+				writeUploadError(w, http.StatusRequestEntityTooLarge, "upload exceeds 10MB limit")
+				return
+			}
 			writeUploadError(w, http.StatusInternalServerError, "failed to copy file content")
 			return
 		}
+		if err := dst.Sync(); err != nil {
+			writeUploadError(w, http.StatusInternalServerError, "failed to persist file content")
+			return
+		}
+		if err := dst.Close(); err != nil {
+			writeUploadError(w, http.StatusInternalServerError, "failed to close file")
+			return
+		}
+		copySucceeded = true
 
 		// 5. 更新 imageLogos.js
 		jsPath := imageLogosPath
 		if err := updateImageLogosJS(jsPath, imageNameKey, filename); err != nil {
-			_ = os.Remove(dstPath)
+			_ = dataRoot.Remove(filename)
 			writeUploadError(w, http.StatusInternalServerError, "failed to update config")
 			return
 		}
@@ -93,7 +139,7 @@ func UploadHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 }
 
 func validateImageName(imageName string) error {
-	if imageName == "" {
+	if imageName == "" || len(imageName) > maxImageNameLength {
 		return fmt.Errorf("imageName is required")
 	}
 	if !imageNamePattern.MatchString(imageName) {
@@ -135,8 +181,19 @@ func writeUploadError(w http.ResponseWriter, statusCode int, msg string) {
 }
 
 func updateImageLogosJS(filePath, imageName, filename string) error {
-	// 读取文件
-	contentBytes, err := os.ReadFile(filePath)
+	imageLogosMu.Lock()
+	defer imageLogosMu.Unlock()
+	configDir, err := filepath.Abs(filepath.Dir(filePath))
+	if err != nil {
+		return err
+	}
+	configRoot, err := os.OpenRoot(configDir)
+	if err != nil {
+		return err
+	}
+	defer configRoot.Close()
+	configName := filepath.Base(filePath)
+	contentBytes, err := readImageLogosConfig(filePath)
 	if err != nil {
 		return err
 	}
@@ -168,5 +225,26 @@ func updateImageLogosJS(filePath, imageName, filename string) error {
 		content = content[:lastBraceIdx] + newLine + "\n" + content[lastBraceIdx:]
 	}
 
-	return os.WriteFile(filePath, []byte(content), 0644)
+	temporary, err := os.CreateTemp(configDir, ".image-logos-*")
+	if err != nil {
+		return err
+	}
+	temporaryName := filepath.Base(temporary.Name())
+	defer func() {
+		_ = temporary.Close()
+		_ = configRoot.Remove(temporaryName)
+	}()
+	if err := temporary.Chmod(0o600); err != nil {
+		return err
+	}
+	if _, err := temporary.WriteString(content); err != nil {
+		return err
+	}
+	if err := temporary.Sync(); err != nil {
+		return err
+	}
+	if err := temporary.Close(); err != nil {
+		return err
+	}
+	return configRoot.Rename(temporaryName, configName)
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"embed"
 	"flag"
 	"fmt"
@@ -9,6 +11,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/onlyLTY/dockerCopilot/internal/config"
 	"github.com/onlyLTY/dockerCopilot/internal/handler"
@@ -48,10 +52,14 @@ func main() {
 	err := conf.Load(*configFile, &c, conf.UseEnv())
 	if err != nil {
 		logx.Errorf("无法加载配置文件出错: %v", err)
-		logx.Errorf("请确认secretKey设置正确，要求非纯数字且大于八位")
+		logx.Errorf("请确认 secretKey 设置正确，要求非纯数字且不少于 32 个字符")
 		os.Exit(1)
 	}
-	server := rest.MustNewServer(c.RestConf, rest.WithCors("*"), rest.WithUnauthorizedCallback(
+	if err := validateRuntimeConfig(c); err != nil {
+		logx.Errorf("配置不安全: %v", err)
+		os.Exit(1)
+	}
+	serverOptions := []rest.RunOption{rest.WithUnauthorizedCallback(
 		func(w http.ResponseWriter, r *http.Request, err error) {
 			response := UnauthorizedResponse{
 				Code: http.StatusUnauthorized, // 401
@@ -59,14 +67,42 @@ func main() {
 				Data: map[string]interface{}{},
 			}
 			httpx.WriteJson(w, http.StatusUnauthorized, response)
+		})}
+	if rawOrigins := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS")); rawOrigins != "" {
+		origins := strings.FieldsFunc(rawOrigins, func(r rune) bool { return r == ',' })
+		serverOptions = append(serverOptions, rest.WithCors(origins...))
+	}
+	certFile := strings.TrimSpace(os.Getenv("TLS_CERT_FILE"))
+	keyFile := strings.TrimSpace(os.Getenv("TLS_KEY_FILE"))
+	if certFile != "" || keyFile != "" {
+		if certFile == "" || keyFile == "" {
+			logx.Error("TLS_CERT_FILE 和 TLS_KEY_FILE 必须同时配置")
+			os.Exit(1)
+		}
+		certificate, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			logx.Errorf("加载 TLS 证书失败: %v", err)
+			os.Exit(1)
+		}
+		serverOptions = append(serverOptions, rest.WithTLSConfig(&tls.Config{
+			MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{certificate},
 		}))
+	}
+	server := rest.MustNewServer(c.RestConf, serverOptions...)
+	server.Use(securityHeaders)
 	defer server.Stop()
 	ctx := svc.NewServiceContext(c)
+	if ctx.DockerClient != nil {
+		defer ctx.DockerClient.Close()
+	}
+	imageCheckContext, cancelImageChecks := context.WithCancel(context.Background())
+	defer cancelImageChecks()
 
 	// Ensure data directory and config exist (Auto-init)
 	dataDir := "/data/config/image"
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
+	if err := os.MkdirAll(dataDir, 0700); err != nil {
 		logx.Errorf("Failed to create data directory: %v", err)
+		os.Exit(1)
 	}
 
 	imageLogosPath := "/data/config/imageLogos.js"
@@ -75,45 +111,49 @@ func main() {
 export const customImageLogos = {
 };
 `)
-		if err := os.WriteFile(imageLogosPath, defaultConfig, 0644); err != nil {
+		if err := os.WriteFile(imageLogosPath, defaultConfig, 0600); err != nil {
 			logx.Errorf("Failed to create default imageLogos.js: %v", err)
+			os.Exit(1)
 		}
+	} else if err != nil {
+		logx.Errorf("Failed to inspect imageLogos.js: %v", err)
+		os.Exit(1)
 	}
 
-	list, err := utiles.GetImagesList(ctx)
-	if err != nil {
-		logx.Errorf("panic获取镜像列表出错: %v", err)
-		panic(err)
+	if list, err := utiles.GetImagesList(ctx); err != nil {
+		logx.Errorf("首次获取镜像列表失败，将在定时任务中重试: %v", err)
+	} else {
+		go ctx.HubImageInfo.CheckUpdate(imageCheckContext, ctx.DockerClient, list)
 	}
-	go ctx.HubImageInfo.CheckUpdate(list)
 	corndanmu := cron.New(cron.WithParser(cron.NewParser(
-		cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
-	)))
+		cron.Minute|cron.Hour|cron.Dom|cron.Month|cron.Dow,
+	)), cron.WithChain(cron.Recover(cron.DefaultLogger)))
 	_, err = corndanmu.AddFunc("30 * * * *", func() {
+		ctx.CleanupProgress(time.Hour)
 		list, err := utiles.GetImagesList(ctx)
 		if err != nil {
-			logx.Errorf("panic获取镜像列表出错: %v", err)
-			panic(err)
+			logx.Errorf("定时获取镜像列表失败: %v", err)
+			return
 		}
-		ctx.HubImageInfo.CheckUpdate(list)
+		ctx.HubImageInfo.CheckUpdate(imageCheckContext, ctx.DockerClient, list)
 	})
 	if err != nil {
-		logx.Errorf("panic添加定时任务出错: %v", err)
-		panic(err)
+		logx.Errorf("添加定时任务失败: %v", err)
 	}
 	corndanmu.Start()
 	defer corndanmu.Stop()
 	httpx.SetErrorHandler(func(err error) (int, any) {
 		switch e := err.(type) {
 		case *errors.CodeMsg:
-			return http.StatusOK, xhttp.BaseResponse[types.Nil]{
+			return http.StatusBadRequest, xhttp.BaseResponse[types.Nil]{
 				Code: e.Code,
 				Msg:  e.Msg,
 			}
 		default:
-			return http.StatusOK, xhttp.BaseResponse[types.Nil]{
-				Code: 50000,
-				Msg:  err.Error(),
+			logx.Errorf("未处理的 HTTP 错误: %v", err)
+			return http.StatusInternalServerError, xhttp.BaseResponse[types.Nil]{
+				Code: http.StatusInternalServerError,
+				Msg:  "内部服务器错误",
 			}
 		}
 	})
@@ -122,6 +162,49 @@ export const customImageLogos = {
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	logx.Info("程序版本" + config.Version)
 	server.Start()
+}
+
+func validateRuntimeConfig(c config.Config) error {
+	secret := strings.TrimSpace(c.Auth.AccessSecret)
+	if len(secret) < 32 {
+		return fmt.Errorf("secretKey 至少需要 32 个字符")
+	}
+	allDigits := true
+	for _, character := range secret {
+		if character < '0' || character > '9' {
+			allDigits = false
+			break
+		}
+	}
+	if allDigits {
+		return fmt.Errorf("secretKey 不能是纯数字")
+	}
+	backupSecret := strings.TrimSpace(os.Getenv("BACKUP_ENCRYPTION_KEY"))
+	if backupSecret != "" && len(backupSecret) < 32 {
+		return fmt.Errorf("BACKUP_ENCRYPTION_KEY 至少需要 32 个字符")
+	}
+	return nil
+}
+
+func securityHeaders(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		header := w.Header()
+		header.Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; worker-src 'self'")
+		header.Set("X-Content-Type-Options", "nosniff")
+		header.Set("X-Frame-Options", "DENY")
+		header.Set("Referrer-Policy", "no-referrer")
+		header.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		header.Set("Cross-Origin-Opener-Policy", "same-origin")
+		header.Set("Cross-Origin-Resource-Policy", "same-origin")
+		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/api" {
+			header.Set("Cache-Control", "no-store")
+			header.Set("Pragma", "no-cache")
+		}
+		if r.TLS != nil {
+			header.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+		next(w, r)
+	}
 }
 func RegisterHandlers(engine *rest.Server) {
 	frontFS, err := fs.Sub(embeddedFront, "front")
@@ -158,6 +241,13 @@ func RegisterHandlers(engine *rest.Server) {
 			},
 			{
 				Method: http.MethodGet,
+				Path:   "/manager/",
+				Handler: func(w http.ResponseWriter, r *http.Request) {
+					frontFileServer.ServeHTTP(w, r)
+				},
+			},
+			{
+				Method: http.MethodGet,
 				Path:   "/manager/:path",
 				Handler: func(w http.ResponseWriter, r *http.Request) {
 					frontFileServer.ServeHTTP(w, r)
@@ -183,17 +273,18 @@ func RegisterHandlers(engine *rest.Server) {
 
 // 检查并创建日志目录
 func ensureLogDirectory(logDir string) error {
-	if _, err := os.Stat(logDir); os.IsNotExist(err) {
-		return os.MkdirAll(logDir, 0755) // 创建目录并设置权限
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
+		return err
 	}
-	return nil
+	// #nosec G302 -- directories require execute permission; 0700 is owner-only.
+	return os.Chmod(logDir, 0o700)
 }
 
 // SetupLog 初始化日志设置
 func SetupLog(logDir string) error {
 	// 检查日志目录是否存在
 	if err := ensureLogDirectory(logDir); err != nil {
-		return fmt.Errorf("failed to create log directory: %v", err)
+		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
 	logConf := logx.LogConf{

@@ -18,6 +18,10 @@ func BackupDir() string {
 	return backupDir
 }
 
+func backupDirectoryPath() (string, error) {
+	return filepath.Abs(filepath.Clean(BackupDir()))
+}
+
 func ResolveBackupPath(filename string, allowedExts ...string) (string, error) {
 	name := strings.TrimSpace(filename)
 	if name == "" {
@@ -44,7 +48,10 @@ func ResolveBackupPath(filename string, allowedExts ...string) (string, error) {
 		}
 	}
 
-	base := filepath.Clean(BackupDir())
+	base, err := backupDirectoryPath()
+	if err != nil {
+		return "", fmt.Errorf("备份目录无效: %w", err)
+	}
 	fullPath := filepath.Clean(filepath.Join(base, name))
 	basePrefix := base + string(os.PathSeparator)
 	if fullPath != base && !strings.HasPrefix(fullPath, basePrefix) {

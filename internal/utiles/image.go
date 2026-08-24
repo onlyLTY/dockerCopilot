@@ -1,20 +1,24 @@
 package utiles
 
 import (
-	"context"
 	"fmt"
+	ref "github.com/distribution/reference"
 	"github.com/docker/docker/api/types/image"
+	"github.com/onlyLTY/dockerCopilot/internal/imageref"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	MyType "github.com/onlyLTY/dockerCopilot/internal/types"
-	"log"
-	"strings"
 )
 
 func GetImagesList(ctx *svc.ServiceContext) ([]MyType.Image, error) {
 	var imagesList []MyType.Image
-	dockerImages, err := ctx.DockerClient.ImageList(context.Background(), image.ListOptions{})
+	operationContext, cancel, err := dockerContext(ctx)
 	if err != nil {
-		log.Fatalf("Unable to fetch docker images: %s", err)
+		return nil, err
+	}
+	defer cancel()
+	dockerImages, err := ctx.DockerClient.ImageList(operationContext, image.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("获取 Docker 镜像列表失败: %w", err)
 	}
 
 	for _, img := range dockerImages {
@@ -38,10 +42,22 @@ func GetImagesList(ctx *svc.ServiceContext) ([]MyType.Image, error) {
 func splitImageNameAndTag(imagesList []MyType.Image) []MyType.Image {
 	for i, imageInfo := range imagesList {
 		if len(imageInfo.RepoTags) != 0 {
-			imagesList[i].ImageName = strings.Split(imageInfo.RepoTags[0], ":")[0]
-			imagesList[i].ImageTag = strings.Split(imageInfo.RepoTags[0], ":")[1]
+			parsed, err := imageref.ParseTagged(imageInfo.RepoTags[0])
+			if err != nil {
+				imagesList[i].ImageName = imageInfo.RepoTags[0]
+				imagesList[i].ImageTag = "None"
+				continue
+			}
+			imagesList[i].ImageName = parsed.Familiar
+			imagesList[i].ImageTag = parsed.Tag
+			imagesList[i].Reference = parsed.Normalized
 		} else if len(imageInfo.RepoDigests) != 0 {
-			imagesList[i].ImageName = strings.Split(imageInfo.RepoDigests[0], "@")[0]
+			imagesList[i].Reference = imageInfo.RepoDigests[0]
+			if named, err := ref.ParseNormalizedNamed(imageInfo.RepoDigests[0]); err == nil {
+				imagesList[i].ImageName = ref.FamiliarName(ref.TrimNamed(named))
+			} else {
+				imagesList[i].ImageName = imageInfo.RepoDigests[0]
+			}
 			imagesList[i].ImageTag = "None"
 		} else {
 			imagesList[i].ImageName = "None"

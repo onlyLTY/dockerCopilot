@@ -26,21 +26,30 @@ services:
   dockercopilot:
     container_name: dockercopilot
     restart: always
-    privileged: true
     network_mode: bridge
     ports:
-      - 12712:12712
+      - 127.0.0.1:12712:12712
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data:/data
     environment:
       - TZ=Asia/Shanghai
       - DOCKER_HOST=unix:///var/run/docker.sock
-      - secretKey=密码，不少于八位且非纯数字
+      - secretKey=请使用不少于32位的随机密码
     image: 0nlylty/dockercopilot:latest
 ```
 
+`privileged` 不是必需项；请只挂载 Docker Socket，并限制管理端口的网络访问。注意：挂载 Docker Socket 实际上授予了主机级管理权限，因此不要把管理端口直接暴露到公网。生产环境建议通过反向代理启用 HTTPS，或同时设置 `TLS_CERT_FILE` 与 `TLS_KEY_FILE`。`secretKey` 和可选的 `BACKUP_ENCRYPTION_KEY` 均要求不少于 32 个字符；备份默认使用 `secretKey` 加密，修改加密密钥后旧备份将无法解密。
+
+可选安全配置：
+
+- `CORS_ALLOWED_ORIGINS`：逗号分隔的可信前端 Origin；默认不开放跨域。
+- `BACKUP_ENCRYPTION_KEY`：独立备份密钥，生产环境建议设置并妥善保存。
+- `TLS_CERT_FILE`、`TLS_KEY_FILE`：同时设置时由服务直接启用 TLS。
+- `DOCKER_AUTH_CONFIG` 或 `DOCKER_CONFIG`：检查私有 Registry 镜像更新时使用的 Docker 凭据。
+- `UPDATE_CHANNEL`：更新频道，默认 `latest`；`githubProxy` 如设置，必须生成 HTTPS 地址。
+
 ## 开发环境
 
-go版本：1.21+
+Go 版本：1.25.13+
 

@@ -8,6 +8,7 @@ type Image struct {
 	image.Summary
 	ImageName  string `json:"imageName"`
 	ImageTag   string `json:"imageTag"`
+	Reference  string `json:"reference"`
 	InUsed     bool   `json:"inUsed"`
 	SizeFormat string `json:"sizeFormat"`
 }

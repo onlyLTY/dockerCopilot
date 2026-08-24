@@ -5,6 +5,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	auth "github.com/onlyLTY/dockerCopilot/internal/handler/auth"
 	container "github.com/onlyLTY/dockerCopilot/internal/handler/container"
@@ -67,12 +68,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: container.UpdateHandler(serverCtx),
 			},
 			{
-				Method:  http.MethodGet,
+				Method:  http.MethodPost,
 				Path:    "/container/backup",
 				Handler: container.BackupHandler(serverCtx),
 			},
 			{
-				Method:  http.MethodGet,
+				Method:  http.MethodPost,
 				Path:    "/container/backup2compose",
 				Handler: container.Backup2composeHandler(serverCtx),
 			},
@@ -99,6 +100,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api"),
+		rest.WithTimeout(2*time.Minute),
 	)
 
 	server.AddRoutes(
@@ -116,6 +118,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api/icons"),
+		rest.WithMaxBytes(11<<20),
 	)
 
 	server.AddRoutes(
@@ -162,5 +165,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api"),
+		rest.WithTimeout(5*time.Minute),
 	)
 }

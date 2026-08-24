@@ -1,5 +1,8 @@
 name: latest
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   push:
@@ -13,16 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout frontend code
-        uses: actions/checkout@v3
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: dongshull/Docker-Copilot-React
           path: './frontend'
-          ref: 'master'
+          ref: '263766c39566a356d916fc2167945cfb8aaffd38'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          node-version: '22.23.2'
           cache: 'npm'
           cache-dependency-path: |
             frontend/package-lock.json
@@ -32,10 +35,11 @@ jobs:
         run: |
           cd frontend
           npm ci
+          npm run test --if-present
           npm run build
 
       - name: Upload Frontend Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: my-artifact-front-dist
           path: frontend/dist
@@ -48,10 +52,10 @@ jobs:
         arch: [ amd64, arm64 ]
     steps:
       - name: Checkout code back end
-        uses: actions/checkout@v3
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Download Frontend Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: my-artifact-front-*
           merge-multiple: true
@@ -64,19 +68,15 @@ jobs:
         run: |
           echo "version=$(cat version)" >> $GITHUB_ENV
 
-      - name: Cache Go Modules
-        uses: actions/cache@v3
-        with:
-          path: ${{ github.workspace }}/msaber-back/pkg/mod
-          key: go-mod-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            go-mod-
-
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.23.4'
-          cache: false
+          go-version: '1.25.13'
+          cache-dependency-path: go.sum
+
+      - name: Run backend tests
+        if: matrix.arch == 'amd64'
+        run: go test ./...
 
       - name: Build for ${{ matrix.arch }}
         run: |
@@ -84,36 +84,45 @@ jobs:
 
       - name: Compress binary
         run: |
-          tar -czvf dockerCopilot-${{ matrix.arch }}.tar.gz dist/linux/${{ matrix.arch }}/dockerCopilot-new
+          tar -C dist/linux/${{ matrix.arch }} -czvf dockerCopilot-${{ matrix.arch }}.tar.gz dockerCopilot-new
+          sha256sum dockerCopilot-${{ matrix.arch }}.tar.gz > dockerCopilot-${{ matrix.arch }}.tar.gz.sha256
 
       - name: List current directory
         run: ls -la
 
-      - name: Check if release already exists
-        id: check_release
+      - name: Upload release assets for ${{ matrix.arch }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-assets-${{ matrix.arch }}
+          path: |
+            dockerCopilot-${{ matrix.arch }}.tar.gz
+            dockerCopilot-${{ matrix.arch }}.tar.gz.sha256
+          if-no-files-found: error
+
+  release:
+    needs: build-backend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout backend code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Get version from file
+        run: echo "version=$(cat version)" >> "$GITHUB_ENV"
+
+      - name: Download release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: release-assets-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Create release and upload all assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          exists=$(gh release view ${{ env.version }} 2>&1 | grep "release not found" || true)
-          if [[ -z "$exists" ]]; then
-            echo "Release exists"
-            echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
-          else
-            echo "Release does not exist"
-            echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
+          if ! gh release view "$version" >/dev/null 2>&1; then
+            gh release create "$version" --title "$version" --notes "Release of version $version"
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create GitHub Release if not exists
-        if: env.RELEASE_EXISTS == 'false'
-        run: |
-          gh release create ${{ env.version }} \
-            --title "${{ env.version }}" \
-            --notes "Release of version ${{ env.version }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Asset for ${{ matrix.arch }}
-        run: |
-          gh release upload ${{ env.version }} dockerCopilot-${{ matrix.arch }}.tar.gz
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh release upload "$version" release-assets/* --clobber

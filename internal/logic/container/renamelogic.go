@@ -26,7 +26,14 @@ func NewRenameLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RenameLogi
 
 func (l *RenameLogic) Rename(req *types.ContainerRenameReq) (resp *types.Resp, err error) {
 	resp = &types.Resp{}
-	err = utiles.RenameContainer(l.svcCtx, req.Id, req.NewName)
+	newName, err := validateContainerName(req.NewName)
+	if err != nil {
+		resp.Code = 400
+		resp.Msg = err.Error()
+		resp.Data = map[string]interface{}{}
+		return resp, err
+	}
+	err = utiles.RenameContainer(l.svcCtx, req.Id, newName)
 	if err != nil {
 		resp.Code = 400
 		resp.Msg = err.Error()

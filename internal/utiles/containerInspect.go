@@ -1,15 +1,19 @@
 package utiles
 
 import (
-	"context"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 )
 
-func GetContainerInspect(ctx *svc.ServiceContext, id string) (types.ContainerJSON, error) {
-	inspectedContainer, err := ctx.DockerClient.ContainerInspect(context.TODO(), id)
+func GetContainerInspect(ctx *svc.ServiceContext, id string) (container.InspectResponse, error) {
+	operationContext, cancel, err := dockerContext(ctx)
 	if err != nil {
-		return types.ContainerJSON{}, err
+		return container.InspectResponse{}, err
+	}
+	defer cancel()
+	inspectedContainer, err := ctx.DockerClient.ContainerInspect(operationContext, id)
+	if err != nil {
+		return container.InspectResponse{}, err
 	}
 	return inspectedContainer, nil
 }

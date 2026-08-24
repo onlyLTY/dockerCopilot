@@ -1,7 +1,6 @@
 package utiles
 
 import (
-	"context"
 	"github.com/docker/docker/api/types/container"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	MyType "github.com/onlyLTY/dockerCopilot/internal/types"
@@ -9,8 +8,13 @@ import (
 )
 
 func GetContainerList(ctx *svc.ServiceContext) ([]MyType.Container, error) {
+	operationContext, cancel, err := dockerContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer cancel()
 	// 获取所有容器（包括停止的容器）
-	dockerContainerList, err := ctx.DockerClient.ContainerList(context.Background(), container.ListOptions{
+	dockerContainerList, err := ctx.DockerClient.ContainerList(operationContext, container.ListOptions{
 		All: true, // 设置为true来获取所有容器
 	})
 	if err != nil {
@@ -29,10 +33,8 @@ func GetContainerList(ctx *svc.ServiceContext) ([]MyType.Container, error) {
 
 func CheckImageUpdate(ctx *svc.ServiceContext, containerListData []MyType.Container) []MyType.Container {
 	for i, v := range containerListData {
-		if _, ok := ctx.HubImageInfo.Data[v.ImageID]; ok {
-			if ctx.HubImageInfo.Data[v.ImageID].NeedUpdate {
-				containerListData[i].Update = true
-			}
+		if ctx.HubImageInfo != nil && ctx.HubImageInfo.NeedUpdate(v.Image) {
+			containerListData[i].Update = true
 		}
 	}
 	return containerListData
