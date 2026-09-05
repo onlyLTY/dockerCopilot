@@ -377,6 +377,14 @@ export class ContainersComponent {
     return this.stateLabel(x.status);
   }
 
+  /** 运行中卡片的资源占用片段；CPU 需两次采样，刚启动后台可能只有 RAM，各自有值才显示 */
+  usageText(x: ContainerRow): string {
+    const parts: string[] = [];
+    if (x.cpuUsage) parts.push(`CPU ${x.cpuUsage}`);
+    if (x.memoryUsage) parts.push(`RAM ${x.memoryUsage}`);
+    return parts.join(" · ");
+  }
+
   enterSelection() {
     this.selectionMode.set(true);
   }

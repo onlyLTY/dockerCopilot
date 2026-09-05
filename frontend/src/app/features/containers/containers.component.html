@@ -137,8 +137,8 @@
             [class.text-red]="item.status === 'restarting'"
           >
             {{ statusText(item) }}
-            @if (isRunning(item) && item.status !== 'restarting' && item.cpuUsage && item.memoryUsage) {
-              · CPU {{ item.cpuUsage }} · RAM {{ item.memoryUsage }}
+            @if (isRunning(item) && item.status !== 'restarting' && usageText(item)) {
+              · {{ usageText(item) }}
             }
           </small>
         </div>

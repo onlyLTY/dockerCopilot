@@ -103,7 +103,7 @@ go test ./...
 
 ### 容器
 
-- `GET /api/containers`
+- `GET /api/containers`（CPU/内存读 `utiles` 按需采样缓存：有人访问时 15s/轮，持续 2 分钟无访问暂停；无样本或样本过期时回退一次 one-shot 采集）
 - `POST /api/containers/check-update`
 - `POST /api/container/:id/start|stop|restart|rename|update`
 - `POST|DELETE /api/container/:id/update-ignore`

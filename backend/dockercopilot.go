@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/onlyLTY/dockerCopilot/internal/config"
@@ -131,6 +132,8 @@ export const customImageLogos = {
 	if list != nil {
 		go ctx.HubImageInfo.CheckUpdate(list)
 	}
+	// 容器 CPU/内存后台采样：容器列表接口直接读缓存返回，不再同步等 Docker 的 1-2 秒/容器 stats 采样
+	go utiles.StartStatsCollector(ctx)
 	// 更新检查定时任务：频率由 settingstore 持久化配置，可在设置页动态调整。
 	updateCheckJob := func(taskCtx context.Context) {
 		list, err := utiles.GetImagesListWithContext(taskCtx, ctx)
@@ -237,6 +240,9 @@ func healthzHandler(serverCtx *svc.ServiceContext) http.HandlerFunc {
 	}
 }
 
+// hashedAssetRe 匹配 Angular 构建产物中带内容哈希的 js/css 文件名（如 main-V246GCF6.js）。
+var hashedAssetRe = regexp.MustCompile(`-[A-Za-z0-9_-]{8}\.(?:js|css)$`)
+
 // newFrontendHandler 提供 Angular 前端（运行时从 webDir 磁盘目录读取）。
 // 命中真实静态文件时按原样返回（带正确的 Content-Type），
 // 未命中时回退到 index.html 以支持前端路由（SPA）。
@@ -252,15 +258,22 @@ func newFrontendHandler() http.Handler {
 			// 防目录穿越：清洗后的相对路径拼到 webDir 下再判断
 			fp := filepath.Join(webDir, filepath.FromSlash(cleaned))
 			if info, err := os.Stat(fp); err == nil && !info.IsDir() {
-				// 命中真实文件，交给标准 FileServer（自动处理 Content-Type/缓存/Range）
 				r2 := r.Clone(r.Context())
 				r2.URL.Path = "/" + cleaned
+				// 带内容哈希的构建产物可永久缓存；其余资源短缓存，index.html 回源验证保证发版即生效
+				switch {
+				case hashedAssetRe.MatchString(cleaned):
+					w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+				case strings.HasPrefix(cleaned, "assets/"):
+					w.Header().Set("Cache-Control", "public, max-age=3600")
+				}
 				fileServer.ServeHTTP(w, r2)
 				return
 			}
 		}
 
 		// 未命中静态文件：回退到 index.html
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, indexPath)
 	})
 }

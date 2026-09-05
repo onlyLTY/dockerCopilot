@@ -49,7 +49,7 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 	resp.Code = 200
 	list = utiles.CheckImageUpdate(l.svcCtx, list)
 
-	// 有限并发 Inspect，降低 N+1 串行延迟；响应字段与原先一致
+	// 有限并发 Inspect，降低 N+1 串行延迟；CPU/内存读后台采样缓存，无样本时回退一次 one-shot 采集
 	const inspectWorkers = 8
 	type inspectResult struct {
 		idx         int
@@ -83,13 +83,9 @@ func (l *ContainersListLogic) ContainersList() (resp *types.Resp, err error) {
 					createImage = containerInspect.Config.Image
 				}
 				var usage utiles.ContainerUsage
-				if list[i].State == "running" {
-					var statsErr error
-					usage, statsErr = utiles.GetContainerUsage(l.ctx, l.svcCtx, list[i].ID)
-					if statsErr != nil {
-						l.Errorf("获取容器统计失败 id=%s: %v", list[i].ID, statsErr)
+					if list[i].State == "running" {
+						usage = utiles.RefreshContainerUsage(l.ctx, l.svcCtx, list[i].ID)
 					}
-				}
 				results <- inspectResult{idx: i, createImage: createImage, usage: usage}
 			}
 		}()
