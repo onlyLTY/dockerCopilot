@@ -4,6 +4,11 @@
     "secure": false,
     "changeOrigin": true
   },
+  "/healthz": {
+    "target": "http://localhost:12712",
+    "secure": false,
+    "changeOrigin": true
+  },
   "/src/config/image": {
     "target": "http://localhost:12712",
     "secure": false,

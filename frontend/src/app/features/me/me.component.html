@@ -11,54 +11,119 @@
 
 <dc-stats [items]="stats()" [columns]="4"></dc-stats>
 
+
 <section class="about-grid d-grid grid-cols-2 gap-20">
   <article class="panel p-16">
-    <h3>项目信息</h3>
-    <span class="text-muted fs-14 my-6"
-      >Docker Copilot是一个便捷的docker容器管理工具，现已支持所有平台</span
-    >
-    <ol class="feature-list d-grid grid-cols-2 gap-8 m-0 mt-16 mb-24 p-0">
-      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
-        指定镜像/tag更新容器
-      </li>
-      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
-        启动、停止、重启、重命名容器
-      </li>
-      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
-        删除无 TAG/未使用镜像
-      </li>
-      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
-        更新/部署进度查看
-      </li>
-      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
-        备份/恢复容器设置
-      </li>
-      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
-        Compose 部署容器
-      </li>
-      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
-        Compose 文件查看
-      </li>
-      <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
-        端口查看
-      </li>
-    </ol>
+    <div class="mb-8">
+      <div class="fs-18 fw-800 mb-8">项目信息</div>
+      <span class="text-muted fs-14 my-6"
+        >Docker Copilot是一个便捷的docker容器管理工具，现已支持所有平台</span
+      >
+      <ol class="feature-list d-grid grid-cols-2 gap-8 m-0 mt-16 mb-24 p-0">
+        <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+          指定镜像/tag更新容器
+        </li>
+        <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+          启动、停止、重启、重命名容器
+        </li>
+        <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+          删除无 TAG/未使用镜像
+        </li>
+        <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+          更新/部署进度查看
+        </li>
+        <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+          备份/恢复容器设置
+        </li>
+        <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+          Compose 部署容器
+        </li>
+        <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+          Compose 文件查看
+        </li>
+        <li class="min-w-0 py-10 px-12 border-1 rounded-8 bg-panel-header-bg text-black lh-15">
+          端口查看
+        </li>
+      </ol>
+    </div>
 
-    <h3>反馈与建议</h3>
-    <span class="text-muted fs-14 my-6"
-      >在项目使用中遇到 bug 或想要提建议？欢迎在<a
-        href="https://github.com/onlyLTY/dockerCopilot/issues"
-        target="_blank"
-        rel="noreferrer"
-        >GitHub Issues</a
-      >提出，或发送邮件至<a href="onlylty@lty.wiki" target="_blank" rel="noreferrer"
-        >onlylty@lty.wiki</a
-      >。期待您的反馈！</span
-    >
+    <div class="mb-8">
+      <div class="fs-18 fw-800 mb-8">程序更新</div>
+      <div class="d-flex items-center flex-wrap gap-12 mt-8">
+        <span class="fs-14">
+          当前版本 <b>{{ version().version || '未知' }}</b>
+          @if (version().buildDate) {
+            <span class="text-muted fs-12">（{{ version().buildDate }}）</span>
+          }
+        </span>
+
+        @switch (updatePhase()) {
+          @case ('idle') {
+            <button class="btn text-white bg-blue" (click)="checkUpdate()">
+              <dc-icon name="refresh"></dc-icon>检查更新
+            </button>
+          }
+          @case ('checking') {
+            <span class="text-muted fs-14">正在检查更新…</span>
+          }
+          @case ('latest') {
+            <span class="text-green fs-14">已是最新版本</span>
+            <button class="btn text-blue border-1" (click)="checkUpdate()">重新检查</button>
+          }
+          @case ('available') {
+            <span class="text-green fs-14">发现新版本 <b>{{ remoteVersion() }}</b></span>
+            <button class="btn text-white bg-blue" (click)="startUpdate()">更新程序</button>
+          }
+          @case ('downloading') {
+            <span class="text-muted fs-14">
+              正在下载更新包… 已等待 {{ waitSeconds() }} 秒
+            </span>
+          }
+          @case ('countdown') {
+            <span class="text-muted fs-14">更新包就绪，服务将在几秒内自动重启…</span>
+          }
+          @case ('restarting') {
+            <span class="text-muted fs-14">服务重启中… 已等待 {{ waitSeconds() }} 秒</span>
+          }
+          @case ('success') {
+            <span class="text-green fs-14">已更新到 {{ remoteVersion() }}，页面即将刷新…</span>
+          }
+          @case ('stale') {
+            <span class="text-muted fs-14">
+              服务已恢复，更新已安装。版本号仍显示为 {{ version().version }}：当前镜像较旧，
+              未携带版本文件切换逻辑，重建/拉取新镜像后版本号即对齐。
+            </span>
+            <button class="btn text-white bg-blue" (click)="reload()">刷新页面</button>
+          }
+          @case ('failed') {
+            <span class="text-red fs-14">{{ updateError() }}</span>
+            <button class="btn text-blue border-1" (click)="checkUpdate()">重试</button>
+          }
+        }
+      </div>
+      @if (updatePhase() === 'available') {
+        <p class="text-muted fs-12 mb-0 mt-8">
+          更新包含前端与后端，下载完成后服务会自动重启并刷新页面；期间请勿关闭或刷新本页。
+        </p>
+      }
+    </div>
+    <div class="mb-8">
+      <div class="fs-18 fw-800 mb-8">反馈与建议</div>
+      <span class="text-muted fs-14 my-6"
+        >在项目使用中遇到 bug 或想要提建议？欢迎在<a
+          href="https://github.com/onlyLTY/dockerCopilot/issues"
+          target="_blank"
+          rel="noreferrer"
+          >GitHub Issues</a
+        >提出，或发送邮件至<a href="onlylty@lty.wiki" target="_blank" rel="noreferrer"
+          >onlylty@lty.wiki</a
+        >。期待您的反馈！</span
+      >
+    </div>
   </article>
 
   <article class="panel p-16">
-    <h3>支持项目</h3>
+    <div class="fs-18 fw-800 mb-8">支持项目</div>
     <span class="text-muted fs-14 my-6"
       >如果您用的愉快的话，可以请我喝一瓶快乐水吗？您的支持是我持续维护项目的动力！</span
     >
