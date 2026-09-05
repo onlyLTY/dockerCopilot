@@ -1,0 +1,72 @@
+# 程序自更新（面板「程序更新」）的发布流水线：
+# version 文件变更推送到 latest 后，构建 linux amd64/arm64 更新包并创建 GitHub Release。
+# 更新包内含 dockerCopilot-new 二进制与 web/ 前端目录，与 backend/start.sh 的切换逻辑对应；
+# 版本号通过 -ldflags 注入，使更新后的二进制不依赖镜像内的旧 version 文件。
+# 注意：与 docker-public 的 Docker 镜像构建相互独立，两者都由 version 变更触发。
+name: release
+
+on:
+  push:
+    branches: [latest]
+    paths: ['version']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 读取版本号
+        id: ver
+        run: echo "version=$(tr -d ' \r\n' < version)" >> "$GITHUB_OUTPUT"
+
+      - name: 构建前端
+        working-directory: frontend
+        run: |
+          npm ci
+          npx ng build --configuration production
+
+      - name: 构建更新包
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          BUILD_DATE="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          LDFLAGS="-s -w -X github.com/onlyLTY/dockerCopilot/internal/config.Version=${VERSION} -X github.com/onlyLTY/dockerCopilot/internal/config.BuildDate=${BUILD_DATE}"
+          mkdir -p dist
+          for ARCH in amd64 arm64; do
+            CGO_ENABLED=0 GOOS=linux GOARCH=$ARCH go build -C backend -ldflags "$LDFLAGS" -o "../dist/pkg-$ARCH/dockerCopilot-new" .
+            cp -r build/frontend "dist/pkg-$ARCH/web"
+            cp version "dist/pkg-$ARCH/version"
+            tar -czf "dist/dockerCopilot-$ARCH.tar.gz" -C "dist/pkg-$ARCH" dockerCopilot-new web version
+            (cd dist && sha256sum "dockerCopilot-$ARCH.tar.gz" > "dockerCopilot-$ARCH.tar.gz.sha256")
+          done
+          ls -la dist/
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.version }}
+          name: ${{ steps.ver.outputs.version }}
+          files: |
+            dist/dockerCopilot-amd64.tar.gz
+            dist/dockerCopilot-amd64.tar.gz.sha256
+            dist/dockerCopilot-arm64.tar.gz
+            dist/dockerCopilot-arm64.tar.gz.sha256
+          fail_on_unmatched_files: true

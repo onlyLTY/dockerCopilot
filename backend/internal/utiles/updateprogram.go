@@ -23,6 +23,26 @@ const maxUpdateDownload = 256 << 20
 
 var releaseVersionPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 
+// defaultUpdateRepo 默认的程序自更新来源仓库（owner/repo）。
+// 本仓库的版本演进以自身为准，更新检查与更新包都从这里获取；
+// 可用环境变量 updateRepo 覆盖为其他仓库。
+const defaultUpdateRepo = "syueya/dockerCopilot"
+
+// updateRepoPattern 校验 owner/repo 形式，防止拼接出越权 URL 路径。
+var updateRepoPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$`)
+
+// updateRepo 返回自更新来源仓库：环境变量 updateRepo 优先，否则用默认值。
+func updateRepo() (string, error) {
+	repo := strings.TrimSpace(os.Getenv("updateRepo"))
+	if repo == "" {
+		repo = defaultUpdateRepo
+	}
+	if !updateRepoPattern.MatchString(repo) {
+		return "", fmt.Errorf("updateRepo 格式不合法: %q", repo)
+	}
+	return repo, nil
+}
+
 // 官方下载源 host 白名单（未走 proxy 时最终 URL 必须落在这些 host 上）。
 var officialUpdateHosts = map[string]struct{}{
 	"github.com":                {},
@@ -121,13 +141,29 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 		}
 	}
 
+	// 更新包内含 version 文件时落到 ./version-new，由 start.sh 重启时随二进制一起切换：
+	// 镜像内的 version 文件停留在镜像构建时的版本，不切换会导致自更新后版本号报错。
+	if versionSrc := findUpdateVersionFile(extractDir); versionSrc != "" {
+		content, err := os.ReadFile(versionSrc)
+		if err != nil {
+			return fmt.Errorf("读取更新包 version 文件失败: %w", err)
+		}
+		if err := os.WriteFile("version-new", content, 0644); err != nil {
+			return fmt.Errorf("写入 version-new 失败: %w", err)
+		}
+	}
+
 	// 二进制最后写：它是 start.sh 触发切换的信号。
 	return os.WriteFile("dockerCopilot-new", content, 0755)
 }
 
 // OfficialVersionURL 返回（可选 githubProxy 前缀后的）官方 version 文件 URL。
 func OfficialVersionURL() (string, error) {
-	official := "https://raw.githubusercontent.com/onlyLTY/dockerCopilot/latest/version"
+	repo, err := updateRepo()
+	if err != nil {
+		return "", err
+	}
+	official := "https://raw.githubusercontent.com/" + repo + "/latest/version"
 	return withGithubProxy(os.Getenv("githubProxy"), official)
 }
 
@@ -145,7 +181,11 @@ func OfficialReleaseAssetURL(version, asset string) (string, error) {
 	if asset == "" || asset != rawAsset {
 		return "", fmt.Errorf("更新资产名不合法")
 	}
-	official := fmt.Sprintf("https://github.com/onlyLTY/dockerCopilot/releases/download/%s/%s", version, asset)
+	repo, err := updateRepo()
+	if err != nil {
+		return "", err
+	}
+	official := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repo, version, asset)
 	return withGithubProxy(os.Getenv("githubProxy"), official)
 }
 
@@ -195,18 +235,21 @@ func assertOfficialUpdateURL(raw string) error {
 	if _, ok := officialUpdateHosts[host]; !ok {
 		return fmt.Errorf("官方更新地址 host 不在白名单")
 	}
+	repo, err := updateRepo()
+	if err != nil {
+		return err
+	}
 	path := u.EscapedPath()
 	switch host {
 	case "raw.githubusercontent.com":
-		if path != "/onlyLTY/dockerCopilot/latest/version" {
+		if path != "/"+repo+"/latest/version" {
 			return fmt.Errorf("官方 version 路径不合法")
 		}
 	case "github.com":
-		// /onlyLTY/dockerCopilot/releases/download/<ver>/<asset>
+		// /<owner>/<repo>/releases/download/<ver>/<asset>
 		parts := strings.Split(strings.Trim(path, "/"), "/")
 		if len(parts) != 6 ||
-			parts[0] != "onlyLTY" ||
-			parts[1] != "dockerCopilot" ||
+			parts[0]+"/"+parts[1] != repo ||
 			parts[2] != "releases" ||
 			parts[3] != "download" ||
 			!releaseVersionPattern.MatchString(parts[4]) ||
@@ -417,6 +460,22 @@ func ensureUpdatePath(root, target string) error {
 		return fmt.Errorf("归档路径越界")
 	}
 	return nil
+}
+
+// findUpdateVersionFile 在解压目录中查找名为 version 的普通文件，返回其路径；未找到返回空串。
+func findUpdateVersionFile(root string) string {
+	var found string
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && info.Name() == "version" {
+			found = path
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	return found
 }
 
 func findUpdateBinary(root string) (string, error) {

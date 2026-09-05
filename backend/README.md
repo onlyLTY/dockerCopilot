@@ -121,7 +121,7 @@ go test ./...
 - `GET /api/ports`
 - `/api/icons`
 - `GET /api/progress/list`、`GET /api/progress/:taskid`
-- `GET /api/version`、`PUT /api/program`
+- `GET /api/version`、`PUT /api/program`（自更新源默认 `syueya/dockerCopilot`，环境变量 `updateRepo` 可覆盖；更新包由仓库的 release 工作流构建）
 
 ### 设置与日志（已在 `.api` + gen routes）
 

@@ -55,7 +55,7 @@ cd frontend && npm start
 
 如需修改监听地址、数据目录或 Compose 扫描目录，请编辑复制出来的 `backend/etc/dockerCopilot.local.yaml`。前端开发地址：<http://localhost:4200/manager>。后端默认监听 `127.0.0.1:12712`。
 
-如果只需要检查前端真实页面、布局和交互，无需启动 Go 后端，可以使用 `subClash` 同样的预览构建模式：
+如果只需要检查前端真实页面、布局和交互，无需启动 Go 后端，可以使用预览构建模式：
 
 ```bash
 cd frontend && npm run start:preview
@@ -89,5 +89,8 @@ cd frontend && npm run start:preview
 | `DOCKER_COMPOSE_DIR` | `../compose` | 否 | 映射到容器 `/compose`，作为 Compose 项目目录 |
 | `TZ` | `Asia/Shanghai` | 否 | 容器时区 |
 | `githubProxy` | 空 | 否 | GitHub 版本和更新下载地址的前缀代理 |
+| `updateRepo` | `syueya/dockerCopilot` | 否 | 程序自更新（更新检查与更新包下载）的来源仓库，格式 `owner/repo` |
 
 `githubProxy` 只用于 Copilot 的 GitHub 版本检查和程序更新地址。Docker 镜像拉取使用 Docker Engine 自身的 daemon 配置。
+
+程序自更新以本仓库为准：更新检查读取本仓库 `latest` 分支的 `version` 文件，更新包来自本仓库对应版本的 Release（由 `.github/workflows/release.yml` 在 `version` 变更推送时自动构建）；不再从上游 onlyLTY 仓库更新。

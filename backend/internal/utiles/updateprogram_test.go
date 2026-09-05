@@ -2,15 +2,17 @@ package utiles
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestAssertOfficialUpdateURL(t *testing.T) {
+	t.Setenv("updateRepo", "")
 	ok := []string{
-		"https://raw.githubusercontent.com/onlyLTY/dockerCopilot/latest/version",
-		"https://github.com/onlyLTY/dockerCopilot/releases/download/v2.2.0/dockerCopilot-amd64.tar.gz",
-		"https://github.com/onlyLTY/dockerCopilot/releases/download/v2.2.0/dockerCopilot-amd64.tar.gz.sha256",
+		"https://raw.githubusercontent.com/syueya/dockerCopilot/latest/version",
+		"https://github.com/syueya/dockerCopilot/releases/download/v2.2.0/dockerCopilot-amd64.tar.gz",
+		"https://github.com/syueya/dockerCopilot/releases/download/v2.2.0/dockerCopilot-amd64.tar.gz.sha256",
 	}
 	for _, u := range ok {
 		if err := assertOfficialUpdateURL(u); err != nil {
@@ -18,11 +20,11 @@ func TestAssertOfficialUpdateURL(t *testing.T) {
 		}
 	}
 	bad := []string{
-		"http://github.com/onlyLTY/dockerCopilot/releases/download/v1/dockerCopilot-amd64.tar.gz",
-		"https://evil.com/onlyLTY/dockerCopilot/latest/version",
-		"https://raw.githubusercontent.com/other/repo/latest/version",
-		"https://github.com/onlyLTY/dockerCopilot/releases/download/../v1/x",
-		"https://github.com/onlyLTY/dockerCopilot/releases/download/v1/dockerCopilot-amd64.tar.gz?x=1",
+		"http://github.com/syueya/dockerCopilot/releases/download/v1/dockerCopilot-amd64.tar.gz",
+		"https://evil.com/syueya/dockerCopilot/latest/version",
+		"https://raw.githubusercontent.com/onlyLTY/dockerCopilot/latest/version",
+		"https://github.com/syueya/dockerCopilot/releases/download/../v1/x",
+		"https://github.com/syueya/dockerCopilot/releases/download/v1/dockerCopilot-amd64.tar.gz?x=1",
 	}
 	for _, u := range bad {
 		if err := assertOfficialUpdateURL(u); err == nil {
@@ -31,8 +33,28 @@ func TestAssertOfficialUpdateURL(t *testing.T) {
 	}
 }
 
+func TestUpdateRepoOverride(t *testing.T) {
+	t.Setenv("updateRepo", "alice/my-copilot.git_1")
+	u, err := OfficialVersionURL()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "https://raw.githubusercontent.com/alice/my-copilot.git_1/latest/version"
+	if u != want {
+		t.Fatalf("got %s want %s", u, want)
+	}
+	if err := assertOfficialUpdateURL(want); err != nil {
+		t.Fatalf("expected ok %s: %v", want, err)
+	}
+	t.Setenv("updateRepo", "not a repo")
+	if _, err := OfficialVersionURL(); err == nil {
+		t.Fatal("expected invalid updateRepo reject")
+	}
+}
+
 func TestWithGithubProxy(t *testing.T) {
-	official := "https://github.com/onlyLTY/dockerCopilot/releases/download/v2.2.0/dockerCopilot-amd64.tar.gz"
+	t.Setenv("updateRepo", "")
+	official := "https://github.com/syueya/dockerCopilot/releases/download/v2.2.0/dockerCopilot-amd64.tar.gz"
 	got, err := withGithubProxy("", official)
 	if err != nil || got != official {
 		t.Fatalf("empty proxy: got %q err=%v", got, err)
@@ -54,11 +76,12 @@ func TestWithGithubProxy(t *testing.T) {
 
 func TestOfficialReleaseAssetURL(t *testing.T) {
 	t.Setenv("githubProxy", "")
+	t.Setenv("updateRepo", "")
 	u, err := OfficialReleaseAssetURL("v2.2.0", "dockerCopilot-amd64.tar.gz")
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "https://github.com/onlyLTY/dockerCopilot/releases/download/v2.2.0/dockerCopilot-amd64.tar.gz"
+	want := "https://github.com/syueya/dockerCopilot/releases/download/v2.2.0/dockerCopilot-amd64.tar.gz"
 	if u != want {
 		t.Fatalf("got %s want %s", u, want)
 	}
@@ -67,6 +90,23 @@ func TestOfficialReleaseAssetURL(t *testing.T) {
 	}
 	if _, err := OfficialReleaseAssetURL("v2.2.0", "../x.tar.gz"); err == nil {
 		t.Fatal("expected bad asset reject")
+	}
+}
+
+func TestFindUpdateVersionFile(t *testing.T) {
+	dir := t.TempDir()
+	if got := findUpdateVersionFile(dir); got != "" {
+		t.Fatalf("expected empty, got %q", got)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "web"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(dir, "version")
+	if err := os.WriteFile(want, []byte("v2.2.6"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if got := findUpdateVersionFile(dir); got != want {
+		t.Fatalf("got %q want %q", got, want)
 	}
 }
 

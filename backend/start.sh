@@ -15,5 +15,10 @@ if [ -d "./web-new" ]; then
     mv ./web-new ./web
 fi
 
+# 同步切换 version 文件（若更新包携带），保证自更新后版本号上报正确
+if [ -f "./version-new" ]; then
+    mv ./version-new ./version
+fi
+
 # 运行 dockerCopilot
 ./dockerCopilot
