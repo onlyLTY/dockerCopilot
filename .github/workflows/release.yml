@@ -47,7 +47,8 @@ jobs:
       - name: 构建更新包
         run: |
           VERSION="${{ steps.ver.outputs.version }}"
-          BUILD_DATE="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          # 注意：go build -ldflags 按空格拆分参数，时间格式不能含空格
+          BUILD_DATE="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
           LDFLAGS="-s -w -X github.com/onlyLTY/dockerCopilot/internal/config.Version=${VERSION} -X github.com/onlyLTY/dockerCopilot/internal/config.BuildDate=${BUILD_DATE}"
           mkdir -p dist
           for ARCH in amd64 arm64; do
