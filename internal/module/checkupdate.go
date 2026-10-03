@@ -12,6 +12,7 @@ import (
 	"net/http"
 	url2 "net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type ImageCheckList struct {
 	NeedUpdate bool
 }
 type ImageUpdateData struct {
+	mu   sync.RWMutex
 	Data map[string]ImageCheckList
 }
 
@@ -30,16 +32,51 @@ func NewImageCheck() *ImageUpdateData {
 		Data: map[string]ImageCheckList{},
 	}
 }
+
+// NeedUpdate 并发安全地查询某镜像（按镜像 ID）是否需要更新
+func (i *ImageUpdateData) NeedUpdate(imageID string) bool {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	v, ok := i.Data[imageID]
+	return ok && v.NeedUpdate
+}
+
+// setAll 并发安全地整体替换数据
+func (i *ImageUpdateData) setAll(data map[string]ImageCheckList) {
+	i.mu.Lock()
+	i.Data = data
+	i.mu.Unlock()
+}
+
 func (i *ImageUpdateData) CheckUpdate(imageList []types.Image) {
+	// 保留本地仍存在的镜像的旧状态（单次查询失败不至于丢状态），
+	// 同时清理已不存在镜像的过期条目（避免"阴魂不散"的更新提示）。
+	i.mu.RLock()
+	exists := make(map[string]bool, len(imageList))
+	next := make(map[string]ImageCheckList, len(imageList))
+	for _, image := range imageList {
+		exists[image.ID] = true
+	}
+	for id, v := range i.Data {
+		if exists[id] {
+			next[id] = v
+		}
+	}
+	i.mu.RUnlock()
+
 	for _, image := range imageList {
 		if strings.Contains(image.ImageName, "0nlylty/dockercopilot") {
 			continue
 		}
-		i.checkSingleImage(image)
+		if result := i.checkSingleImage(image); result != nil {
+			next[image.ID] = *result
+		}
 	}
+	i.setAll(next)
 }
 
-func (i *ImageUpdateData) checkSingleImage(image types.Image) {
+// checkSingleImage 返回 nil 表示本次检查失败（保留旧状态，不作判断）
+func (i *ImageUpdateData) checkSingleImage(image types.Image) *ImageCheckList {
 	token, err := GetToken(image, "")
 	if err != nil {
 		logx.Error("获取token失败或者无需获取token，继续尝试检查" + err.Error())
@@ -47,34 +84,55 @@ func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 	digestURL, err := BuildManifestURL(image)
 	if err != nil {
 		logx.Error("获取digestURL失败" + err.Error())
-		return
+		return nil
 	}
 	remoteDigest, err := GetDigest(digestURL, token)
 	if err != nil {
 		logx.Error("获取digest失败" + err.Error())
-		return
+		return nil
 	}
 	if len(image.RepoDigests) == 0 {
 		logx.Error("未在本地获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
-		return
+		return nil
 	}
-	needUpdate := false
-	for _, localRepoDigests := range image.RepoDigests {
-		localDigest := strings.Split(localRepoDigests, "@")[1]
-		if remoteDigest != localDigest {
-			if remoteDigest == "" || localDigest == "" {
-				logx.Error("Digest为空" + image.ImageName + ":" + image.ImageTag)
-				continue
-			}
-			logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
-			logx.Infof("localDigest: %s, remoteDigest: %s", localDigest, remoteDigest)
-			needUpdate = true
-		} else {
-			logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
+	// 只与**同一仓库**的本地 digest 比较；任一匹配即视为已是最新。
+	// （修复旧逻辑：循环内反复赋值，结果被 RepoDigests 末位元素覆盖导致的误报。）
+	needUpdate := true
+	compared := false
+	for _, localRepoDigest := range image.RepoDigests {
+		parts := strings.SplitN(localRepoDigest, "@", 2)
+		if len(parts) != 2 || parts[1] == "" {
+			continue
+		}
+		if normalizeRepoName(parts[0]) != normalizeRepoName(image.ImageName) {
+			continue
+		}
+		compared = true
+		if parts[1] == remoteDigest {
 			needUpdate = false
+			break
 		}
 	}
-	i.Data[image.ID] = ImageCheckList{NeedUpdate: needUpdate}
+	if !compared {
+		logx.Error("未找到同仓库的本地 digest，跳过检查 " + image.ImageName + ":" + image.ImageTag)
+		return nil
+	}
+	if needUpdate {
+		logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
+		logx.Infof("remoteDigest: %s", remoteDigest)
+	} else {
+		logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
+	}
+	return &ImageCheckList{NeedUpdate: needUpdate}
+}
+
+// normalizeRepoName 抹平仓库名常见写法差异（大小写 / docker.io / library 前缀）
+func normalizeRepoName(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+	name = strings.TrimPrefix(name, "docker.io/")
+	name = strings.TrimPrefix(name, "index.docker.io/")
+	name = strings.TrimPrefix(name, "library/")
+	return name
 }
 
 func BuildManifestURL(image types.Image) (string, error) {
