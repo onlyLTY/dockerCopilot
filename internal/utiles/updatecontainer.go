@@ -74,6 +74,18 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	oldTaskProgress.Message = "拉取镜像成功"
 	oldTaskProgress.DetailMsg = "拉取镜像成功"
 
+	// 停止前先取一次容器信息：记录原始运行状态（重建后据此保持原状态）
+	inspectedContainer, err := serviceContext.DockerClient.ContainerInspect(ctx, id)
+	if err != nil {
+		oldTaskProgress.Message = "获取容器信息失败"
+		oldTaskProgress.DetailMsg = err.Error()
+		oldTaskProgress.IsDone = true
+		serviceContext.UpdateProgress(taskID, oldTaskProgress)
+		logx.Error("获取容器信息失败" + err.Error())
+		return err
+	}
+	wasRunning := inspectedContainer.State != nil && inspectedContainer.State.Running
+
 	oldTaskProgress.Percentage = 30
 	oldTaskProgress.Message = "正在停止容器"
 	oldTaskProgress.DetailMsg = "正在停止容器"
@@ -114,15 +126,6 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	oldTaskProgress.Message = "正在创建新容器"
 	oldTaskProgress.DetailMsg = "正在创建新容器"
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
-	inspectedContainer, err := serviceContext.DockerClient.ContainerInspect(ctx, id)
-	if err != nil {
-		oldTaskProgress.Message = "获取容器信息失败"
-		oldTaskProgress.DetailMsg = err.Error()
-		oldTaskProgress.IsDone = true
-		serviceContext.UpdateProgress(taskID, oldTaskProgress)
-		logx.Error("获取容器信息失败" + err.Error())
-		return err
-	}
 	inspectedContainer.Config.Hostname = ""
 	inspectedContainer.Config.Image = imageNameAndTag
 	inspectedContainer.Image = imageNameAndTag
@@ -144,19 +147,25 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	oldTaskProgress.DetailMsg = "创建新容器成功"
 	oldTaskProgress.Percentage = 80
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
-	oldTaskProgress.Message = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
-	oldTaskProgress.DetailMsg = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
-	serviceContext.UpdateProgress(taskID, oldTaskProgress)
-	err = serviceContext.DockerClient.ContainerStart(context.Background(), containerName, container.StartOptions{
-		CheckpointID:  "",
-		CheckpointDir: "",
-	})
-	if err != nil {
-		oldTaskProgress.Message = "启动新容器失败"
-		oldTaskProgress.DetailMsg = err.Error()
-		oldTaskProgress.IsDone = true
+	if wasRunning {
+		oldTaskProgress.Message = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
+		oldTaskProgress.DetailMsg = "正在启动新容器以及删除旧容器(如果不保留旧容器)"
 		serviceContext.UpdateProgress(taskID, oldTaskProgress)
-		return err
+		err = serviceContext.DockerClient.ContainerStart(context.Background(), containerName, container.StartOptions{
+			CheckpointID:  "",
+			CheckpointDir: "",
+		})
+		if err != nil {
+			oldTaskProgress.Message = "启动新容器失败"
+			oldTaskProgress.DetailMsg = err.Error()
+			oldTaskProgress.IsDone = true
+			serviceContext.UpdateProgress(taskID, oldTaskProgress)
+			return err
+		}
+	} else {
+		oldTaskProgress.Message = "容器原为停止状态，保持停止"
+		oldTaskProgress.DetailMsg = "容器原为停止状态，保持停止"
+		serviceContext.UpdateProgress(taskID, oldTaskProgress)
 	}
 	if delOldContainer {
 		err = serviceContext.DockerClient.ContainerRemove(context.Background(), id, container.RemoveOptions{})
