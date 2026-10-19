@@ -153,3 +153,29 @@ func TestFileSHA256(t *testing.T) {
 		t.Fatalf("got %s want %s", sum, want)
 	}
 }
+
+func TestValidateWebBundleRequiresIndexAtRoot(t *testing.T) {
+	dir := t.TempDir()
+	if err := validateWebBundle(dir); err == nil {
+		t.Fatal("expected error for empty web dir")
+	}
+
+	// v2.2.7 的错误布局：产物在 browser/ 下，不能通过校验，否则切换后整站 404。
+	nested := filepath.Join(dir, "browser")
+	if err := os.MkdirAll(nested, 0750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "index.html"), []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateWebBundle(dir); err == nil {
+		t.Fatal("expected error when index.html only exists under browser/")
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateWebBundle(dir); err != nil {
+		t.Fatalf("expected valid bundle, got %v", err)
+	}
+}

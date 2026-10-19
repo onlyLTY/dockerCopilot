@@ -243,20 +243,36 @@ func healthzHandler(serverCtx *svc.ServiceContext) http.HandlerFunc {
 // hashedAssetRe 匹配 Angular 构建产物中带内容哈希的 js/css 文件名（如 main-V246GCF6.js）。
 var hashedAssetRe = regexp.MustCompile(`-[A-Za-z0-9_-]{8}\.(?:js|css)$`)
 
+// frontendRoot 返回实际存放 index.html 的前端根目录。
+// 正常布局是 web/index.html；v2.2.7 的更新包误把 Angular 产物整体放进了
+// web/browser/，这里做兼容，避免已自更新的实例必须手动换回镜像才能恢复。
+func frontendRoot(root string) string {
+	if info, err := os.Stat(filepath.Join(root, "index.html")); err == nil && !info.IsDir() {
+		return root
+	}
+	nested := filepath.Join(root, "browser")
+	if info, err := os.Stat(filepath.Join(nested, "index.html")); err == nil && !info.IsDir() {
+		logx.Errorf("前端资源位于 %s/browser，已自动兼容；请用修复版更新包重新更新以恢复标准布局", root)
+		return nested
+	}
+	return root
+}
+
 // newFrontendHandler 提供 Angular 前端（运行时从 webDir 磁盘目录读取）。
 // 命中真实静态文件时按原样返回（带正确的 Content-Type），
 // 未命中时回退到 index.html 以支持前端路由（SPA）。
 func newFrontendHandler() http.Handler {
-	fileServer := http.FileServer(http.Dir(webDir))
-	indexPath := filepath.Join(webDir, "index.html")
+	root := frontendRoot(webDir)
+	fileServer := http.FileServer(http.Dir(root))
+	indexPath := filepath.Join(root, "index.html")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 去掉 /manager 前缀，使子目录资源可按任意深度访问
 		trimmed := strings.TrimPrefix(r.URL.Path, "/manager")
 		cleaned := strings.TrimPrefix(path.Clean("/"+trimmed), "/")
 
 		if cleaned != "" {
-			// 防目录穿越：清洗后的相对路径拼到 webDir 下再判断
-			fp := filepath.Join(webDir, filepath.FromSlash(cleaned))
+			// 防目录穿越：清洗后的相对路径拼到 root 下再判断
+			fp := filepath.Join(root, filepath.FromSlash(cleaned))
 			if info, err := os.Stat(fp); err == nil && !info.IsDir() {
 				r2 := r.Clone(r.Context())
 				r2.URL.Path = "/" + cleaned

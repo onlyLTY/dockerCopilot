@@ -53,8 +53,12 @@ jobs:
           mkdir -p dist
           for ARCH in amd64 arm64; do
             CGO_ENABLED=0 GOOS=linux GOARCH=$ARCH go build -C backend -ldflags "$LDFLAGS" -o "../dist/pkg-$ARCH/dockerCopilot-new" .
-            cp -r build/frontend "dist/pkg-$ARCH/web"
+            # Angular 的浏览器产物在 build/frontend/browser；必须把该目录内容放到 web/ 根，
+            # 否则更新后 ./web/index.html 不存在，前端整站 404（v2.2.7 即因此翻车）。
+            mkdir -p "dist/pkg-$ARCH/web"
+            cp -r build/frontend/browser/. "dist/pkg-$ARCH/web/"
             cp version "dist/pkg-$ARCH/version"
+            test -f "dist/pkg-$ARCH/web/index.html"
             tar -czf "dist/dockerCopilot-$ARCH.tar.gz" -C "dist/pkg-$ARCH" dockerCopilot-new web version
             (cd dist && sha256sum "dockerCopilot-$ARCH.tar.gz" > "dockerCopilot-$ARCH.tar.gz.sha256")
           done

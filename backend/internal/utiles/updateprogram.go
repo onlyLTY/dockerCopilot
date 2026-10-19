@@ -133,6 +133,9 @@ func UpdateProgram(ctx *svc.ServiceContext) error {
 	// 由 start.sh 在下次重启时与二进制一起切换，保证前后端版本同步。
 	// 旧版更新包（仅二进制）无 web 目录时跳过，保持向后兼容。
 	if webSrc := findUpdateWebDir(extractDir); webSrc != "" {
+		if err := validateWebBundle(webSrc); err != nil {
+			return fmt.Errorf("更新包前端资源不完整: %w", err)
+		}
 		if err := os.RemoveAll("web-new"); err != nil {
 			return err
 		}
@@ -337,6 +340,17 @@ func findUpdateWebDir(root string) string {
 		return nil
 	})
 	return found
+}
+
+// validateWebBundle 拒绝缺少 index.html 的前端目录。
+// v2.2.7 的更新包把 Angular 产物放成了 web/browser/，切换后 ./web/index.html 不存在，
+// 整站返回 404；这里在落盘前拦下，旧 web 目录保持可服务。
+func validateWebBundle(webSrc string) error {
+	indexPath := filepath.Join(webSrc, "index.html")
+	if info, err := os.Stat(indexPath); err == nil && !info.IsDir() {
+		return nil
+	}
+	return fmt.Errorf("web/index.html 不存在，请检查发布流水线是否复制了 build/frontend/browser 下的内容")
 }
 
 // copyDir 递归复制目录，用于将更新包中的前端资源落到 web-new。
