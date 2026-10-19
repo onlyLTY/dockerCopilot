@@ -105,7 +105,6 @@
           >镜像包文件<input
             class="field-control d-block mt-8 py-12 px-12"
             type="file"
-            [disabled]="importUploading()"
             accept=".tar,.tar.gz,.tgz,.tar.bz2,application/x-tar,application/gzip"
             (change)="chooseImportFile($event)"
         /></label>
@@ -119,49 +118,29 @@
             <button
               class="btn text-red border-1 py-6 px-8 fs-12 flex-none"
               type="button"
-              [disabled]="importUploading()"
               (click)="removeImportFile()"
             >
               移除
             </button>
           </div>
         }
-        @if (importUploading() || importPercent() > 0) {
-          <div class="mt-16">
-            <div class="d-flex justify-between items-center fs-12 mb-6">
-              <span class="text-muted">{{ importUploading() ? '正在上传并导入…' : '上传完成' }}</span>
-              <b class="text-blue">{{ importPercent() }}%</b>
-            </div>
-            <div class="h-6 rounded-3 bg-line overflow-hidden">
-              <i
-                class="d-block h-full bg-blue transition-width"
-                [style.width.%]="importPercent()"
-              ></i>
-            </div>
-          </div>
-        }
-        @if (importResult(); as result) {
-          <div class="mt-16 py-10 px-12 rounded-7 bg-green-soft fs-12">
-            <div class="text-green fw-600">成功导入 {{ result.count }} 个镜像</div>
-            @for (ref of result.loaded; track ref) {
-              <div class="text-muted mt-4 break-word">{{ ref }}</div>
-            }
-          </div>
-        }
+        <p class="form-hint m-0 mt-8 fs-12 text-muted lh-15">
+          开始导入后弹窗会关闭，上传与导入在后台继续；可在「任务」页面查看进度或停止任务。
+        </p>
         @if (importError()) {
           <p class="message error mt-12 fs-12">{{ importError() }}</p>
         }
       </div>
       <div class="modal-actions d-flex justify-end gap-10 pt-18">
-        <button class="btn text-secondary-text bg-secondary-bg" [disabled]="importUploading()" (click)="closeImport()">
+        <button class="btn text-secondary-text bg-secondary-bg" (click)="closeImport()">
           关闭
         </button>
         <button
           class="btn text-white bg-blue"
-          [disabled]="!importFile() || importUploading() || !!importResult()"
+          [disabled]="!importFile()"
           (click)="startImport()"
         >
-          {{ importUploading() ? '导入中…' : importResult() ? '已导入' : '开始导入' }}
+          开始导入
         </button>
       </div>
     </section>

@@ -61,6 +61,10 @@ func ConfigFile(name string) string { return Join("config", name) }
 // BackupsDir 备份目录默认路径（仍可被 BACKUP_DIR 覆盖，见 backupstore/pathsafe）。
 func BackupsDir() string { return Join("backups") }
 
+// TempDir 临时文件目录：镜像导入等需要暂存大文件的场景使用，
+// 放在数据卷下，避免容器内 /tmp 容量不足。
+func TempDir() string { return Join("tmp") }
+
 // IconDir 自定义图标文件目录。
 func IconDir() string { return Join("icon", "icons") }
 

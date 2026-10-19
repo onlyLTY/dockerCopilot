@@ -91,23 +91,26 @@ type cronTask struct {
 }
 
 type TaskProgress struct {
-	TaskID         string     `json:"taskID"`
-	ResourceID     string     `json:"resourceID,omitempty"`
-	Percentage     int        `json:"percentage"`
-	Message        string     `json:"message"`
-	Name           string     `json:"name"`
-	DetailMsg      string     `json:"detailMsg"`
-	StepPercentage int        `json:"stepPercentage"`
-	ProgressType   string     `json:"progressType,omitempty"`
-	Indeterminate  bool       `json:"indeterminate,omitempty"`
-	Current        int64      `json:"current,omitempty"`
-	Total          int64      `json:"total,omitempty"`
-	IsDone         bool       `json:"isDone"`
-	Failed         bool       `json:"failed"`
-	Canceled       bool       `json:"canceled"`
-	TimedOut       bool       `json:"timedOut"`
-	Refresh        bool       `json:"refresh"`
-	Steps          []TaskStep `json:"steps"`
+	TaskID         string `json:"taskID"`
+	ResourceID     string `json:"resourceID,omitempty"`
+	Percentage     int    `json:"percentage"`
+	Message        string `json:"message"`
+	Name           string `json:"name"`
+	DetailMsg      string `json:"detailMsg"`
+	StepPercentage int    `json:"stepPercentage"`
+	ProgressType   string `json:"progressType,omitempty"`
+	Indeterminate  bool   `json:"indeterminate,omitempty"`
+	Current        int64  `json:"current,omitempty"`
+	Total          int64  `json:"total,omitempty"`
+	IsDone         bool   `json:"isDone"`
+	Failed         bool   `json:"failed"`
+	// Succeeded 明确标记成功：详情里可能包含 fail2ban 这类镜像名，
+	// 需要跳过关键词失败判定。
+	Succeeded bool       `json:"succeeded,omitempty"`
+	Canceled  bool       `json:"canceled"`
+	TimedOut  bool       `json:"timedOut"`
+	Refresh   bool       `json:"refresh"`
+	Steps     []TaskStep `json:"steps"`
 	// StartedAt、EndedAt 和 DurationMs 是任务生命周期时间（Unix 毫秒）。
 	StartedAt  int64 `json:"startedAt"`
 	EndedAt    int64 `json:"endedAt,omitempty"`
@@ -133,7 +136,10 @@ type TaskStep struct {
 
 type ProgressStoreType map[string]TaskProgress
 
-const ProgressTypeImagePull = "image-pull"
+const (
+	ProgressTypeImagePull   = "image-pull"
+	ProgressTypeImageImport = "image-import"
+)
 
 type ComposeToken struct {
 	ProjectID string
@@ -295,6 +301,9 @@ func progressFailed(progress TaskProgress) bool {
 	if !progress.IsDone || progress.Canceled {
 		return false
 	}
+	if progress.Succeeded {
+		return false
+	}
 	if progress.Failed || progress.Percentage < 100 {
 		return true
 	}
@@ -310,6 +319,9 @@ func progressFailed(progress TaskProgress) bool {
 func stepFailed(progress TaskProgress) bool {
 	if progress.Failed {
 		return true
+	}
+	if progress.Succeeded {
+		return false
 	}
 	text := strings.ToLower(progress.Message + " " + progress.DetailMsg)
 	for _, keyword := range []string{"失败", "错误", "中断", "拒绝", "超时", "error", "fail", "timeout", "interrupted"} {
@@ -349,7 +361,7 @@ func (ctx *ServiceContext) updateProgressLocked(taskID string, progress, previou
 	if !progress.Refresh {
 		progress.Refresh = previous.Refresh
 	}
-	if progress.ProgressType != ProgressTypeImagePull {
+	if progress.ProgressType != ProgressTypeImagePull && progress.ProgressType != ProgressTypeImageImport {
 		progress.ProgressType = ""
 		progress.Indeterminate = false
 		progress.Current = 0
@@ -689,6 +701,26 @@ func (ctx *ServiceContext) AcquireImageOp(taskCtx context.Context) bool {
 	case slots <- struct{}{}:
 		return true
 	case <-taskCtx.Done():
+		return false
+	}
+}
+
+// TryAcquireImageOp 不阻塞地尝试占用镜像操作槽位；
+// 未取到时可先展示「等待中」状态，再调用 AcquireImageOp 阻塞等待。
+func (ctx *ServiceContext) TryAcquireImageOp() bool {
+	if ctx == nil {
+		return false
+	}
+	ctx.imageOpsMu.Lock()
+	if ctx.imageOps == nil {
+		ctx.imageOps = make(chan struct{}, 1)
+	}
+	slots := ctx.imageOps
+	ctx.imageOpsMu.Unlock()
+	select {
+	case slots <- struct{}{}:
+		return true
+	default:
 		return false
 	}
 }

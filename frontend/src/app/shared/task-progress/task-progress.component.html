@@ -35,7 +35,7 @@
                   @if (step.detailMsg && step.detailMsg !== step.message) {
                     <div class="text-muted mt-2 break-word">{{ step.detailMsg }}</div>
                   }
-                  @if (step.progressType === 'image-pull') {
+                  @if (step.progressType === 'image-pull' || step.progressType === 'image-import') {
                     <div class="task-step-progress-wrap mt-6 d-flex items-center gap-6">
                       <div class="task-step-progress flex-1 h-6 bg-line overflow-hidden rounded-6">
                         <span
@@ -53,7 +53,10 @@
                       }
                     </div>
                     @if (step.total) {
-                      <div class="text-muted mt-2 fs-11">已拉取 {{ formatBytes(step.current || 0) }} / {{ formatBytes(step.total) }}</div>
+                      <div class="text-muted mt-2 fs-11">
+                        {{ step.progressType === 'image-import' ? '已上传' : '已拉取' }}
+                        {{ formatBytes(step.current || 0) }} / {{ formatBytes(step.total) }}
+                      </div>
                     }
                   }
                 </div>

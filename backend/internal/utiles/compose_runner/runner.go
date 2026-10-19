@@ -255,7 +255,8 @@ func ensureVolumes(ctx context.Context, cli client.APIClient, project *composeTy
 	return names, nil
 }
 
-// deployService 按需拉镜像、转换配置，并在配置哈希变化时重建后启动容器。
+// deployService 按需拉镜像、转换配置，并删除同名旧容器后用当前镜像重建启动。
+// 未勾选拉取时只使用本地镜像，不会联网覆盖用户刚导入的同 tag 镜像。
 func deployService(ctx context.Context, cli client.APIClient, projectName, root, serviceName string, svc composeTypes.ServiceConfig, defaultNetwork string, networkNames, volumeNames map[string]string, mappings []PathMapping, pullImages bool, pullTimeout time.Duration, logf func(string, ...interface{}), report ProgressReporter) error {
 	t, err := translateService(projectName, root, serviceName, svc, defaultNetwork, networkNames, volumeNames, mappings...)
 	if err != nil {
@@ -350,14 +351,10 @@ func deployService(ctx context.Context, cli client.APIClient, projectName, root,
 		reportFailure("检查容器失败（"+serviceName+"）", 60, err)
 		return err
 	}
-	newHash := t.config.Labels[labelConfigHash]
+	// 每次部署都用当前镜像重建容器：未勾选拉取时复用本地镜像，
+	// 但本地同名 tag 被重新导入后，也必须让容器指向新的镜像 ID。
 	if existing != nil {
-		oldHash := existing.Labels[labelConfigHash]
-		if !pullImages && oldHash == newHash && existing.State == "running" {
-			logf("服务 %s 配置未变化，跳过", serviceName)
-			return nil
-		}
-		logf("服务 %s 配置变化，重建容器", serviceName)
+		logf("服务 %s 已存在，重建容器", serviceName)
 		reportStage("正在移除旧容器（"+serviceName+"）", 70)
 		if err := removeContainer(ctx, cli, existing.ID, t.name); err != nil {
 			reportFailure("移除旧容器失败（"+serviceName+"）", 70, err)
@@ -402,7 +399,7 @@ func findContainerByName(ctx context.Context, cli client.APIClient, name string)
 	for _, c := range list {
 		for _, n := range c.Names {
 			if strings.TrimPrefix(n, "/") == name {
-				return &containerSummary{ID: c.ID, State: c.State, Labels: c.Labels}, nil
+				return &containerSummary{ID: c.ID}, nil
 			}
 		}
 	}
@@ -410,9 +407,7 @@ func findContainerByName(ctx context.Context, cli client.APIClient, name string)
 }
 
 type containerSummary struct {
-	ID     string
-	State  string
-	Labels map[string]string
+	ID string
 }
 
 func removeContainer(ctx context.Context, cli client.APIClient, id string, name string) error {
@@ -468,7 +463,8 @@ func topoSort(services composeTypes.Services) ([]string, error) {
 	return order, nil
 }
 
-// serviceConfigHash 对服务定义做稳定哈希，重复部署时仅在配置漂移时重建。
+// serviceConfigHash 对服务定义做稳定哈希，写入容器 label 便于识别配置来源。
+// 部署时不再据此跳过重建：同名镜像被重新导入后，必须重建容器才能切换到新镜像。
 func serviceConfigHash(svc composeTypes.ServiceConfig, mappings ...PathMapping) string {
 	sortedMappings := append([]PathMapping(nil), mappings...)
 	sort.Slice(sortedMappings, func(i, j int) bool {

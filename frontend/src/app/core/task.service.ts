@@ -59,6 +59,7 @@ interface ProgressData {
   steps?: TaskStep[];
   isDone: boolean;
   failed?: boolean;
+  succeeded?: boolean;
   canceled?: boolean;
   timedOut?: boolean;
   refresh?: boolean;
@@ -274,6 +275,7 @@ export class TaskService {
             failed:
               progress.failed ??
               (progress.isDone &&
+                !progress.succeeded &&
                 (progress.percentage < 100 ||
                   /失败|错误|中断|拒绝|超时|error|fail|timeout/i.test(
                     progress.message || "",
@@ -325,6 +327,67 @@ export class TaskService {
   /** 关闭进度弹窗（任务继续在后台轮询） */
   closeView(): void {
     this.viewing.set("");
+  }
+
+  /**
+   * 请求中断后确认任务是否真的已在后端登记：
+   * 上传完成但响应丢失时任务可能仍在执行，只标记确实不存在的任务失败。
+   */
+  confirmOrFail(taskID: string, message: string): void {
+    if (this.canceling().has(taskID)) return;
+    this.http
+      .get<ApiResponse<ProgressData>>(
+        "/api/progress/" + encodeURIComponent(taskID),
+      )
+      .subscribe({
+        next: (r) => {
+          if (r.code !== 200) this.fail(taskID, r.msg || message);
+        },
+        error: () => this.fail(taskID, message),
+      });
+  }
+
+  /**
+   * 前端侧直接判定任务失败：用于请求在创建后端进度前就被拒绝
+   * （上传超限、网络错误等），避免轮询等到「任务不存在」。
+   */
+  fail(taskID: string, message: string): void {
+    // 用户已请求停止：以后端取消终态为准，避免请求中断把「已取消」覆盖成「失败」
+    if (this.canceling().has(taskID)) return;
+    let changed = false;
+    let refreshKeys: ResourceKey[] = [];
+    this.tasks.update((list) =>
+      list.map((t) => {
+        if (t.taskID !== taskID || t.isDone) return t;
+        changed = true;
+        refreshKeys = this.taskRefreshKeys(t);
+        return {
+          ...t,
+          isDone: true,
+          failed: true,
+          percentage: 100,
+          message: "任务失败",
+          detailMsg: message || "任务执行失败",
+          updatedAt: Date.now(),
+        };
+      }),
+    );
+    this.canceling.update((set) => {
+      const next = new Set(set);
+      next.delete(taskID);
+      return next;
+    });
+    this.unknownCounts.delete(taskID);
+    if (changed) {
+      this.toast.error("任务失败", message || "任务执行失败");
+      if (refreshKeys.length) this.bus.refresh(refreshKeys);
+      this.completed.next({
+        taskID,
+        resourceID: this.tasks().find((t) => t.taskID === taskID)?.resourceID,
+        refresh: refreshKeys.length > 0,
+      });
+    }
+    this.persist();
   }
 
   /** 删除单个任务；进行中的任务不能删除，避免把执行中的任务伪装成已取消。 */
@@ -589,6 +652,7 @@ export class TaskService {
         const failed =
           d.failed ??
           (d.isDone &&
+            !d.succeeded &&
             (d.percentage < 100 ||
               /失败|错误|中断|拒绝|超时|error|fail|timeout/i.test(
                 d.message || "",

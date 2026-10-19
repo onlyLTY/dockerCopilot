@@ -8,7 +8,8 @@ import (
 )
 
 // ImportImagesHandler 接收 docker save 导出的镜像包（原始请求体流式读取，
-// 不经过 multipart，避免大镜像包写入临时文件或占用内存）。
+// 不经过 multipart，避免大镜像包占用内存）。上传完成后立即返回 taskID，
+// docker load 在后台任务中执行，可前往任务页面查看进度或停止任务。
 func ImportImagesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit := svcCtx.Config.ImageImportLimit()
@@ -16,9 +17,11 @@ func ImportImagesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		r.Body = http.MaxBytesReader(w, r.Body, limit)
 
 		l := logic.NewImportImagesLogic(r.Context(), svcCtx)
-		resp, err := l.Import(logic.ImportInput{
+		resp, err := l.SubmitImport(logic.ImportInput{
 			Filename: r.URL.Query().Get("filename"),
+			TaskID:   r.URL.Query().Get("taskID"),
 			Reader:   r.Body,
+			Total:    r.ContentLength,
 		})
 		WriteLogicResp(w, r, resp, err)
 	}

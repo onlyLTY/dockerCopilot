@@ -11,11 +11,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/onlyLTY/dockerCopilot/internal/config"
 	"github.com/onlyLTY/dockerCopilot/internal/datadir"
 	"github.com/onlyLTY/dockerCopilot/internal/errorx"
 	"github.com/onlyLTY/dockerCopilot/internal/handler"
+	"github.com/onlyLTY/dockerCopilot/internal/logic"
 	"github.com/onlyLTY/dockerCopilot/internal/settingstore"
 	"github.com/onlyLTY/dockerCopilot/internal/svc"
 	"github.com/onlyLTY/dockerCopilot/internal/utiles"
@@ -112,6 +114,12 @@ func main() {
 	if err := os.MkdirAll(datadir.ConfigDir(), 0755); err != nil {
 		logx.Errorf("Failed to create config directory: %v", err)
 	}
+	if err := os.MkdirAll(datadir.TempDir(), 0755); err != nil {
+		logx.Errorf("Failed to create temp directory: %v", err)
+	}
+	// 导入任务在进程内执行且上传超时不超过 30 分钟，超过 1 小时的残留文件必然是
+	// 上次异常退出遗留的临时包（同一数据目录不支持多实例同时写入）。
+	logic.CleanupStaleImageImports(time.Hour)
 
 	imageLogosPath := datadir.IconConfigPath()
 	if _, err := os.Stat(imageLogosPath); os.IsNotExist(err) {

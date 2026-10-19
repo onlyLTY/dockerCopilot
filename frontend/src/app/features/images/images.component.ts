@@ -1,10 +1,6 @@
 import { Component, computed, DestroyRef, inject, signal } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import {
-  ImageImportResult,
-  ImageRow,
-  ImageService,
-} from "../../core/image.service";
+import { ImageRow, ImageService, newImportTaskID } from "../../core/image.service";
 import { IconService } from "../../core/icon.service";
 import { ToastService } from "../../core/toast.service";
 import {
@@ -108,22 +104,15 @@ export class ImagesComponent {
   readonly importOpen = signal(false);
   readonly importFile = signal<File | undefined>(undefined);
   readonly importFileName = signal("");
-  readonly importUploading = signal(false);
-  readonly importPercent = signal(0);
   readonly importError = signal("");
-  readonly importResult = signal<ImageImportResult | undefined>(undefined);
 
   openImport(): void {
     this.importFile.set(undefined);
     this.importFileName.set("");
     this.importError.set("");
-    this.importResult.set(undefined);
-    this.importPercent.set(0);
-    this.importUploading.set(false);
     this.importOpen.set(true);
   }
   closeImport(): void {
-    if (this.importUploading()) return;
     this.importOpen.set(false);
   }
   closeImportOnBackdrop(event: Event): void {
@@ -133,8 +122,6 @@ export class ImagesComponent {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     this.importError.set("");
-    this.importResult.set(undefined);
-    this.importPercent.set(0);
     if (!file) {
       this.importFile.set(undefined);
       this.importFileName.set("");
@@ -156,42 +143,17 @@ export class ImagesComponent {
     this.importFile.set(file);
     this.importFileName.set(file.name);
   }
+  /** 提交后立即关闭弹窗：上传与导入都在后台继续，进度在任务页查看。 */
   startImport(): void {
     const file = this.importFile();
-    if (!file || this.importUploading()) return;
-    this.importUploading.set(true);
-    this.importPercent.set(0);
-    this.importError.set("");
-    this.importResult.set(undefined);
-    this.service.import(file, (percent) => this.importPercent.set(percent)).subscribe({
-      next: (r) => {
-        this.importUploading.set(false);
-        if (r.code === 200) {
-          this.importResult.set(r.data);
-          this.importPercent.set(100);
-          const count = r.data?.count || r.data?.loaded?.length || 0;
-          this.toast.success(`已导入 ${count} 个镜像`);
-        } else {
-          this.importError.set(r.msg || "导入失败");
-        }
-      },
-      error: (e) => {
-        this.importUploading.set(false);
-        this.importError.set(
-          (e as { status?: number } | null)?.status === 413
-            ? "镜像包超过服务端允许的大小限制"
-            : actionErrorMessage(e, "导入失败"),
-        );
-      },
-    });
+    if (!file) return;
+    this.service.startImport(file, newImportTaskID());
+    this.importOpen.set(false);
   }
   removeImportFile(): void {
-    if (this.importUploading()) return;
     this.importFile.set(undefined);
     this.importFileName.set("");
-    this.importPercent.set(0);
     this.importError.set("");
-    this.importResult.set(undefined);
   }
   importFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;

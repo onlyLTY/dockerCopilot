@@ -32,7 +32,8 @@ type Config struct {
 	// 零或负值使用 DefaultImageImportMaxBytes（3 GiB）。
 	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
 	ImageImportMaxBytes int64 `json:",optional"`
-	// ImageImportTimeoutSec 导入镜像的上传/落盘超时（秒），默认 1800（30 分钟）。
+	// ImageImportTimeoutSec 导入镜像的上传超时（秒），默认 1800（30 分钟）。
+	// 只约束请求体上传；上传完成后 docker load 转入后台任务，不受该超时影响。
 	// 仅覆盖 POST /api/images/import；注意 go-zero 会把 Server 的读写超时取所有路由最大值，
 	// 因此调大该值也会放宽底层连接的整体读写上限。无 Content-Length 的大包上传尤其需要留足时间。
 	//lint:ignore SA5008 go-zero uses optional as a configuration tag.

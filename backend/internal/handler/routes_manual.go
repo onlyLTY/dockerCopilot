@@ -36,6 +36,7 @@ func RegisterManualHandlers(server *rest.Server, serverCtx *svc.ServiceContext) 
 
 	// 镜像导入：大请求体 + 长连接，单路由策略。MaxBytesHandler 会拒绝超过上限的
 	// Content-Length；无 Content-Length 的 chunked 上传再由 handler 内的 MaxBytesReader 兜底。
+	// 超时只约束上传；上传完成后 docker load 转入后台任务，进度见 /api/progress。
 	importLimit := serverCtx.Config.ImageImportLimit()
 	server.AddRoutes(
 		[]rest.Route{
