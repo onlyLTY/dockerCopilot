@@ -14,6 +14,9 @@
     >
       <dc-icon name="clean"></dc-icon>清理未使用 ({{ unusedCount() }})
     </button>
+    <button class="btn text-secondary-text bg-secondary-bg" (click)="openImport()" title="导入 docker save 导出的镜像包">
+      <dc-icon name="upload"></dc-icon>导入镜像
+    </button>
     <button class="btn text-white bg-blue" (click)="refresh()" title="刷新镜像">
       <dc-icon name="refresh"></dc-icon>刷新
     </button>
@@ -86,4 +89,81 @@
       </dc-resource-card>
     }
   </section>
+}
+
+@if (importOpen()) {
+  <div class="modal-backdrop d-grid place-items-center" (click)="closeImportOnBackdrop($event)">
+    <section
+      class="modal min-w-0 d-grid modal-form modal-m h-auto"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <dc-modal-heading title="导入镜像" subtitle="从本地镜像包导入，支持 docker save 生成的 tar 文件" (closed)="closeImport()" />
+      <div class="modal-body">
+        <label class="form-field d-block mt-20 fs-12"
+          >镜像包文件<input
+            class="field-control d-block mt-8 py-12 px-12"
+            type="file"
+            [disabled]="importUploading()"
+            accept=".tar,.tar.gz,.tgz,.tar.bz2,application/x-tar,application/gzip"
+            (change)="chooseImportFile($event)"
+        /></label>
+        <p class="form-hint m-0 mt-8 fs-12 text-muted lh-15">
+          在源机器执行 <code>docker save -o image.tar 镜像名:标签</code>，再上传生成的 tar 文件；支持 gzip/bzip2 压缩包。
+        </p>
+        @if (importFile(); as file) {
+          <div class="d-flex items-center justify-between gap-12 mt-16 py-10 px-12 border-1 rounded-7 fs-12">
+            <span class="text-ellipsis min-w-0" [title]="importFileName()">{{ importFileName() }}</span>
+            <span class="text-muted flex-none">{{ importFileSize(file.size) }}</span>
+            <button
+              class="btn text-red border-1 py-6 px-8 fs-12 flex-none"
+              type="button"
+              [disabled]="importUploading()"
+              (click)="removeImportFile()"
+            >
+              移除
+            </button>
+          </div>
+        }
+        @if (importUploading() || importPercent() > 0) {
+          <div class="mt-16">
+            <div class="d-flex justify-between items-center fs-12 mb-6">
+              <span class="text-muted">{{ importUploading() ? '正在上传并导入…' : '上传完成' }}</span>
+              <b class="text-blue">{{ importPercent() }}%</b>
+            </div>
+            <div class="h-6 rounded-3 bg-line overflow-hidden">
+              <i
+                class="d-block h-full bg-blue transition-width"
+                [style.width.%]="importPercent()"
+              ></i>
+            </div>
+          </div>
+        }
+        @if (importResult(); as result) {
+          <div class="mt-16 py-10 px-12 rounded-7 bg-green-soft fs-12">
+            <div class="text-green fw-600">成功导入 {{ result.count }} 个镜像</div>
+            @for (ref of result.loaded; track ref) {
+              <div class="text-muted mt-4 break-word">{{ ref }}</div>
+            }
+          </div>
+        }
+        @if (importError()) {
+          <p class="message error mt-12 fs-12">{{ importError() }}</p>
+        }
+      </div>
+      <div class="modal-actions d-flex justify-end gap-10 pt-18">
+        <button class="btn text-secondary-text bg-secondary-bg" [disabled]="importUploading()" (click)="closeImport()">
+          关闭
+        </button>
+        <button
+          class="btn text-white bg-blue"
+          [disabled]="!importFile() || importUploading() || !!importResult()"
+          (click)="startImport()"
+        >
+          {{ importUploading() ? '导入中…' : importResult() ? '已导入' : '开始导入' }}
+        </button>
+      </div>
+    </section>
+  </div>
 }

@@ -28,6 +28,15 @@ type Config struct {
 	// 适用于单容器更新、恢复和 Compose 部署中的镜像拉取；零或负值使用默认值。
 	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
 	PullTimeoutSec int64 `json:",optional"`
+	// ImageImportMaxBytes 单次导入镜像包大小上限（字节）。
+	// 零或负值使用 DefaultImageImportMaxBytes（3 GiB）。
+	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
+	ImageImportMaxBytes int64 `json:",optional"`
+	// ImageImportTimeoutSec 导入镜像的上传/落盘超时（秒），默认 1800（30 分钟）。
+	// 仅覆盖 POST /api/images/import；注意 go-zero 会把 Server 的读写超时取所有路由最大值，
+	// 因此调大该值也会放宽底层连接的整体读写上限。无 Content-Length 的大包上传尤其需要留足时间。
+	//lint:ignore SA5008 go-zero uses optional as a configuration tag.
+	ImageImportTimeoutSec int64 `json:",optional"`
 }
 
 // MinAccessSecretLen secretKey / AccessSecret 最短长度（与 go-zero JWT 下限及文案「8 位以上」一致）。
@@ -35,6 +44,30 @@ const MinAccessSecretLen = 8
 
 // DefaultPullTimeoutSec 单容器更新/恢复拉取镜像的默认超时（秒）。
 const DefaultPullTimeoutSec int64 = 300
+
+// DefaultImageImportMaxBytes 导入镜像包默认大小上限（3 GiB）。
+// 私有镜像 tar 往往远大于普通请求体，因此单独放宽；超限由 handler 在读取前拒绝。
+const DefaultImageImportMaxBytes int64 = 3 << 30
+
+// DefaultImageImportTimeoutSec 导入镜像上传/落盘的默认超时（秒）。
+const DefaultImageImportTimeoutSec int64 = 1800
+
+// ImageImportLimit 返回实际生效的导入包大小上限。
+func (c Config) ImageImportLimit() int64 {
+	if c.ImageImportMaxBytes > 0 {
+		return c.ImageImportMaxBytes
+	}
+	return DefaultImageImportMaxBytes
+}
+
+// ImageImportTimeout 返回实际生效的导入超时。
+func (c Config) ImageImportTimeout() time.Duration {
+	seconds := c.ImageImportTimeoutSec
+	if seconds <= 0 {
+		seconds = DefaultImageImportTimeoutSec
+	}
+	return time.Duration(seconds) * time.Second
+}
 
 // ValidateAccessSecret 启动时校验登录/JWT 密钥：至少 8 位，且不能为纯数字。
 // 与历史提示「非纯数字且大于八位」对齐；「8 位以上」按常见语义含 8 位（len >= 8）。

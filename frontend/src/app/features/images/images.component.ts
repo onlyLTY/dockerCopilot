@@ -1,6 +1,10 @@
 import { Component, computed, DestroyRef, inject, signal } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { ImageRow, ImageService } from "../../core/image.service";
+import {
+  ImageImportResult,
+  ImageRow,
+  ImageService,
+} from "../../core/image.service";
 import { IconService } from "../../core/icon.service";
 import { ToastService } from "../../core/toast.service";
 import {
@@ -14,6 +18,7 @@ import { ConfirmService } from "../../core/confirm.service";
 import { ResourceCardComponent } from "../../shared/resource-card/resource-card.component";
 import { StatsComponent, StatItem } from "../../shared/stats/stats.component";
 import { PageHeadingComponent } from "../../shared/page-heading/page-heading.component";
+import { ModalHeadingComponent } from "../../shared/modal-heading/modal-heading.component";
 import { TaskService } from "../../core/task.service";
 import { MatTooltipModule } from "@angular/material/tooltip";
 
@@ -26,6 +31,7 @@ import { MatTooltipModule } from "@angular/material/tooltip";
     ResourceCardComponent,
     StatsComponent,
     PageHeadingComponent,
+    ModalHeadingComponent,
     MatTooltipModule,
   ],
   templateUrl: "./images.component.html",
@@ -97,6 +103,108 @@ export class ImagesComponent {
   isUntagged(x: ImageRow) {
     return !x.tag || ["<none>", "none"].includes(x.tag.toLowerCase());
   }
+
+  // ===== 导入镜像 =====
+  readonly importOpen = signal(false);
+  readonly importFile = signal<File | undefined>(undefined);
+  readonly importFileName = signal("");
+  readonly importUploading = signal(false);
+  readonly importPercent = signal(0);
+  readonly importError = signal("");
+  readonly importResult = signal<ImageImportResult | undefined>(undefined);
+
+  openImport(): void {
+    this.importFile.set(undefined);
+    this.importFileName.set("");
+    this.importError.set("");
+    this.importResult.set(undefined);
+    this.importPercent.set(0);
+    this.importUploading.set(false);
+    this.importOpen.set(true);
+  }
+  closeImport(): void {
+    if (this.importUploading()) return;
+    this.importOpen.set(false);
+  }
+  closeImportOnBackdrop(event: Event): void {
+    if (event.target === event.currentTarget) this.closeImport();
+  }
+  chooseImportFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    this.importError.set("");
+    this.importResult.set(undefined);
+    this.importPercent.set(0);
+    if (!file) {
+      this.importFile.set(undefined);
+      this.importFileName.set("");
+      return;
+    }
+    const lower = file.name.toLowerCase();
+    if (
+      !lower.endsWith(".tar") &&
+      !lower.endsWith(".tar.gz") &&
+      !lower.endsWith(".tgz") &&
+      !lower.endsWith(".tar.bz2")
+    ) {
+      this.importFile.set(undefined);
+      this.importFileName.set("");
+      this.importError.set("请选择 docker save 导出的 .tar（或 .tar.gz/.tgz/.tar.bz2）文件");
+      input.value = "";
+      return;
+    }
+    this.importFile.set(file);
+    this.importFileName.set(file.name);
+  }
+  startImport(): void {
+    const file = this.importFile();
+    if (!file || this.importUploading()) return;
+    this.importUploading.set(true);
+    this.importPercent.set(0);
+    this.importError.set("");
+    this.importResult.set(undefined);
+    this.service.import(file, (percent) => this.importPercent.set(percent)).subscribe({
+      next: (r) => {
+        this.importUploading.set(false);
+        if (r.code === 200) {
+          this.importResult.set(r.data);
+          this.importPercent.set(100);
+          const count = r.data?.count || r.data?.loaded?.length || 0;
+          this.toast.success(`已导入 ${count} 个镜像`);
+        } else {
+          this.importError.set(r.msg || "导入失败");
+        }
+      },
+      error: (e) => {
+        this.importUploading.set(false);
+        this.importError.set(
+          (e as { status?: number } | null)?.status === 413
+            ? "镜像包超过服务端允许的大小限制"
+            : actionErrorMessage(e, "导入失败"),
+        );
+      },
+    });
+  }
+  removeImportFile(): void {
+    if (this.importUploading()) return;
+    this.importFile.set(undefined);
+    this.importFileName.set("");
+    this.importPercent.set(0);
+    this.importError.set("");
+    this.importResult.set(undefined);
+  }
+  importFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    const units = ["KB", "MB", "GB", "TB"];
+    let value = bytes / 1024;
+    let unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit++;
+    }
+    return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[unit]}`;
+  }
+
   async cleanup(kind: "untagged" | "unused") {
     const count =
       kind === "untagged" ? this.untaggedCount() : this.unusedCount();

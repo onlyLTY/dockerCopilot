@@ -1,6 +1,11 @@
 import { Injectable, inject } from "@angular/core";
-import { HttpClient } from "@angular/common/http";
-import { Observable, tap } from "rxjs";
+import {
+  HttpClient,
+  HttpEventType,
+  HttpRequest,
+  HttpResponse,
+} from "@angular/common/http";
+import { Observable, filter, map, tap } from "rxjs";
 import { ApiResponse } from "./compose.service";
 import { CacheStore, CacheView } from "./cache-store";
 import { CacheBus } from "./cache-bus";
@@ -19,6 +24,11 @@ export interface ImageCleanupResult {
   deleted: number;
   skipped: number;
   errors: string[];
+}
+
+export interface ImageImportResult {
+  loaded: string[];
+  count: number;
 }
 
 @Injectable({ providedIn: "root" })
@@ -65,6 +75,41 @@ export class ImageService {
     return this.http.post<ApiResponse<{ taskID: string }>>(
       "/api/images/prune?kind=" + kind,
       {},
+    );
+  }
+
+  /**
+   * 导入 docker save 导出的镜像包。
+   * 直接上传原始文件流（不套 multipart），大文件不占内存；onProgress 回报上传进度。
+   */
+  import(
+    file: File,
+    onProgress: (percent: number) => void,
+  ): Observable<ApiResponse<ImageImportResult>> {
+    const req = new HttpRequest<File>(
+      "POST",
+      "/api/images/import?filename=" + encodeURIComponent(file.name),
+      file,
+      { reportProgress: true },
+    );
+    return this.http.request<ApiResponse<ImageImportResult>>(req).pipe(
+      tap((event) => {
+        if (event.type === HttpEventType.UploadProgress) {
+          const total = event.total || file.size;
+          onProgress(total > 0 ? Math.round((event.loaded / total) * 100) : 0);
+        }
+      }),
+      filter(
+        (event): event is HttpResponse<ApiResponse<ImageImportResult>> =>
+          event instanceof HttpResponse,
+      ),
+      map((event) => event.body as ApiResponse<ImageImportResult>),
+      tap((r) => {
+        if (r.code === 200) {
+          this.store.refresh();
+          this.bus.invalidate(["containers"]);
+        }
+      }),
     );
   }
 
