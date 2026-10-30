@@ -173,6 +173,18 @@ func UpdateContainer(serviceContext *svc.ServiceContext, id string, name string,
 	oldTaskProgress.Percentage = 100
 	oldTaskProgress.IsDone = true
 	serviceContext.UpdateProgress(taskID, oldTaskProgress)
+
+	// 修复：更新容器成功后刷新 HubImageInfo，避免旧的 NeedUpdate 状态残留
+	// 之前需要等到每小时的定时检查才能更新，导致用户看到"已更新但仍提示有更新"
+	go func() {
+		list, err := GetImagesList(serviceContext)
+		if err != nil {
+			logx.Errorf("刷新镜像列表出错: %v", err)
+			return
+		}
+		serviceContext.HubImageInfo.CheckUpdate(list)
+	}()
+
 	return nil
 }
 

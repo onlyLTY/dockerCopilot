@@ -58,21 +58,35 @@ func (i *ImageUpdateData) checkSingleImage(image types.Image) {
 		logx.Error("未在本地获取到repoDigest" + image.ImageName + ":" + image.ImageTag)
 		return
 	}
-	needUpdate := false
-	for _, localRepoDigests := range image.RepoDigests {
-		localDigest := strings.Split(localRepoDigests, "@")[1]
-		if remoteDigest != localDigest {
-			if remoteDigest == "" || localDigest == "" {
-				logx.Error("Digest为空" + image.ImageName + ":" + image.ImageTag)
-				continue
-			}
-			logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
-			logx.Infof("localDigest: %s, remoteDigest: %s", localDigest, remoteDigest)
-			needUpdate = true
-		} else {
+	// 如果远程 digest 为空，无法比较，保持原状态
+	if remoteDigest == "" {
+		logx.Error("远程Digest为空，无法比较" + image.ImageName + ":" + image.ImageTag)
+		return
+	}
+
+	// 修复：只要有一个本地 RepoDigests 与远程匹配，就认为不需要更新
+	// 原逻辑中多个 RepoDigests 时，后续结果会覆盖之前的判断，导致误判
+	needUpdate := true
+	for _, localRepoDigest := range image.RepoDigests {
+		parts := strings.Split(localRepoDigest, "@")
+		if len(parts) < 2 {
+			logx.Error("RepoDigest格式异常" + localRepoDigest)
+			continue
+		}
+		localDigest := parts[1]
+		if localDigest == "" {
+			logx.Error("本地Digest为空" + image.ImageName + ":" + image.ImageTag)
+			continue
+		}
+		if localDigest == remoteDigest {
 			logx.Info(image.ImageName + ":" + image.ImageTag + " not need update")
 			needUpdate = false
+			break
 		}
+	}
+	if needUpdate {
+		logx.Info(image.ImageName + ":" + image.ImageTag + " need update")
+		logx.Infof("localRepoDigests: %v, remoteDigest: %s", image.RepoDigests, remoteDigest)
 	}
 	i.Data[image.ID] = ImageCheckList{NeedUpdate: needUpdate}
 }
@@ -123,10 +137,15 @@ func GetDigest(url string, token string) (string, error) {
 	if token != "" {
 		req.Header.Add("Authorization", token)
 	}
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	// 优先请求 manifest list / OCI image index，以匹配本地 RepoDigests 记录的 digest
+	// 本地 RepoDigests 记录的是 manifest list 的 digest（多架构镜像）
+	// 如果优先请求单个 manifest（manifest.v2+json），registry 可能返回某个架构的具体 manifest，
+	// 其 digest 与 manifest list 的 digest 不同，导致误判需要更新
 	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v1+json")
 	req.Header.Add("Accept", "application/vnd.oci.image.index.v1+json")
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Add("Accept", "application/vnd.oci.image.manifest.v1+json")
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v1+json")
 
 	res, err := client.Do(req)
 	if err != nil {
